@@ -51,6 +51,47 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.prevent_distribution_menu_item_change_after_documents()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $
+DECLARE
+  v_distribution_id uuid;
+BEGIN
+  IF current_setting('app.allow_distribution_history_delete', true) = 'on' THEN
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    v_distribution_id := OLD.distribution_id;
+  ELSE
+    v_distribution_id := NEW.distribution_id;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.documents AS d
+    WHERE d.distribution_id = v_distribution_id
+  ) OR (
+    TG_OP = 'UPDATE'
+    AND EXISTS (
+      SELECT 1 FROM public.documents AS d
+      WHERE d.distribution_id = OLD.distribution_id
+    )
+  ) THEN
+    RAISE EXCEPTION USING
+      ERRCODE = '55000',
+      MESSAGE = 'Komponen menu tidak dapat diubah setelah dokumen distribusi diterbitkan.';
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
+END;
+$;
+
+REVOKE ALL ON FUNCTION public.prevent_distribution_menu_item_change_after_documents() FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.hapus_riwayat_distribusi(p_distribution_ids uuid[])
 RETURNS jsonb
 LANGUAGE plpgsql
