@@ -3,6 +3,7 @@
 const { apiUrl: API, publishableKey: KEY } = window.AutoDocConfig;
 const $=(selector,root=document)=>root.querySelector(selector);
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const LETTERHEAD_LOGO_URL="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png";
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null;
 
@@ -228,8 +229,8 @@ function printDocument(doc){
  const realRows=real.items||[];
  const realization=isBast&&real.document_id?"<h3>Realisasi Penerimaan</h3><p>Kondisi: "+esc(real.kondisi||"—")+" · Jam diterima: "+esc(real.jam_diterima||"—")+" · Suhu: "+esc(real.suhu_c??"—")+" °C</p><p>Ompreng kembali: "+esc(real.ompreng_kembali??"—")+" · Penerima: "+esc(real.nama_penerima||"—")+" ("+esc(real.jabatan_penerima||"—")+")</p><table class='data'><thead><tr><th>Jenis</th><th>Diserahkan</th><th>Diterima</th></tr></thead><tbody>"+realRows.map(x=>"<tr><td>"+esc(x.jenis_porsi)+"</td><td>"+Number(x.jumlah_diserahkan).toLocaleString("id-ID")+"</td><td>"+Number(x.jumlah_diterima).toLocaleString("id-ID")+"</td></tr>").join("")+"</tbody></table><p>Catatan: "+esc(real.catatan||"—")+"</p>":"";
  const title=isBast?"BERITA ACARA SERAH TERIMA":"SURAT JALAN";
- const html="<!doctype html><html lang='id'><head><meta charset='utf-8'><title>"+esc(doc.nomor_lengkap)+"</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:12px;line-height:1.5}.top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #222;padding-bottom:10px}.brand{font-size:15px;font-weight:700}.muted{color:#444}.center{text-align:center;margin:22px 0 14px}.center h1{font-size:18px;margin:0;letter-spacing:.6px}.center h2{font-size:13px;margin:3px 0;text-decoration:underline}.number{text-align:center;font-size:12px;margin:4px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:7px 22px;margin:17px 0}.meta div{padding:4px 0;border-bottom:1px dotted #bbb}.meta b{display:inline-block;min-width:115px}.data{width:100%;border-collapse:collapse;margin-top:10px}.data th,.data td{padding:7px;border:1px solid #333;text-align:left}.data th{background:#f1f1ed}.sign{display:grid;grid-template-columns:1fr 1fr;gap:65px;margin-top:48px;text-align:center}.space{height:68px}.footer{margin-top:25px;color:#444;font-size:10px}h3{font-size:13px;margin:20px 0 5px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>"+
- "<div class='top'><div><div class='brand'>"+esc(sppg.nama_sppg||"SPPG")+"</div><div>"+esc(sppg.alamat||"")+"</div><div>"+esc(sppg.kecamatan||"")+" · "+esc(sppg.kabupaten||"")+"</div></div><div style='text-align:right'><b>"+esc(sppg.kode_sppg||"")+"</b><br><span class='muted'>Dokumen operasional MBG</span></div></div>"+
+ const html="<!doctype html><html lang='id'><head><meta charset='utf-8'><title>"+esc(doc.nomor_lengkap)+"</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:12px;line-height:1.5}.top{display:grid;grid-template-columns:70px minmax(0,1fr) 105px;align-items:center;gap:12px;border-bottom:3px double #222;padding-bottom:10px;min-height:82px}.top-logo{display:block;width:68px;height:68px;object-fit:contain}.top-copy{text-align:center}.brand{font-size:15px;font-weight:700}.top-address{font-size:10px;line-height:1.5}.top-meta{text-align:right;font-size:10px;line-height:1.5}.muted{color:#444}.center{text-align:center;margin:22px 0 14px}.center h1{font-size:18px;margin:0;letter-spacing:.6px}.center h2{font-size:13px;margin:3px 0;text-decoration:underline}.number{text-align:center;font-size:12px;margin:4px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:7px 22px;margin:17px 0}.meta div{padding:4px 0;border-bottom:1px dotted #bbb}.meta b{display:inline-block;min-width:115px}.data{width:100%;border-collapse:collapse;margin-top:10px}.data th,.data td{padding:7px;border:1px solid #333;text-align:left}.data th{background:#f1f1ed}.sign{display:grid;grid-template-columns:1fr 1fr;gap:65px;margin-top:48px;text-align:center}.space{height:68px}.footer{margin-top:25px;color:#444;font-size:10px}h3{font-size:13px;margin:20px 0 5px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>"+
+ "<div class='top'><img class='top-logo' src='"+LETTERHEAD_LOGO_URL+"' alt='Logo BGN'><div class='top-copy'><div class='brand'>"+esc(sppg.nama_sppg||"SPPG")+"</div><div class='top-address'>"+esc(sppg.alamat||"")+"</div><div class='top-address'>"+esc(sppg.kecamatan||"")+" · "+esc(sppg.kabupaten||"")+"</div></div><div class='top-meta'><b>"+esc(sppg.kode_sppg||"")+"</b><br><span class='muted'>Dokumen operasional MBG</span></div></div>"+
  "<div class='center'><h1>"+title+"</h1><h2>"+(isBast?"SERAH TERIMA HASIL DISTRIBUSI MBG":"PENGIRIMAN / DISTRIBUSI MBG")+"</h2><div class='number'>Nomor: <b>"+esc(doc.nomor_lengkap)+"</b></div></div>"+
  "<div class='meta'><div><b>Tanggal</b>: "+esc(dist.tanggal||"—")+"</div><div><b>Jam berangkat</b>: "+esc(dist.jam_berangkat||"—")+"</div><div><b>Penerima</b>: "+esc(rec.nama||"—")+"</div><div><b>Kelompok</b>: "+esc(rec.kelompok||"—")+" / "+esc(rec.jenjang||"")+"</div><div><b>Alamat</b>: "+esc(rec.alamat||"—")+"</div><div><b>Menu</b>: "+esc(dist.menu||"—")+"</div><div><b>Pengemudi</b>: "+esc(dist.nama_pengemudi||"—")+"</div><div><b>Kendaraan</b>: "+esc(dist.no_kendaraan||"—")+"</div><div><b>Petugas</b>: "+esc(dist.nama_petugas||"—")+"</div><div><b>Total porsi</b>: "+Number((snap.ringkasan||{}).total_porsi||0).toLocaleString("id-ID")+"</div></div>"+
  "<h3>Rincian Porsi</h3><table class='data'><thead><tr><th style='width:35px'>No.</th><th>Kelompok sasaran</th><th>Jenis porsi</th><th style='width:100px;text-align:right'>Jumlah</th></tr></thead><tbody>"+rows+"</tbody><tfoot><tr><th colspan='3' style='text-align:right'>Total</th><th style='text-align:right'>"+Number((snap.ringkasan||{}).total_porsi||0).toLocaleString("id-ID")+"</th></tr></tfoot></table>"+
@@ -237,10 +238,13 @@ function printDocument(doc){
  "<div class='sign'><div>Petugas / Pengemudi<div class='space'></div><b><u>"+esc(dist.nama_petugas||dist.nama_pengemudi||"")+"</u></b></div><div>"+(isBast?"Penerima":"Penerima / Tujuan")+"<div class='space'></div><b><u>"+esc(real.nama_penerima||"")+"</u></b></div></div>"+
  "<div class='footer'>Dokumen dibuat oleh AutoDoc · SPPG Darmaraja 01. Snapshot dokumen: "+esc(doc.created_at||"")+".</div></body></html>";
  const win=window.open("","_blank");if(!win){status("Popup cetak diblokir. Izinkan popup untuk situs AutoDoc.",true);return}
- win.document.open();win.document.write(html);win.document.close();win.focus();
- setTimeout(()=>{
+ win.document.open();win.document.write(html);win.document.close();
+ let printStarted=false;
+ const invokePrint=()=>{
+  if(printStarted)return;
+  printStarted=true;
   if(win.closed||typeof win.print!=="function")return;
-  try{win.print()}catch(_){return}
+  try{win.focus();win.print()}catch(_){return}
   // Browser APIs cannot confirm whether the user printed or cancelled the dialog.
   // Record the print action only after the print dialog has been invoked and dismissed.
   api("docs/mark-printed",{document_id:doc.id}).then(()=>{window.dispatchEvent(new Event("autodoc:data-changed"));
@@ -249,7 +253,15 @@ function printDocument(doc){
     if(dateField)loadHistory(dateField.value).catch(()=>{});
    }
   }).catch(()=>{});
- },500);
+ };
+ const logo=win.document.querySelector(".top-logo");
+ if(logo&&!logo.complete){
+  logo.addEventListener("load",invokePrint,{once:true});
+  logo.addEventListener("error",invokePrint,{once:true});
+  setTimeout(invokePrint,3000);
+ }else{
+  setTimeout(invokePrint,350);
+ }
 }
 function showRealization(card,doc){
  modal.querySelectorAll(".docs-realization").forEach(x=>x.remove());
