@@ -359,16 +359,12 @@
               Konfigurasi pertama kali
             </div>
             <h2 id="setupTitle" class="form-title">Setup Awal AutoDoc</h2>
-            <p class="form-intro">Buat PIN rahasia dan tentukan nomor awal kedua jenis dokumen. Pengaturan ini hanya dapat diselesaikan satu kali.</p>
+            <p class="form-intro">PIN MASUK sudah disimpan sebagai secret di Supabase. Masukkan PIN tersebut untuk menyelesaikan pengaturan awal dan mengunci nomor awal dokumen.</p>
 
             <form id="setupForm" class="setup-form">
               <div class="setup-field">
-                <label class="field-label" for="setupToken">Buat token / PIN baru</label>
-                <input class="token-input" id="setupToken" type="password" autocomplete="new-password" minlength="6" maxlength="128" placeholder="Minimal 6 karakter" required>
-              </div>
-              <div class="setup-field" style="margin-top:14px">
-                <label class="field-label" for="setupTokenConfirm">Ulangi token / PIN</label>
-                <input class="token-input" id="setupTokenConfirm" type="password" autocomplete="new-password" minlength="6" maxlength="128" placeholder="Masukkan kembali PIN" required>
+                <label class="field-label" for="setupToken">PIN MASUK dari Supabase</label>
+                <input class="token-input" id="setupToken" type="password" autocomplete="current-password" minlength="6" maxlength="128" placeholder="Masukkan PIN MASUK" required>
               </div>
 
               <div class="setup-grid">
@@ -381,7 +377,7 @@
                   <input class="token-input" id="startNumberBast" type="number" min="1" step="1" inputmode="numeric" placeholder="Contoh: 1" required>
                 </div>
               </div>
-              <p class="setup-helper">Nomor awal akan dikunci setelah setup. Siapkan PIN dengan aman karena PIN ini menjadi satu-satunya akses ke AutoDoc.</p>
+              <p class="setup-helper">PIN dicocokkan di server dengan secret Supabase dan disimpan ke database hanya sebagai hash bcrypt. Nilai PIN tidak dikirim kembali ke browser.</p>
               <p id="setupError" class="setup-error" role="alert" aria-live="polite"></p>
               <button class="submit-button" id="setupButton" type="submit">
                 Simpan Setup & Masuk
@@ -461,6 +457,9 @@
       const loginButton = document.getElementById("loginButton");
       const setupButton = document.getElementById("setupButton");
 
+      const API_URL = "https://cnbomblvtddkmtojzpyd.supabase.co/functions/v1/autodoc-auth";
+      const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_xSbC7RqRGFkZVaqkFYJ7OA_DJ9qSuyv";
+
       function setStatus(message, state) {
         authStatus.textContent = message || "";
         authStatus.dataset.state = state || "";
@@ -492,11 +491,15 @@
         document.title = "Setup Awal — AutoDoc";
       }
 
-      async function requestJson(url, options) {
-        const response = await fetch(url, {
-          credentials: "same-origin",
-          cache: "no-store",
-          ...options
+      async function requestJson(route, options = {}) {
+        const headers = new Headers(options.headers || {});
+        headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
+        headers.set("Accept", "application/json");
+        const response = await fetch(API_URL + "/" + route.replace(/^\/+/, ""), {
+          ...options,
+          headers,
+          credentials: "include",
+          cache: "no-store"
         });
         let payload = {};
         try { payload = await response.json(); } catch (_) {}
@@ -508,8 +511,8 @@
         return payload;
       }
 
-      async function postJson(url, body) {
-        return requestJson(url, {
+      async function postJson(route, body) {
+        return requestJson(route, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)
@@ -539,7 +542,7 @@
         loginButton.disabled = true;
         loginButton.textContent = "Memeriksa akses...";
         try {
-          await postJson("/api/auth/login", { token });
+          await postJson("auth/login", { token });
           tokenInput.value = "";
           showHome();
         } catch (error) {
@@ -558,16 +561,11 @@
         setupError.textContent = "";
 
         const token = document.getElementById("setupToken").value.trim();
-        const confirmToken = document.getElementById("setupTokenConfirm").value.trim();
         const startNumberSj = Number(document.getElementById("startNumberSj").value);
         const startNumberBast = Number(document.getElementById("startNumberBast").value);
 
         if (token.length < 6 || token.length > 128) {
           setupError.textContent = "PIN/token harus berisi 6 sampai 128 karakter.";
-          return;
-        }
-        if (token !== confirmToken) {
-          setupError.textContent = "Konfirmasi PIN/token tidak sama.";
           return;
         }
         if (!Number.isSafeInteger(startNumberSj) || startNumberSj < 1 ||
@@ -579,11 +577,10 @@
         setupButton.disabled = true;
         setupButton.textContent = "Menyimpan pengaturan...";
         try {
-          await postJson("/api/setup/complete", {
-            token, confirmToken, startNumberSj, startNumberBast
+          await postJson("setup/complete", {
+            token, startNumberSj, startNumberBast
           });
           document.getElementById("setupToken").value = "";
-          document.getElementById("setupTokenConfirm").value = "";
           showHome();
         } catch (error) {
           setupError.textContent = error.message || "Setup Awal tidak berhasil.";
@@ -596,7 +593,7 @@
       logoutButton.addEventListener("click", async () => {
         logoutButton.disabled = true;
         try {
-          await postJson("/api/auth/logout", {});
+          await postJson("auth/logout", {});
           tokenInput.value = "";
           showLogin();
           tokenInput.focus();
@@ -611,14 +608,14 @@
         authPage.hidden = false;
         homePage.hidden = true;
         try {
-          const setup = await requestJson("/api/setup/status");
+          const setup = await requestJson("setup/status");
           if (setup.setupRequired) {
             showSetup();
             return;
           }
 
           showLogin();
-          const session = await requestJson("/api/auth/session");
+          const session = await requestJson("auth/session");
           if (session.authenticated) showHome();
         } catch (error) {
           showLogin();
