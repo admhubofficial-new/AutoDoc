@@ -59,12 +59,11 @@ Edge Function memakai variabel default proyek Supabase:
 
 - Push ke `main` memicu GitHub Pages untuk memperbarui frontend statis.
 - Edge Function `autodoc-auth` perlu dideploy ke proyek Supabase dengan JWT gateway verification dimatikan; fungsi melakukan validasi origin, PIN, session, dan pembatasan percobaan sendiri.
-- Publishable key di `index.html` adalah public key dan memang untuk frontend. Jangan pernah menaruh `service_role` atau `sb_secret` di sana.
+- Publishable key di `config.js` adalah public key dan memang untuk frontend. Jangan pernah menaruh `service_role` atau `sb_secret` di sana.
 
 ### Pengujian
 
 - `npm test` — unit test langsung terhadap helper sesi dan validasi PIN yang dipakai Edge Function aktif.
-- Modul server lama berbasis API routes dihapus agar tidak ada dua implementasi autentikasi yang membingungkan.
 - `deno check supabase/functions/autodoc-auth/index.ts` — pemeriksaan tipe Edge Function.
 
 ### Catatan data sumber
