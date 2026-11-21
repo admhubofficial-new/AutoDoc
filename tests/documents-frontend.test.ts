@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../documents.js", import.meta.url), "utf8");
+const organolepticSource = readFileSync(new URL("../organoleptic-print.js", import.meta.url), "utf8");
+const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
   assert.doesNotMatch(source, /^\s*token\s*$/m);
@@ -82,24 +84,22 @@ test("meal time supports pagi, siang, and sore with siang selected by default", 
 
 test("organoleptic printing matches the approved A4 portrait template", () => {
   assert.match(source, /FORMULIR UJI ORGANOLEPTIK/);
-  assert.match(source, /@page\{size:A4 portrait;margin:0\}/);
+  assert.match(source, /@page\\{size:A4 portrait;margin:0\\}/);
   assert.match(source, /break-after:page/);
-  assert.match(source, /function organolepticSheet/);
-  assert.match(source, /function organolepticTable/);
-  for (const aspect of ["Aroma", "Suhu", "Penampilan", "Citarasa", "Tekstur"]) assert.match(source, new RegExp(aspect));
+  assert.match(organolepticSource, /function organolepticSheet/);
+  assert.match(organolepticSource, /function organolepticTable/);
+  for (const aspect of ["Aroma", "Suhu", "Penampilan", "Citarasa", "Tekstur"]) assert.match(organolepticSource, new RegExp(aspect));
 });
-
 test("organoleptic checkboxes and handwritten fields stay blank", () => {
-  assert.match(source, /for\(let i=0;i<10;i\+\+\)row\.append\(doc\.createElement\("td"\)\)/);
-  assert.match(source, /organolepticElement\(doc,"div","followup","Tindak Lanjut:"\)/);
-  assert.match(source, /organolepticElement\(doc,"div","dots"\)/);
+  assert.match(organolepticSource, /for\\(let i=0;i<10;i\\+\\+\\)row\\.append\\(doc\\.createElement\\("td"\\)\\)/);
+  assert.match(organolepticSource, /organolepticElement\\(doc,"div","followup","Tindak Lanjut:"\\)/);
+  assert.match(organolepticSource, /organolepticElement\\(doc,"div","dots"\\)/);
 });
-
 test("organoleptic forms use distribution snapshots and five blank menu rows", () => {
   assert.match(source, /currentDistribution\.nama_ahli_gizi/);
   assert.match(source, /currentDistribution\.waktu_makan/);
   assert.match(source, /currentDistribution\.menu_items/);
-  assert.match(source, /Array\(5\)\.fill\(""\)/);
+  assert.match(organolepticSource, /Array\(5\)\.fill\(""\)/);
   assert.match(source, /Nama Posyandu/);
   assert.match(source, /Nama Sekolah/);
 });
@@ -120,9 +120,8 @@ test("organoleptic printing does not create or update numbered documents", () =>
 });
 
 test("organoleptic user data is inserted with textContent rather than HTML interpolation", () => {
-  const body = source.slice(source.indexOf("function organolepticElement"), source.indexOf("function showRealization"));
-  assert.ok(body.includes('element.textContent=String(text??"")'));
-  assert.doesNotMatch(body, /innerHTML|insertAdjacentHTML/);
+  assert.ok(organolepticSource.includes('element.textContent=String(text??"")'));
+  assert.doesNotMatch(organolepticSource, /innerHTML|insertAdjacentHTML/);
 });
 
 test("printed Surat Jalan has three role-specific signatories", () => {
@@ -153,4 +152,16 @@ test("archive global search and bulk deletion use explicit page selection and re
   assert.match(source, /api\("docs\/delete-history"/);
   assert.match(source, /distribution_ids:ids/);
   assert.match(source, /const token=pin\.value/);
+});
+
+
+test("organoleptic renderer module loads before documents and exposes the expected API", () => {
+  const rendererTag = htmlSource.indexOf('src="./organoleptic-print.js?v=organoleptic-render-module-20261122"');
+  const documentsTag = htmlSource.indexOf('src="./documents.js?v=documents-print-module-20261122"');
+  assert.ok(rendererTag >= 0 && documentsTag > rendererTag);
+  assert.match(organolepticSource, /window\.AutoDocOrganolepticPrint\s*=\s*Object\.freeze/);
+  for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
+    assert.match(organolepticSource, new RegExp(name));
+  }
+  assert.match(source, /window\.AutoDocOrganolepticPrint/);
 });
