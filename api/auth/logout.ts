@@ -1,7 +1,7 @@
-import { sameOriginAllowed } from "../../lib/server/env.js";
-import { adminClient } from "../../lib/server/supabase.js";
-import { clearAuthCookies } from "../../lib/server/session.js";
-import { json, methodNotAllowed, publicError } from "../../lib/server/http.js";
+import { sameOriginAllowed } from "../../lib/server/env.ts";
+import { clearAuthCookies } from "../../lib/server/session.ts";
+import { insertRow } from "../../lib/server/supabase.ts";
+import { json, methodNotAllowed, publicError } from "../../lib/server/http.ts";
 
 export default {
   async fetch(request: Request): Promise<Response> {
@@ -11,8 +11,7 @@ export default {
     }
 
     try {
-      const client = adminClient();
-      const { error } = await client.from("audit_log").insert({
+      await insertRow("audit_log", {
         aksi: "logout",
         tabel: "settings",
         record_key: "1",
@@ -21,13 +20,10 @@ export default {
         nilai_baru: { session: "berakhir" },
         detail: { metode: "logout" },
       });
-      if (error) throw error;
 
-      return json(
-        { success: true },
-        200,
-        { "Set-Cookie": clearAuthCookies(request) },
-      );
+      return json({ success: true }, 200, {
+        "Set-Cookie": clearAuthCookies(request),
+      });
     } catch (error) {
       return publicError(error);
     }
