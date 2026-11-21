@@ -73,7 +73,7 @@ function init(){
     if(!rows.length||rows.length>500)throw Error("Jumlah baris harus 1–500.");
     if(rows.some(row=>!row.kelompok||!row.nama||!row.jenjang))throw Error("Setiap baris wajib memiliki kelompok, nama, dan jenjang.");
     if(!confirm("Impor "+rows.length+" penerima? Kelompok+nama yang sama akan diperbarui; data lain tidak dihapus."))return;
-    const result=await api("master/import",{rows});await load();message.textContent=result.imported+" baris berhasil diimpor."window.dispatchEvent(new Event("autodoc:data-changed"));;
+    const result=await api("master/import",{rows});await load();message.textContent=result.imported+" baris berhasil diimpor.";window.dispatchEvent(new Event("autodoc:data-changed"));
    }catch(e){message.textContent=e.message;message.style.color="#a43c32"}
   };
   input.click();
