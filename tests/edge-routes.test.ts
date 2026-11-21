@@ -56,7 +56,10 @@ test("distribution archive endpoint requires a valid session and reads only rece
   const body = functionBody("handleDocsDays", "handleDocsList");
   assert.match(body, /validSession\(request\)/);
   assert.match(body, /order: "tanggal\.desc"/);
-  assert.match(body, /limit: "60"/);
+  assert.match(body, /limit: "61"/);
+  assert.match(body, /rawOffset/);
+  assert.match(body, /offset: String\(offset\)/);
+  assert.match(body, /has_more: rows.length > 60/);
   assert.match(source, /case "docs\/days": return await handleDocsDays\(request\)/);
 });
 
@@ -71,6 +74,9 @@ test("document creation uses a guided flow and recipients are explicitly selecte
 test("archive provides searchable distribution days, recipient pairs, and bulk print actions", () => {
   assert.match(documentsUi, /api\("docs\/days"\)/);
   assert.match(documentsUi, /docsDaysSearch/);
+  assert.match(documentsUi, /docs\/days\?offset=/);
+  assert.match(documentsUi, /docsDaysPrevious/);
+  assert.match(documentsUi, /docsDaysNext/);
   assert.match(documentsUi, /function renderDocumentGroup/);
   assert.match(documentsUi, /function printDocuments/);
   assert.match(documentsUi, /docsPrintSj/);
