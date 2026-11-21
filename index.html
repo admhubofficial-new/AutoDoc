@@ -241,7 +241,7 @@
     .home-actions{display:flex;align-items:center;gap:8px}
     .logout-button{display:flex;align-items:center;justify-content:center;width:100%;min-height:40px;padding:0 13px;border:1px solid #e3e9e3;border-radius:9px;background:#fff;color:#647268;font-size:11px;font-weight:650}
     .logout-button:hover{border-color:#d7e2d8;background:#f7f9f7;color:#294c38}
-    .home-menu-toggle{display:none;width:38px;height:36px;border:1px solid #e1e6e2;border-radius:9px;background:#fff;color:#1e5a43;font-size:19px}
+    .home-menu-toggle{display:inline-grid;place-items:center;flex:0 0 38px;width:38px;height:36px;border:1px solid #e1e6e2;border-radius:9px;background:#fff;color:#1e5a43;font-size:18px}
     .home-workspace{min-width:0;min-height:100vh;min-height:100svh}
     .home-pagebar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:58px;padding:0 clamp(22px,4vw,52px);border-bottom:1px solid #e7ebe7;background:#fff}
     .home-pagebar-label{display:flex;align-items:center;gap:8px;color:#7a887f;font-size:11px;font-weight:550}
@@ -269,12 +269,9 @@
       .home-brand-name{font-size:15px}
       .home-brand-sub{font-size:9px}
       .home-nav-caption,.home-sidebar-footer{display:none}
-      .home-nav{display:flex;position:absolute;z-index:50;top:63px;left:12px;right:12px;width:auto;padding:10px;border:1px solid #e1e8e1;border-radius:12px;background:#fff;box-shadow:0 14px 34px rgba(25,55,40,.12);flex-direction:column;align-items:stretch;transform:translateY(-8px);visibility:hidden;opacity:0;pointer-events:none;transition:transform .16s ease,opacity .16s ease,visibility .16s ease}
-      .home-nav.open{transform:translateY(0);visibility:visible;opacity:1;pointer-events:auto}
+      .home-nav{display:grid;position:static;width:100%;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;gap:5px;flex-direction:column;align-items:stretch}
       .home-nav button{min-height:42px;text-align:left}
-      .home-nav button[data-home-nav=print]{margin:3px 0}
       .home-actions{margin:0;gap:8px}
-      .home-menu-toggle{display:inline-grid;place-items:center}
       .logout-button{width:auto;min-height:36px;padding:0 11px;font-size:10px}
       .home-pagebar{height:48px;padding:0 18px}
       .home-pagebar-label{font-size:10px}
@@ -291,6 +288,45 @@
     }
     @media(prefers-reduced-motion:reduce){
       .home-nav,.home-nav button{transition:none}
+    }
+
+    /* Sidebar adaptif: rail di desktop, drawer yang selalu bisa dipanggil di mobile. */
+    .home-page{transition:grid-template-columns .2s ease}
+    .home-page.sidebar-collapsed{grid-template-columns:76px minmax(0,1fr)}
+    .home-page.sidebar-collapsed .home-topbar{width:76px;padding-inline:10px}
+    .home-page.sidebar-collapsed .home-brand{justify-content:center;padding-inline:0}
+    .home-page.sidebar-collapsed .home-brand>div,
+    .home-page.sidebar-collapsed .home-nav-caption,
+    .home-page.sidebar-collapsed .home-nav button>span:last-child,
+    .home-page.sidebar-collapsed .home-sidebar-footer>span:last-child{display:none}
+    .home-page.sidebar-collapsed .home-nav button{justify-content:center;padding-inline:0}
+    .home-page.sidebar-collapsed .home-sidebar-footer{justify-content:center;padding-inline:0}
+    .home-page.sidebar-collapsed .logout-button{font-size:0;padding:0}
+    .home-page.sidebar-collapsed .logout-button::after{content:"↪";font-size:17px}
+    .home-page .home-menu-toggle{display:inline-grid;place-items:center}
+    .home-menu-toggle svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round}
+    .home-menu-toggle:focus-visible{outline:3px solid #a9c9b7;outline-offset:3px}
+    .home-sidebar-backdrop{display:none}
+    @media(max-width:720px){
+      .home-page,.home-page.sidebar-collapsed{display:block;min-height:100svh}
+      .home-topbar,.home-page.sidebar-collapsed .home-topbar{position:fixed;z-index:61;top:0;bottom:0;left:0;width:min(290px,86vw);height:100svh;min-height:0;padding:22px 16px 16px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;border:0;border-right:1px solid #e3e9e3;background:#fff;box-shadow:16px 0 40px rgba(25,55,40,.12);transform:translateX(-105%);visibility:hidden;transition:transform .2s ease,visibility .2s ease}
+      .home-page.mobile-nav-open .home-topbar{transform:translateX(0);visibility:visible}
+      .home-brand,.home-page.sidebar-collapsed .home-brand{justify-content:flex-start;padding:0 8px 28px;gap:11px}
+      .home-brand>div,.home-nav-caption,.home-nav button>span:last-child,.home-sidebar-footer>span:last-child{display:block!important}
+      .home-nav-caption{margin:0 10px 9px}
+      .home-nav,.home-page.sidebar-collapsed .home-nav{display:grid;position:static;width:100%;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;gap:5px}
+      .home-nav button,.home-page.sidebar-collapsed .home-nav button{justify-content:flex-start;padding:0 12px}
+      .home-sidebar-footer,.home-page.sidebar-collapsed .home-sidebar-footer{display:flex;justify-content:flex-start;margin-top:auto;padding:16px 9px 13px}
+      .home-actions{margin-top:16px;justify-content:flex-start}
+      .home-page.sidebar-collapsed .logout-button{font-size:10px;padding:0 11px}
+      .home-page.sidebar-collapsed .logout-button::after{content:none}
+      .home-sidebar-backdrop{position:fixed;z-index:60;inset:0;display:block;border:0;background:rgba(17,35,26,.34);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease,visibility .2s ease}
+      .home-page.mobile-nav-open .home-sidebar-backdrop{opacity:1;visibility:visible;pointer-events:auto}
+      .home-workspace{min-height:100svh}
+      .home-pagebar{position:sticky;z-index:30;top:0;justify-content:flex-start}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .home-nav,.home-nav button,.home-page,.home-topbar,.home-sidebar-backdrop{transition:none}
     }
     /* Dokumen dan Data Master menggunakan ruang kerja penuh, bukan dialog mengambang */
     body .docs-overlay,body .dm-overlay{padding:0;align-items:stretch;justify-content:stretch;background:#f6f7f5}
@@ -405,7 +441,7 @@
   </main>
 
   <main id="homePage" class="home-page" hidden>
-    <aside class="home-topbar" aria-label="Navigasi AutoDoc">
+    <aside class="home-topbar" id="homeSidebar" aria-label="Navigasi AutoDoc">
       <div class="home-brand">
         <img src="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png" alt="Logo BGN" width="40" height="40">
         <div><div class="home-brand-name">AutoDoc</div><div class="home-brand-sub">SPPG Darmaraja 01</div></div>
@@ -434,12 +470,13 @@
         <span><strong>SPPG Darmaraja 01</strong><small>Administrasi distribusi MBG</small></span>
       </div>
       <div class="home-actions">
-        <button type="button" class="home-menu-toggle" id="homeMenuToggle" aria-label="Buka menu" aria-expanded="false" aria-controls="homeNav">☰</button>
         <button type="button" class="logout-button" id="logoutButton">Keluar</button>
       </div>
     </aside>
+    <button type="button" class="home-sidebar-backdrop" id="homeSidebarBackdrop" aria-label="Tutup navigasi" tabindex="-1"></button>
     <div class="home-workspace">
       <header class="home-pagebar">
+        <button type="button" class="home-menu-toggle" id="homeMenuToggle" aria-label="Ciutkan sidebar" aria-expanded="true" aria-controls="homeSidebar" title="Ciutkan sidebar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
         <div class="home-pagebar-label"><span class="home-pagebar-dot" aria-hidden="true"></span>Sistem administrasi dokumen</div>
         <time class="home-date-label" id="homeToday"></time>
       </header>
@@ -613,10 +650,28 @@
       const homeNav = document.getElementById("homeNav");
       const menuToggle = document.getElementById("homeMenuToggle");
       const homeToday = document.getElementById("homeToday");
+      const sidebarBackdrop = document.getElementById("homeSidebarBackdrop");
+      const isMobileSidebar = () => window.matchMedia("(max-width: 720px)").matches;
       function closeHomeNav() {
-        homeNav.classList.remove("open");
-        menuToggle.setAttribute("aria-expanded", "false");
-        menuToggle.setAttribute("aria-label", "Buka menu");
+        homePage.classList.remove("mobile-nav-open");
+        const expanded = !homePage.classList.contains("sidebar-collapsed");
+        menuToggle.setAttribute("aria-expanded", String(expanded));
+        menuToggle.setAttribute("aria-label", expanded ? "Ciutkan sidebar" : "Buka sidebar");
+        menuToggle.title = expanded ? "Ciutkan sidebar" : "Buka sidebar";
+      }
+      function toggleSidebar() {
+        if (isMobileSidebar()) {
+          const open = !homePage.classList.contains("mobile-nav-open");
+          homePage.classList.toggle("mobile-nav-open", open);
+          menuToggle.setAttribute("aria-expanded", String(open));
+          menuToggle.setAttribute("aria-label", open ? "Tutup sidebar" : "Buka sidebar");
+          menuToggle.title = open ? "Tutup sidebar" : "Buka sidebar";
+        } else {
+          const collapsed = homePage.classList.toggle("sidebar-collapsed");
+          menuToggle.setAttribute("aria-expanded", String(!collapsed));
+          menuToggle.setAttribute("aria-label", collapsed ? "Buka sidebar" : "Ciutkan sidebar");
+          menuToggle.title = collapsed ? "Buka sidebar" : "Ciutkan sidebar";
+        }
       }
       function updateHomeDate() {
         homeToday.textContent = new Intl.DateTimeFormat("id-ID", {
@@ -642,18 +697,13 @@
         setHomeNav("archive");
         window.AutoDocDocuments?.openArchive(date);
       };
-      menuToggle.addEventListener("click", () => {
-        const open = !homeNav.classList.contains("open");
-        homeNav.classList.toggle("open", open);
-        menuToggle.setAttribute("aria-expanded", String(open));
-        menuToggle.setAttribute("aria-label", open ? "Tutup menu" : "Buka menu");
-      });
-      document.addEventListener("click", (event) => {
-        if (!homeNav.classList.contains("open")) return;
-        if (!homeNav.contains(event.target) && !menuToggle.contains(event.target)) closeHomeNav();
-      });
+      menuToggle.addEventListener("click", toggleSidebar);
+      sidebarBackdrop.addEventListener("click", closeHomeNav);
       document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && homeNav.classList.contains("open")) closeHomeNav();
+        if (event.key === "Escape" && homePage.classList.contains("mobile-nav-open")) closeHomeNav();
+      });
+      window.addEventListener("resize", () => {
+        if (!isMobileSidebar()) closeHomeNav();
       });
       homeNav.addEventListener("click", (event) => {
         const button = event.target.closest("[data-home-nav]");
