@@ -217,40 +217,80 @@
     .auth-status[data-state="error"] { color: #B42318; }
     .auth-status[data-state="success"] { color: #286548; }
 
-    /* Beranda ringkas */
-    .home-page{min-height:100vh;min-height:100svh;background:#F6F7F5;overflow-x:hidden}
-    .home-topbar{height:64px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 clamp(16px,4vw,48px);border-bottom:1px solid #E1E6E2;background:#fff}
-    .home-brand{display:flex;align-items:center;gap:10px;min-width:190px}
-    .home-brand img{width:36px;height:36px;object-fit:contain}
-    .home-brand-name{color:#1E5A43;font-size:15px;font-weight:750;line-height:1.25}
-    .home-brand-sub{margin-top:2px;color:#718077;font-size:10px}
-    .home-nav{display:flex;align-items:center;justify-content:center;gap:5px}
-    .home-nav button{min-height:36px;padding:0 13px;border:0;border-radius:9px;background:transparent;color:#53645A;font:inherit;font-size:12px;font-weight:600}
-    .home-nav button[aria-current=page]{background:#E8F0EB;color:#1E5A43}
-    .home-nav button:hover{background:#F0F4F0}
+    /* Workspace AutoDoc */
+    .home-page{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh;min-height:100svh;background:#f6f7f5;color:#1d3026}
+    .home-topbar{position:sticky;top:0;align-self:start;display:flex;flex-direction:column;align-items:stretch;gap:0;width:248px;height:100vh;height:100svh;min-height:620px;padding:28px 17px 18px;border:0;border-right:1px solid #e3e9e3;background:#fff}
+    .home-brand{display:flex;align-items:center;gap:11px;min-width:0;padding:0 8px 28px}
+    .home-brand img{width:40px;height:40px;object-fit:contain}
+    .home-brand-name{color:#1e5a43;font-size:17px;font-weight:750;line-height:1.2;letter-spacing:-.35px}
+    .home-brand-sub{margin-top:4px;color:#7b887f;font-size:10px;line-height:1.4}
+    .home-nav-caption{margin:0 10px 9px;color:#98a39b;font-size:9px;font-weight:750;letter-spacing:1.1px}
+    .home-nav{display:grid;gap:5px}
+    .home-nav button{display:flex;align-items:center;gap:12px;width:100%;min-height:43px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:#66746b;text-align:left;font:inherit;font-size:12px;font-weight:600;transition:background .15s ease,color .15s ease}
+    .home-nav button:hover{background:#f3f6f3;color:#254a36}
+    .home-nav button[aria-current=page]{background:#edf3ee;color:#1e5a43;font-weight:700}
+    .home-nav button[data-home-nav=print]{margin:5px 0 3px;background:#1e5a43;color:#fff;box-shadow:0 3px 8px rgba(30,90,67,.12)}
+    .home-nav button[data-home-nav=print]:hover{background:#194d3a}
+    .home-nav button[data-home-nav=print][aria-current=page]{background:#174b39;color:#fff}
+    .home-nav-icon{display:grid;place-items:center;flex:0 0 19px;width:19px;height:19px;color:currentColor}
+    .home-nav-icon svg{display:block;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    .home-sidebar-footer{display:flex;align-items:center;gap:10px;margin-top:auto;padding:16px 9px 13px;border-top:1px solid #edf0ec}
+    .home-sidebar-mark{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:9px;background:#edf4ee;color:#1e5a43;font-size:12px;font-weight:800}
+    .home-sidebar-footer strong{display:block;color:#415249;font-size:10px;font-weight:700}
+    .home-sidebar-footer small{display:block;margin-top:3px;color:#8a968e;font-size:9px}
     .home-actions{display:flex;align-items:center;gap:8px}
-    .logout-button{min-height:36px;padding:0 13px;border:1px solid #E1E6E2;border-radius:9px;background:#fff;color:#53645A;font-size:12px;font-weight:650}
-    .logout-button:hover{background:#F6F8F6}
-    .home-menu-toggle{display:none;width:38px;height:36px;border:1px solid #E1E6E2;border-radius:9px;background:#fff;color:#1E5A43;font-size:19px}
-    .home-content{width:min(1120px,calc(100% - 40px));margin:0 auto;padding:34px 0 56px}
-    .home-heading{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:20px}
-    .home-heading h1{margin:0;color:#1d3026;font-size:25px;line-height:1.25;font-weight:700;letter-spacing:-.6px}
-    .home-heading p{margin:5px 0 0;color:#718077;font-size:12px}
-    .home-dashboard{min-height:220px}
-    .home-legacy-launchers{display:none!important}
-    .home-legacy-launchers .docs-launcher{display:none!important}
-    .logout-button:focus-visible,.home-nav button:focus-visible,.home-menu-toggle:focus-visible{outline:3px solid #A9C9B7;outline-offset:2px}
+    .logout-button{display:flex;align-items:center;justify-content:center;width:100%;min-height:40px;padding:0 13px;border:1px solid #e3e9e3;border-radius:9px;background:#fff;color:#647268;font-size:11px;font-weight:650}
+    .logout-button:hover{border-color:#d7e2d8;background:#f7f9f7;color:#294c38}
+    .home-menu-toggle{display:none;width:38px;height:36px;border:1px solid #e1e6e2;border-radius:9px;background:#fff;color:#1e5a43;font-size:19px}
+    .home-workspace{min-width:0;min-height:100vh;min-height:100svh}
+    .home-pagebar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:58px;padding:0 clamp(22px,4vw,52px);border-bottom:1px solid #e7ebe7;background:#fff}
+    .home-pagebar-label{display:flex;align-items:center;gap:8px;color:#7a887f;font-size:11px;font-weight:550}
+    .home-pagebar-dot{width:7px;height:7px;border-radius:50%;background:#55936b}
+    .home-date-label{color:#89948c;font-size:11px;white-space:nowrap}
+    .home-content{width:min(1160px,calc(100% - 80px));margin:0 auto;padding:38px 0 58px}
+    .home-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}
+    .home-eyebrow{display:block;margin-bottom:8px;color:#7a887f;font-size:9px;font-weight:750;letter-spacing:1.2px}
+    .home-heading h1{margin:0;color:#20372a;font-size:26px;line-height:1.22;font-weight:720;letter-spacing:-.7px}
+    .home-heading p{margin:7px 0 0;color:#7b887f;font-size:12px;line-height:1.5}
+    .home-create-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;min-height:43px;padding:0 17px;border:1px solid #1e5a43;border-radius:9px;background:#1e5a43;color:#fff;font-size:12px;font-weight:700;box-shadow:0 3px 8px rgba(30,90,67,.10)}
+    .home-create-button:hover{background:#194d3a}
+    .home-create-button:focus-visible,.logout-button:focus-visible,.home-nav button:focus-visible,.home-menu-toggle:focus-visible{outline:3px solid #a9c9b7;outline-offset:3px}
+    @media(max-width:900px){
+      .home-page{grid-template-columns:218px minmax(0,1fr)}
+      .home-topbar{width:218px;padding-inline:13px}
+      .home-content{width:calc(100% - 48px);padding-top:30px}
+      .home-heading h1{font-size:24px}
+    }
     @media(max-width:720px){
-      .home-topbar{position:relative;padding:0 16px}
-      .home-brand{min-width:0}
+      .home-page{display:block}
+      .home-topbar{position:sticky;z-index:40;top:0;width:auto;height:64px;min-height:64px;padding:0 16px;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;border:0;border-bottom:1px solid #e3e9e3;background:#fff}
+      .home-brand{padding:0;gap:9px}
+      .home-brand img{width:34px;height:34px}
+      .home-brand-name{font-size:15px}
+      .home-brand-sub{font-size:9px}
+      .home-nav-caption,.home-sidebar-footer{display:none}
+      .home-nav{display:flex;position:absolute;z-index:50;top:63px;left:12px;right:12px;width:auto;padding:10px;border:1px solid #e1e8e1;border-radius:12px;background:#fff;box-shadow:0 14px 34px rgba(25,55,40,.12);flex-direction:column;align-items:stretch;transform:translateY(-8px);visibility:hidden;opacity:0;pointer-events:none;transition:transform .16s ease,opacity .16s ease,visibility .16s ease}
+      .home-nav.open{transform:translateY(0);visibility:visible;opacity:1;pointer-events:auto}
+      .home-nav button{min-height:42px;text-align:left}
+      .home-nav button[data-home-nav=print]{margin:3px 0}
+      .home-actions{margin:0;gap:8px}
       .home-menu-toggle{display:inline-grid;place-items:center}
-      .home-nav{display:flex;position:absolute;z-index:20;top:63px;right:0;width:min(320px,calc(100vw - 24px));padding:10px 14px 14px;border:1px solid #E1E6E2;border-radius:0 0 0 14px;background:#fff;box-shadow:0 12px 24px rgba(25,55,40,.10);flex-direction:column;align-items:stretch;transform:translateX(110%);visibility:hidden;pointer-events:none;transition:transform .18s ease,visibility .18s ease}
-      .home-nav.open{transform:translateX(0);visibility:visible;pointer-events:auto}
-      .home-nav button{text-align:left;min-height:42px}
-      .home-actions{gap:7px}
-      .home-content{width:calc(100% - 32px);padding:27px 0 42px}
-      .home-heading{align-items:flex-start;flex-direction:column;gap:4px}
+      .logout-button{width:auto;min-height:36px;padding:0 11px;font-size:10px}
+      .home-pagebar{height:48px;padding:0 18px}
+      .home-pagebar-label{font-size:10px}
+      .home-date-label{font-size:10px}
+      .home-content{width:calc(100% - 36px);padding:27px 0 42px}
+      .home-heading{align-items:flex-start;flex-direction:column;gap:15px;margin-bottom:20px}
       .home-heading h1{font-size:23px}
+      .home-create-button{width:100%}
+    }
+    @media(max-width:420px){
+      .home-pagebar{align-items:flex-start;justify-content:center;flex-direction:column;gap:3px;height:auto;min-height:51px;padding:9px 18px}
+      .home-date-label{font-size:9px}
+      .home-content{width:calc(100% - 32px);padding-top:24px}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .home-nav,.home-nav button{transition:none}
     }
     [hidden] { display: none !important; }
 
@@ -354,28 +394,56 @@
   </main>
 
   <main id="homePage" class="home-page" hidden>
-    <header class="home-topbar">
+    <aside class="home-topbar" aria-label="Navigasi AutoDoc">
       <div class="home-brand">
-        <img src="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png" alt="Logo BGN" width="36" height="36">
+        <img src="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png" alt="Logo BGN" width="40" height="40">
         <div><div class="home-brand-name">AutoDoc</div><div class="home-brand-sub">SPPG Darmaraja 01</div></div>
       </div>
+      <div class="home-nav-caption">MENU UTAMA</div>
       <nav class="home-nav" id="homeNav" aria-label="Navigasi utama">
-        <button type="button" data-home-nav="home" aria-current="page">Beranda</button>
-        <button type="button" data-home-nav="print">Buat Dokumen</button>
-        <button type="button" data-home-nav="archive">Arsip</button>
-        <button type="button" data-home-nav="master">Data Master</button>
+        <button type="button" data-home-nav="home" aria-current="page">
+          <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5M9 21v-7h6v7"/></svg></span>
+          <span>Beranda</span>
+        </button>
+        <button type="button" data-home-nav="print">
+          <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span>Buat Dokumen</span>
+        </button>
+        <button type="button" data-home-nav="archive">
+          <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+          <span>Arsip</span>
+        </button>
+        <button type="button" data-home-nav="master">
+          <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span>
+          <span>Data Master</span>
+        </button>
       </nav>
+      <div class="home-sidebar-footer">
+        <span class="home-sidebar-mark" aria-hidden="true">AD</span>
+        <span><strong>SPPG Darmaraja 01</strong><small>Administrasi distribusi MBG</small></span>
+      </div>
       <div class="home-actions">
         <button type="button" class="home-menu-toggle" id="homeMenuToggle" aria-label="Buka menu" aria-expanded="false" aria-controls="homeNav">☰</button>
         <button type="button" class="logout-button" id="logoutButton">Keluar</button>
       </div>
-    </header>
-    <section class="home-content">
-      <div class="home-heading">
-        <div><h1>Beranda</h1><p id="homeToday"></p></div>
-      </div>
-      <section id="opsDashboard" class="home-dashboard" aria-label="Ringkasan operasional"></section>
-    </section>
+    </aside>
+    <div class="home-workspace">
+      <header class="home-pagebar">
+        <div class="home-pagebar-label"><span class="home-pagebar-dot" aria-hidden="true"></span>Sistem administrasi dokumen</div>
+        <time class="home-date-label" id="homeToday"></time>
+      </header>
+      <section class="home-content">
+        <div class="home-heading">
+          <div>
+            <span class="home-eyebrow">SPPG DARMARAJA 01</span>
+            <h1>Ringkasan operasional</h1>
+            <p>Pantau distribusi dan kelola dokumen dalam satu tempat.</p>
+          </div>
+          <button type="button" class="home-create-button" id="homeCreateShortcut">+ Buat Dokumen</button>
+        </div>
+        <section id="opsDashboard" class="home-dashboard" aria-label="Ringkasan operasional"></section>
+      </section>
+    </div>
   </main>
 
   <script src="./config.js?v=shared-config-20261121"></script>
@@ -564,6 +632,9 @@
         setHomeNav("archive");
         window.AutoDocDocuments?.openArchive(date);
       };
+      document.getElementById("homeCreateShortcut").addEventListener("click", () => {
+        window.AutoDocOpenDocs("create");
+      });
       menuToggle.addEventListener("click", () => {
         const open = !homeNav.classList.contains("open");
         homeNav.classList.toggle("open", open);
@@ -629,6 +700,6 @@
   <script src="./master-utils.js?v=master-csv-hardening-20261121" defer></script>
   <script src="./master.js?v=master-identitas-ahli-gizi-20261122" defer></script>
   <script src="./documents.js?v=three-party-signatures-20261122" defer></script>
-  <script src="./dashboard.js?v=ahli-gizi-reminder-20261122" defer></script>
+  <script src="./dashboard.js?v=operations-workspace-20261122" defer></script>
 </body>
 </html>
