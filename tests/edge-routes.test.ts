@@ -126,3 +126,23 @@ test("home dashboard avoids duplicate latest distribution and emphasizes global 
   assert.doesNotMatch(dashboardUi, /action\("Lihat arsip", false/);
   assert.match(indexHtml, /dashboard\.js\?v=home-summary-polish-20261121/);
 });
+
+test("SPPG identity exposes separate Kepala SPPG, Kepala SPPI, and Ahli Gizi Dapur fields", () => {
+  assert.match(masterUi, /\["nama_kepala_sppg","Nama Kepala SPPG","text"\]/);
+  assert.match(masterUi, /\["nama_kepala_sppi","Nama Kepala SPPI","text"\]/);
+  assert.match(masterUi, /\["nama_ahli_gizi","Nama Ahli Gizi Dapur","text"\]/);
+  assert.match(masterUi, /data\.nama_kepala_sppg/);
+  assert.match(masterUi, /wrap\.append\(el\("small","dm-hint"/);
+  assert.match(source, /if \("nama_kepala_sppi" in input\)/);
+  assert.match(source, /if \("nama_ahli_gizi" in input\)/);
+});
+
+test("dashboard reports missing kitchen nutritionist name independently from SPPG identity", () => {
+  const body = functionBody("handleDashboardSummary", "handleDocsCreate");
+  assert.match(body, /nama_kepala_sppi,nama_ahli_gizi/);
+  assert.match(body, /const ahliGiziMissing = !settings \|\| !String\(settings\.nama_ahli_gizi/);
+  assert.match(body, /ahli_gizi_missing: ahliGiziMissing \? 1 : 0/);
+  assert.match(dashboardUi, /counts\.ahli_gizi_missing/);
+  assert.match(dashboardUi, /Nama Ahli Gizi Dapur belum diisi/);
+  assert.match(dashboardUi, /entity: "settings"/);
+});
