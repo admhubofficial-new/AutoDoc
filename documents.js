@@ -305,7 +305,7 @@ async function loadHistory(date){
   const list=$("#docsList",target);list.innerHTML="";
   const dist=currentDistribution||{};
   $("#docsDistributionMeta",target).textContent=(dist.menu||"Menu belum diisi")+" · "+(dist.nama_petugas||"Petugas belum diisi")+" · "+(dist.nama_pengemudi||"Pengemudi belum diisi")+" · "+(dist.no_kendaraan||"Kendaraan belum diisi");
-  if(!currentDocs.length){list.append(node("div","docs-empty","Belum ada dokumen untuk tanggal ini."));status("");return}
+  if(!currentDocs.length){$("#docsPrintSj",target).disabled=true;$("#docsPrintBast",target).disabled=true;list.append(node("div","docs-empty","Belum ada dokumen untuk tanggal ini."));status("");return}
   const grouped=new Map();
   currentDocs.forEach(doc=>{
    const snap=doc.snapshot_json||{},recipient=snap.penerima||{};
@@ -334,8 +334,10 @@ function renderDocumentGroup(group){
   const print=node("button","docs-btn", "Cetak "+kind);print.type="button";print.onclick=()=>printDocuments([doc]);actions.append(print);
   const stat=node("span","docs-status "+(doc.status||""),doc.status||"dibuat");actions.append(stat);
   if(doc.jenis==="BAST"){
-   const real=node("button","docs-btn primary",doc.realisasi?"Lihat/Ubah realisasi":"Input realisasi");
-   real.type="button";real.onclick=()=>showRealization(card,doc);actions.append(real);
+   if(doc.status!=="batal"){
+    const real=node("button","docs-btn primary",doc.realisasi?"Lihat/Ubah realisasi":"Input realisasi");
+    real.type="button";real.onclick=()=>showRealization(card,doc);actions.append(real);
+   }
   }
  });
  card.append(actions);return card;
