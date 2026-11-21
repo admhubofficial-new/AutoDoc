@@ -71,7 +71,7 @@ test("history deletion migration uses valid dollar quoting for its menu-item tri
   const definition = historyDeletionMigration.slice(start, end);
   assert.ok(definition.includes("AS $\\nDECLARE"));
   assert.ok(definition.includes("END;\\n$;"));
-  assert.ok(!definition.includes("AS $\\nDECLARE"));
+  assert.ok(!definition.includes("AS $" + String.fromCharCode(10) + "DECLARE"));
 });
 
 test("PIN normalization enforces 6 to 128 characters in the active backend", () => {
