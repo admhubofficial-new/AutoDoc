@@ -109,3 +109,13 @@ test("inline application script remains syntactically valid", () => {
   assert.ok(scripts.length > 0, "expected an inline application script");
   scripts.forEach(match => new Script(match[1]));
 });
+
+test("home dashboard avoids duplicate latest distribution and emphasizes global pending work", () => {
+  assert.match(dashboardUi, /\["BAST belum direalisasi", counts\.bast_pending\]/);
+  assert.match(dashboardUi, /\["Total distribusi tercatat", counts\.distributions\]/);
+  assert.match(dashboardUi, /const earlierRows = rows\.slice\(1\)/);
+  assert.match(dashboardUi, /"Distribusi sebelumnya"/);
+  assert.match(dashboardUi, /action\("Buat dokumen", true/);
+  assert.doesNotMatch(dashboardUi, /action\("Lihat arsip", false/);
+  assert.match(indexHtml, /dashboard\.js\?v=home-summary-polish-20261121/);
+});
