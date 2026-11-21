@@ -6,6 +6,7 @@ import {
   type SessionPayload,
 } from "../supabase/functions/autodoc-auth/session.ts";
 import { normalizeToken } from "../supabase/functions/autodoc-auth/validation.ts";
+import { readFileSync } from "node:fs";
 
 const secret = "unit-test-only-secret-at-least-32-characters";
 const keyPromise = crypto.subtle.importKey(
@@ -51,6 +52,27 @@ test("active Edge Function session helper rejects expired and future-issued payl
   const future = { ...(await makePayload(now + 120)) };
   const futureToken = await signSessionPayload(future, key);
   assert.equal(await verifySessionPayload(futureToken, key, now, 12 * 60 * 60), null);
+});
+
+const historyDeletionMigration = readFileSync(
+  new URL("../supabase/migrations/20261122150000_delete_distribution_history.sql", import.meta.url),
+  "utf8",
+);
+
+test("history deletion migration uses valid dollar quoting for its menu-item trigger", () => {
+  const start = historyDeletionMigration.indexOf(
+    "CREATE OR REPLACE FUNCTION public.prevent_distribution_menu_item_change_after_documents()",
+  );
+  const end = historyDeletionMigration.indexOf(
+    "REVOKE ALL ON FUNCTION public.prevent_distribution_menu_item_change_after_documents()",
+    start,
+  );
+  assert.ok(start >= 0 && end > start);
+  const definition = historyDeletionMigration.slice(start, end);
+  const newline = String.fromCharCode(10);
+  assert.ok(definition.includes("AS $$" + newline + "DECLARE"));
+  assert.ok(definition.includes("END;" + newline + "$$;"));
+  assert.ok(!definition.includes("AS $" + newline + "DECLARE"));
 });
 
 test("PIN normalization enforces 6 to 128 characters in the active backend", () => {

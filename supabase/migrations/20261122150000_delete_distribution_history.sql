@@ -55,7 +55,7 @@ CREATE OR REPLACE FUNCTION public.prevent_distribution_menu_item_change_after_do
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog
-AS $
+AS $$
 DECLARE
   v_distribution_id uuid;
 BEGIN
@@ -88,7 +88,7 @@ BEGIN
   IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.prevent_distribution_menu_item_change_after_documents() FROM PUBLIC, anon, authenticated;
 
