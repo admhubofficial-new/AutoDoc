@@ -400,6 +400,12 @@ function cleanInteger(value: unknown, field: string, fallback = 0): number {
   return result;
 }
 
+function cleanOrder(value: unknown): number {
+  const result = cleanInteger(value, "Urutan", 100);
+  if (result < 1) throw new AppError(400, "Urutan harus bilangan bulat minimal 1.");
+  return result;
+}
+
 function masterPayload(entity: MasterEntity, input: Record<string, unknown>): Record<string, unknown> {
   const data: Record<string, unknown> = {};
   if (entity === "settings") {
@@ -420,7 +426,8 @@ function masterPayload(entity: MasterEntity, input: Record<string, unknown>): Re
     data.nama = cleanText(input.nama, "Nama penerima", true, 180);
     data.jenjang = cleanText(input.jenjang, "Jenjang", true, 80);
     data.alamat = cleanText(input.alamat, "Alamat", false, 500);
-    for (const field of ["siswa_kecil","siswa_besar","tendik","ibu_hamil","ibu_menyusui","balita","putus_sekolah","kader","urutan"]) data[field] = cleanInteger(input[field], field, field === "urutan" ? 100 : 0);
+    for (const field of ["siswa_kecil","siswa_besar","tendik","ibu_hamil","ibu_menyusui","balita","putus_sekolah","kader"]) data[field] = cleanInteger(input[field], field, 0);
+    data.urutan = cleanOrder(input.urutan);
     data.aktif = input.aktif !== false;
     data.keterangan = cleanText(input.keterangan, "Keterangan", false, 1000);
     data.perlu_verifikasi = input.perlu_verifikasi === true;
@@ -432,7 +439,7 @@ function masterPayload(entity: MasterEntity, input: Record<string, unknown>): Re
     data[field] = cleanText(input[field], entity === "vehicles" ? "Nomor kendaraan" : entity === "menus" ? "Menu" : "Nama", true, 180);
     if (entity === "staff") data.jabatan = cleanText(input.jabatan, "Jabatan", false, 120);
     data.aktif = input.aktif !== false;
-    data.urutan = cleanInteger(input.urutan, "Urutan", 100);
+    data.urutan = cleanOrder(input.urutan);
     return data;
   }
   throw new AppError(400, "Jenis data master tidak didukung.");
@@ -816,45 +823,29 @@ async function handleDocsRealization(request: Request): Promise<Response> {
     nama_penerima: cleanText(body.nama_penerima, "Nama penerima BAST", true, 180),
     jabatan_penerima: cleanText(body.jabatan_penerima, "Jabatan penerima", false, 120),
   };
-  await supabaseRequest<unknown>(
-    "bast_realisasi?" + new URLSearchParams({ on_conflict: "document_id" }).toString(),
+  const itemsPayload = [
     {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify(realisasiPayload),
+      urutan: 1,
+      kelompok_sasaran: "Total",
+      jenis_porsi: "Porsi Kecil",
+      jumlah_diserahkan: deliveredSmall,
+      jumlah_diterima: receivedSmall,
+      keterangan: null,
     },
-  );
-  await supabaseRequest<unknown>(
-    "bast_realisasi_items?" + new URLSearchParams({ on_conflict: "document_id,urutan" }).toString(),
     {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify([
-        {
-          document_id: document.id,
-          urutan: 1,
-          kelompok_sasaran: "Total",
-          jenis_porsi: "Porsi Kecil",
-          jumlah_diserahkan: deliveredSmall,
-          jumlah_diterima: receivedSmall,
-          keterangan: null,
-        },
-        {
-          document_id: document.id,
-          urutan: 2,
-          kelompok_sasaran: "Total",
-          jenis_porsi: "Porsi Besar",
-          jumlah_diserahkan: deliveredLarge,
-          jumlah_diterima: receivedLarge,
-          keterangan: null,
-        },
-      ]),
+      urutan: 2,
+      kelompok_sasaran: "Total",
+      jenis_porsi: "Porsi Besar",
+      jumlah_diserahkan: deliveredLarge,
+      jumlah_diterima: receivedLarge,
+      keterangan: null,
     },
-  );
-  await supabaseRequest<unknown>(
-    "documents?" + new URLSearchParams({ id: "eq." + document.id, status: "neq.batal" }).toString(),
-    { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "selesai" }) },
-  );
+  ];
+  await rpc("simpan_realisasi_bast", {
+    p_document_id: document.id,
+    p_realisasi: realisasiPayload,
+    p_items: itemsPayload,
+  });
   return respond(request, { success: true, message: "Realisasi BAST berhasil disimpan." });
 }
 

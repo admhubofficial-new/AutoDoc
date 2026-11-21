@@ -38,6 +38,8 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 - Penerbitan dokumen dan penyimpanan realisasi BAST meminta verifikasi PIN ulang selain sesi aktif.
 - Dokumen dapat ditampilkan dan dicetak dengan layout A4 melalui dialog cetak browser (termasuk Save as PDF).
 - Realisasi BAST mencatat kondisi makanan, jam diterima, suhu, jumlah porsi diserahkan/diterima, ompreng, identitas penerima, dan catatan.
+- Penyimpanan realisasi BAST dan perubahan status dokumen berjalan atomik dalam satu transaksi database.
+- Data distribusi dikunci dari perubahan setelah dokumen pertama diterbitkan agar riwayat dan snapshot dokumen tetap konsisten.
 - Jika proses penerbitan sebagian gagal, pengulangan untuk tanggal dan penerima yang sama menggunakan kembali nomor dokumen yang sudah berhasil dibuat dan melengkapi sisanya.
 - Cetak mengubah status dokumen dari dibuat menjadi dicetak; penyimpanan realisasi BAST mengubah status menjadi selesai.
 
