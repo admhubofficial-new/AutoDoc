@@ -59,8 +59,8 @@ test("retries cannot overwrite an issued distribution snapshot", () => {
 });
 
 
-test("distribution archive endpoint requires a valid session and reads only recent distributions", () => {
-  const body = functionBody("handleDocsDays", "handleDocsList");
+test("distribution archive endpoint requires a valid session and supports server-side global search", () => {
+  const body = functionBody("handleDocsDays", "handleDocsDeleteHistory");
   assert.match(body, /validSession\(request\)/);
   assert.match(body, /order: "tanggal\.desc"/);
   assert.match(body, /limit: "61"/);
