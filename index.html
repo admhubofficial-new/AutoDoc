@@ -654,9 +654,10 @@
       const isMobileSidebar = () => window.matchMedia("(max-width: 720px)").matches;
       function closeHomeNav() {
         homePage.classList.remove("mobile-nav-open");
-        menuToggle.setAttribute("aria-expanded", "false");
-        menuToggle.setAttribute("aria-label", "Buka sidebar");
-        menuToggle.title = "Buka sidebar";
+        const expanded = !homePage.classList.contains("sidebar-collapsed");
+        menuToggle.setAttribute("aria-expanded", String(expanded));
+        menuToggle.setAttribute("aria-label", expanded ? "Ciutkan sidebar" : "Buka sidebar");
+        menuToggle.title = expanded ? "Ciutkan sidebar" : "Buka sidebar";
       }
       function toggleSidebar() {
         if (isMobileSidebar()) {
