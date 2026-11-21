@@ -18,8 +18,23 @@ async function api(route,body){
 }
 function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
 function status(message,bad){const el=$(".doc-msg",modal);el.textContent=message||"";el.classList.toggle("error",!!bad)}
-function close(){modal.hidden=true;document.body.style.overflow=""}
-function show(){modal.hidden=false;document.body.style.overflow="hidden";loadMaster().catch(e=>status(e.message,true))}
+function close(){
+ if(!modal)return;
+ modal.hidden=true;modal.style.display="none";modal.setAttribute("aria-hidden","true");
+ document.body.style.overflow="";
+ const launch=document.querySelector("#docsLauncher");if(launch)launch.setAttribute("aria-expanded","false");
+}
+function show(){
+ if(!modal){style();build()}
+ modal.hidden=false;
+ modal.style.display="flex";
+ modal.style.visibility="visible";
+ modal.style.zIndex="2147483647";
+ modal.setAttribute("aria-hidden","false");
+ document.body.style.overflow="hidden";
+ const launch=document.querySelector("#docsLauncher");if(launch)launch.setAttribute("aria-expanded","true");
+ loadMaster().catch(e=>status(e.message,true));
+}
 function style(){
  if($("#docsStyles"))return;
  const css=node("style");css.id="docsStyles";
@@ -29,6 +44,7 @@ function style(){
 function build(){
  if(modal)return;
  modal=node("div","docs-overlay");modal.hidden=true;
+ modal.id="docsModal";modal.setAttribute("aria-hidden","true");
  const dialog=node("section","docs-dialog");dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","docsTitle");
  const head=node("header","docs-head");
  const title=node("div");title.innerHTML="<h2 id='docsTitle'>Surat Jalan &amp; BAST MBG</h2><p>Buat dokumen distribusi, cetak, dan catat realisasi penerimaan.</p>";
@@ -232,12 +248,11 @@ function showRealization(card,doc){
 function init(){
  style();build();
  window.AutoDocDocuments=Object.freeze({open:show,close});
- // Delegasi pada document tetap menangani klik jika elemen beranda dirender ulang.
- // Capture phase mencegah handler lain menghentikan klik sebelum mencapai launcher.
- document.addEventListener("click",event=>{
-  const target=event.target instanceof Element?event.target.closest("#docsLauncher"):null;
-  if(target)show();
- },{capture:true});
+ const launch=document.querySelector("#docsLauncher");
+ if(launch){
+  // Handler langsung pada tombol; tidak bergantung pada bubbling/delegasi event.
+  launch.onclick=event=>{event.preventDefault();show()};
+ }
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
