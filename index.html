@@ -216,30 +216,41 @@
     .auth-status[data-state="error"] { color: #B42318; }
     .auth-status[data-state="success"] { color: #286548; }
 
-    /* Beranda awal — ditampilkan setelah tombol masuk pada pratinjau desain. */
-    .home-page { min-height: 100vh; min-height: 100svh; background: #f5f7f4; }
-    .home-topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 19px clamp(20px, 5vw, 74px); border-bottom: 1px solid var(--line); background: #fff; }
-    .home-brand { display: flex; align-items: center; gap: 11px; }
-    .home-brand .brand-mark { width: 40px; height: 40px; border-color: #dce8dd; background: var(--mint-2); color: var(--forest); border-radius: 12px; }
-    .home-brand-name { color: var(--forest); font-weight: 850; font-size: 17px; letter-spacing: -.4px; }
-    .home-brand-sub { color: #839087; font-size: 10px; margin-top: 2px; }
-    .logout-button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #dfe7df; border-radius: 10px; background: #fff; color: #526258; font-size: 12px; font-weight: 750; }
-    .logout-button:hover { background: #f5f8f4; }
-    .home-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: clamp(32px, 6vw, 70px) 0; }
-    .home-greeting { position: relative; overflow: hidden; padding: clamp(25px, 5vw, 46px); border-radius: 22px; background: linear-gradient(120deg, #153f32, #286548); color: #fff; }
-    .home-greeting::after { content: ""; position: absolute; width: 330px; height: 330px; border: 1px solid rgba(255,255,255,.13); border-radius: 50%; right: -100px; top: -185px; box-shadow: 0 0 0 35px rgba(255,255,255,.035), 0 0 0 70px rgba(255,255,255,.025); }
-    .preview-badge { display: inline-flex; padding: 7px 10px; border-radius: 99px; background: rgba(255,255,255,.12); color: #e9d8a9; font-size: 10px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
-    .home-greeting h1 { position: relative; z-index: 1; margin: 17px 0 8px; font-size: clamp(28px, 4vw, 42px); letter-spacing: -1.5px; }
-    .home-greeting p { position: relative; z-index: 1; max-width: 600px; margin: 0; color: rgba(255,255,255,.76); font-size: 14px; line-height: 1.7; }
-    .section-heading { margin: 38px 0 16px; font-size: 18px; letter-spacing: -.4px; color: #25382d; }
-    .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
-    .feature-card { min-height: 170px; padding: 22px; border: 1px solid #e4eae3; border-radius: 16px; background: #fff; box-shadow: 0 5px 18px rgba(32,60,40,.035); }
-    .docs-feature-card { display: block; width: 100%; padding: 22px; border: 1px solid #e4eae3; background: #fff; color: inherit; font: inherit; text-align: left; appearance: none; -webkit-appearance: none; cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-    .docs-feature-card:hover, .docs-feature-card:focus-visible { border-color: #9dbba2; box-shadow: 0 9px 24px rgba(32,60,40,.09); outline: none; transform: translateY(-2px); }
-    .feature-icon { width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 18px; border-radius: 12px; background: var(--mint-2); color: var(--forest-2); }
-    .feature-card h3 { margin: 0 0 7px; font-size: 14px; color: #2b3e32; }
-    .feature-card p { margin: 0; color: #7b887f; font-size: 12px; line-height: 1.6; }
-    .home-footnote { margin-top: 24px; color: #8b978e; font-size: 11px; line-height: 1.6; }
+    /* Beranda ringkas */
+    .home-page{min-height:100vh;min-height:100svh;background:#F6F7F5}
+    .home-topbar{height:64px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 clamp(16px,4vw,48px);border-bottom:1px solid #E1E6E2;background:#fff}
+    .home-brand{display:flex;align-items:center;gap:10px;min-width:190px}
+    .home-brand img{width:36px;height:36px;object-fit:contain}
+    .home-brand-name{color:#1E5A43;font-size:15px;font-weight:750;line-height:1.25}
+    .home-brand-sub{margin-top:2px;color:#718077;font-size:10px}
+    .home-nav{display:flex;align-items:center;justify-content:center;gap:5px}
+    .home-nav button{min-height:36px;padding:0 13px;border:0;border-radius:9px;background:transparent;color:#53645A;font:inherit;font-size:12px;font-weight:600}
+    .home-nav button[aria-current=page]{background:#E8F0EB;color:#1E5A43}
+    .home-nav button:hover{background:#F0F4F0}
+    .home-actions{display:flex;align-items:center;gap:8px}
+    .logout-button{min-height:36px;padding:0 13px;border:1px solid #E1E6E2;border-radius:9px;background:#fff;color:#53645A;font-size:12px;font-weight:650}
+    .logout-button:hover{background:#F6F8F6}
+    .home-menu-toggle{display:none;width:38px;height:36px;border:1px solid #E1E6E2;border-radius:9px;background:#fff;color:#1E5A43;font-size:19px}
+    .home-content{width:min(1120px,calc(100% - 40px));margin:0 auto;padding:34px 0 56px}
+    .home-heading{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:20px}
+    .home-heading h1{margin:0;color:#1d3026;font-size:25px;line-height:1.25;font-weight:700;letter-spacing:-.6px}
+    .home-heading p{margin:5px 0 0;color:#718077;font-size:12px}
+    .home-dashboard{min-height:220px}
+    .home-legacy-launchers{display:none!important}
+    .home-legacy-launchers .docs-launcher{display:none!important}
+    .logout-button:focus-visible,.home-nav button:focus-visible,.home-menu-toggle:focus-visible{outline:3px solid #A9C9B7;outline-offset:2px}
+    @media(max-width:720px){
+      .home-topbar{position:relative;padding:0 16px}
+      .home-brand{min-width:0}
+      .home-menu-toggle{display:inline-grid;place-items:center}
+      .home-nav{display:none;position:absolute;z-index:20;top:63px;left:0;right:0;padding:10px 16px 14px;border-bottom:1px solid #E1E6E2;background:#fff;box-shadow:0 12px 18px rgba(25,55,40,.08);flex-direction:column;align-items:stretch}
+      .home-nav.open{display:flex}
+      .home-nav button{text-align:left;min-height:42px}
+      .home-actions{gap:7px}
+      .home-content{width:calc(100% - 32px);padding:27px 0 42px}
+      .home-heading{align-items:flex-start;flex-direction:column;gap:4px}
+      .home-heading h1{font-size:23px}
+    }
     [hidden] { display: none !important; }
 
     @media (max-width: 480px) {
@@ -344,43 +355,29 @@
   <main id="homePage" class="home-page" hidden>
     <header class="home-topbar">
       <div class="home-brand">
-        <div class="brand-mark" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6.5 3.75h7l4 4v12.5H6.5a2 2 0 0 1-2-2V5.75a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 3.9v4h4M8.5 12h7M8.5 15.5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        </div>
+        <img src="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png" alt="Logo BGN" width="36" height="36">
         <div><div class="home-brand-name">AutoDoc</div><div class="home-brand-sub">SPPG Darmaraja 01</div></div>
       </div>
-      <button type="button" class="logout-button" id="logoutButton">
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 3.5H4.5v13H8M11.5 6.5 15 10l-3.5 3.5M6.5 10H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Keluar
-      </button>
+      <nav class="home-nav" id="homeNav" aria-label="Navigasi utama">
+        <button type="button" data-home-nav="home" aria-current="page">Beranda</button>
+        <button type="button" data-home-nav="print">Cetak</button>
+        <button type="button" data-home-nav="archive">Arsip</button>
+        <button type="button" data-home-nav="master">Data Master</button>
+      </nav>
+      <div class="home-actions">
+        <button type="button" class="home-menu-toggle" id="homeMenuToggle" aria-label="Buka menu" aria-expanded="false" aria-controls="homeNav">☰</button>
+        <button type="button" class="logout-button" id="logoutButton">Keluar</button>
+      </div>
     </header>
     <section class="home-content">
-      <div class="home-greeting">
-        <span class="preview-badge">Ruang kerja internal</span>
-        <h1>Selamat datang di AutoDoc</h1>
-        <p>Ruang kerja digital untuk membantu pengelolaan dokumen penunjang kegiatan Satuan Pelayanan Pemenuhan Gizi Gratis Darmaraja 01.</p>
+      <div class="home-heading">
+        <div><h1>Beranda</h1><p id="homeToday"></p></div>
       </div>
-      <section id="opsDashboard" aria-labelledby="opsDashboardTitle"></section>
-      <h2 class="section-heading">Menu utama</h2>
-      <div class="feature-grid">
-        <article class="feature-card">
-          <div class="feature-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-          <div><h3>Buat dokumen</h3><p>Mulai menyusun dokumen penunjang pekerjaan.</p></div>
-        </article>
-        <article class="feature-card">
-          <div class="feature-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h14v15H5zM8 8h8M8 11.5h8M8 15h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div><h3>Template dokumen</h3><p>Gunakan format dokumen yang telah disiapkan.</p></div>
-        </article>
-        <article class="feature-card">
-          <div class="feature-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4.5 7h15v12h-15zM8 7V5h8v2M8 11h8M8 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div><h3>Riwayat dokumen</h3><p>Lihat kembali dokumen yang pernah dibuat.</p></div>
-        </article>
-        <button type="button" class="feature-card docs-feature-card" id="docsLauncher" aria-haspopup="dialog" aria-expanded="false" aria-controls="docsModal" aria-label="Buka menu Surat Jalan dan BAST MBG">
-          <div class="feature-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h8l4 4V20H6zM14 3.5V8h4M9 12h6M9 15h6M9 18h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div><h3>Surat Jalan &amp; BAST MBG</h3><p>Buat dokumen distribusi, cetak A4, dan catat realisasi penerimaan.</p></div>
-        </button>
+      <section id="opsDashboard" class="home-dashboard" aria-label="Ringkasan operasional"></section>
+      <div class="home-legacy-launchers" aria-hidden="true">
+        <div class="feature-grid"></div>
+        <button type="button" id="docsLauncher" tabindex="-1">Buka dokumen</button>
       </div>
-      <p class="home-footnote">Kelola Data Master terlebih dahulu, lalu terbitkan Surat Jalan dan BAST dari menu di atas.</p>
     </section>
   </main>
 
@@ -416,6 +413,7 @@
         homePage.hidden = false;
         setStatus("", "");
         document.title = "Beranda — AutoDoc";
+        updateHomeDate();
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
@@ -536,6 +534,60 @@
           setupButton.innerHTML = 'Simpan Setup & Masuk <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         }
       });
+
+      const homeNav = document.getElementById("homeNav");
+      const menuToggle = document.getElementById("homeMenuToggle");
+      const homeToday = document.getElementById("homeToday");
+      function closeHomeNav() {
+        homeNav.classList.remove("open");
+        menuToggle.setAttribute("aria-expanded", "false");
+        menuToggle.setAttribute("aria-label", "Buka menu");
+      }
+      function updateHomeDate() {
+        homeToday.textContent = new Intl.DateTimeFormat("id-ID", {
+          weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta"
+        }).format(new Date());
+      }
+      function openDocsTab(tabName) {
+        const launcher = document.getElementById("docsLauncher");
+        if (!launcher) return;
+        launcher.click();
+        if (tabName === "history") {
+          const tabs = document.querySelectorAll("#docsModal .docs-tab");
+          if (tabs[1]) tabs[1].click();
+        }
+      }
+      window.AutoDocOpenArchive = (date) => {
+        openDocsTab("history");
+        if (date) {
+          window.setTimeout(() => {
+            const input = document.querySelector("#docsModal #docsHistoryDate");
+            const load = document.querySelector("#docsModal #docsLoadHistory");
+            if (input && load) { input.value = date; load.click(); }
+          }, 0);
+        }
+      };
+      menuToggle.addEventListener("click", () => {
+        const open = !homeNav.classList.contains("open");
+        homeNav.classList.toggle("open", open);
+        menuToggle.setAttribute("aria-expanded", String(open));
+        menuToggle.setAttribute("aria-label", open ? "Tutup menu" : "Buka menu");
+      });
+      homeNav.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-home-nav]");
+        if (!button) return;
+        const action = button.dataset.homeNav;
+        homeNav.querySelectorAll("button").forEach(item => item.removeAttribute("aria-current"));
+        if (action === "home") button.setAttribute("aria-current", "page");
+        closeHomeNav();
+        if (action === "print") openDocsTab("create");
+        if (action === "archive") window.AutoDocOpenArchive();
+        if (action === "master") {
+          const masterLauncher = document.querySelector(".home-legacy-launchers + .dm-launch");
+          if (masterLauncher) masterLauncher.click();
+        }
+      });
+      updateHomeDate();
 
       logoutButton.addEventListener("click", async () => {
         logoutButton.disabled = true;
