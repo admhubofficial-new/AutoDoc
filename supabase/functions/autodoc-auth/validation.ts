@@ -31,8 +31,8 @@ export function parseNonNegativeInteger(value: unknown, fallback = 0): number | 
   return Number.isSafeInteger(result) && result >= 0 ? result : null;
 }
 
-export function normalizeUuidList(value: unknown): string[] | null {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 100) return null;
+export function normalizeUuidList(value: unknown, maxItems = 100): string[] | null {
+  if (!Number.isSafeInteger(maxItems) || maxItems < 1 || !Array.isArray(value) || value.length < 1 || value.length > maxItems) return null;
   const values: string[] = [];
   for (const entry of value) {
     if (typeof entry !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entry)) {
