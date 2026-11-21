@@ -1,82 +1,62 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  signCookiePayload,
-  verifyCookiePayload,
-  SESSION_TTL_SECONDS,
+  signSessionPayload,
+  verifySessionPayload,
   type SessionPayload,
-} from "../lib/server/session.ts";
-import { normalizeToken, loginThrottleKey } from "../lib/server/security.ts";
+} from "../supabase/functions/autodoc-auth/session.ts";
+import { normalizeToken } from "../supabase/functions/autodoc-auth/validation.ts";
 
 const secret = "unit-test-only-secret-at-least-32-characters";
+const keyPromise = crypto.subtle.importKey(
+  "raw",
+  new TextEncoder().encode(secret),
+  { name: "HMAC", hash: "SHA-256" },
+  false,
+  ["sign", "verify"],
+);
 
-test("signed session accepts a valid 12-hour payload", () => {
-  const now = 1_800_000_000;
-  const payload: SessionPayload = {
-    typ: "session",
-    sub: "autodoc",
+async function makePayload(now: number): Promise<SessionPayload> {
+  return {
+    v: 1,
     iat: now,
-    exp: now + SESSION_TTL_SECONDS,
-    sv: 1,
+    exp: now + 12 * 60 * 60,
     nonce: "abcdefghijklmnopqr",
   };
-  const token = signCookiePayload(payload, secret);
-  assert.deepEqual(verifyCookiePayload(token, secret, now + 60), payload);
-});
+}
 
-test("signed session rejects a modified signature", () => {
+test("active Edge Function session helper accepts a valid 12-hour payload", async () => {
   const now = 1_800_000_000;
-  const payload: SessionPayload = {
-    typ: "session",
-    sub: "autodoc",
-    iat: now,
-    exp: now + SESSION_TTL_SECONDS,
-    sv: 1,
-    nonce: "abcdefghijklmnopqr",
-  };
-  const token = signCookiePayload(payload, secret);
-  const altered = token.slice(0, -1) + (token.endsWith("a") ? "b" : "a");
-  assert.equal(verifyCookiePayload(altered, secret, now + 60), null);
+  const key = await keyPromise;
+  const token = await signSessionPayload(await makePayload(now), key);
+  assert.deepEqual(await verifySessionPayload(token, key, now + 60, 12 * 60 * 60), await makePayload(now));
 });
 
-test("signed session rejects an expired payload", () => {
+test("active Edge Function session helper rejects a modified signature", async () => {
   const now = 1_800_000_000;
-  const payload: SessionPayload = {
-    typ: "session",
-    sub: "autodoc",
-    iat: now,
-    exp: now + SESSION_TTL_SECONDS,
-    sv: 1,
-    nonce: "abcdefghijklmnopqr",
-  };
-  const token = signCookiePayload(payload, secret);
-  assert.equal(verifyCookiePayload(token, secret, now + SESSION_TTL_SECONDS + 1), null);
+  const key = await keyPromise;
+  const token = await signSessionPayload(await makePayload(now), key);
+  const separator = token.indexOf(".");
+  const firstSignatureChar = token[separator + 1];
+  const altered = token.slice(0, separator + 1) + (firstSignatureChar === "A" ? "B" : "A") + token.slice(separator + 2);
+  assert.equal(await verifySessionPayload(altered, key, now + 60, 12 * 60 * 60), null);
 });
 
-test("signed session rejects a future issue time", () => {
+test("active Edge Function session helper rejects expired and future-issued payloads", async () => {
   const now = 1_800_000_000;
-  const payload: SessionPayload = {
-    typ: "session",
-    sub: "autodoc",
-    iat: now + 60,
-    exp: now + 60 + SESSION_TTL_SECONDS,
-    sv: 1,
-    nonce: "abcdefghijklmnopqr",
-  };
-  const token = signCookiePayload(payload, secret);
-  assert.equal(verifyCookiePayload(token, secret, now), null);
+  const key = await keyPromise;
+  const expired = await signSessionPayload(await makePayload(now), key);
+  assert.equal(await verifySessionPayload(expired, key, now + 12 * 60 * 60 + 1, 12 * 60 * 60), null);
+
+  const future = { ...(await makePayload(now + 120)) };
+  const futureToken = await signSessionPayload(future, key);
+  assert.equal(await verifySessionPayload(futureToken, key, now, 12 * 60 * 60), null);
 });
 
-test("PIN/token validation requires 6 to 128 characters", () => {
+test("PIN normalization enforces 6 to 128 characters in the active backend", () => {
   assert.equal(normalizeToken("12345"), null);
   assert.equal(normalizeToken("123456"), "123456");
   assert.equal(normalizeToken("  ABCDEF  "), "ABCDEF");
   assert.equal(normalizeToken("x".repeat(129)), null);
   assert.equal(normalizeToken(123456), null);
-});
-
-test("login throttle key is opaque and stable", () => {
-  assert.equal(loginThrottleKey(secret), loginThrottleKey(secret));
-  assert.notEqual(loginThrottleKey(secret), loginThrottleKey(secret + "-different"));
-  assert.match(loginThrottleKey(secret), /^[0-9a-f]{64}$/);
 });

@@ -1,3 +1,6 @@
+import { signSessionPayload, toBase64Url, verifySessionPayload } from "./session.ts";
+import { normalizeToken } from "./validation.ts";
+
 // AutoDoc authentication backend for the GitHub Pages frontend.
 // The PIN is read only from Supabase Edge Function secrets and is never
 // returned to the browser or written to logs.
@@ -150,19 +153,6 @@ function hmacKey(): Promise<CryptoKey> {
   );
 }
 
-function toBase64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-function fromBase64Url(value: string): Uint8Array {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
-}
-
 async function hmacHex(value: string): Promise<string> {
   const signature = new Uint8Array(
     await crypto.subtle.sign("HMAC", await hmacKey(), encoder.encode(value)),
@@ -178,11 +168,7 @@ async function createSessionCookie(sessionVersion: number): Promise<string> {
     exp: now + SESSION_SECONDS,
     nonce: toBase64Url(crypto.getRandomValues(new Uint8Array(16))),
   };
-  const encoded = toBase64Url(encoder.encode(JSON.stringify(payload)));
-  const signature = new Uint8Array(
-    await crypto.subtle.sign("HMAC", await hmacKey(), encoder.encode(encoded)),
-  );
-  const token = encoded + "." + toBase64Url(signature);
+  const token = await signSessionPayload(payload, await hmacKey());
   // Partitioned + SameSite=None supports credentialed calls from GitHub Pages
   // to the Supabase Edge Function on a different site.
   return COOKIE_NAME + "=" + token +
@@ -211,33 +197,9 @@ function getCookie(request: Request, name: string): string | null {
 async function validSession(request: Request): Promise<{ version: number } | null> {
   const token = getCookie(request, COOKIE_NAME);
   if (!token) return null;
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
-
-  let payload: { v?: number; iat?: number; exp?: number };
-  try {
-    const signature = new Uint8Array(fromBase64Url(parts[1]));
-    const valid = await crypto.subtle.verify(
-      "HMAC",
-      await hmacKey(),
-      signature.buffer as ArrayBuffer,
-      encoder.encode(parts[0]),
-    );
-    if (!valid) return null;
-    payload = JSON.parse(new TextDecoder().decode(fromBase64Url(parts[0])));
-  } catch {
-    return null;
-  }
-
   const now = Math.floor(Date.now() / 1000);
-  if (
-    !Number.isSafeInteger(payload.v) ||
-    !Number.isSafeInteger(payload.iat) ||
-    !Number.isSafeInteger(payload.exp) ||
-    (payload.iat as number) > now + 60 ||
-    (payload.exp as number) <= now ||
-    (payload.exp as number) - (payload.iat as number) > SESSION_SECONDS
-  ) return null;
+  const payload = await verifySessionPayload(token, await hmacKey(), now, SESSION_SECONDS);
+  if (!payload) return null;
 
   const settings = await selectOne<{
     setup_completed_at: string | null;
@@ -261,12 +223,6 @@ function secureEqual(left: string, right: string): boolean {
     mismatch |= (a[i] ?? 0) ^ (b[i] ?? 0);
   }
   return mismatch === 0;
-}
-
-function normalizeToken(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const token = value.trim();
-  return token.length >= 6 && token.length <= 128 ? token : null;
 }
 
 function corsHeaders(origin: string | null): Headers {
