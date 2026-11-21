@@ -1,0 +1,22 @@
+# Environment variables and secrets
+.env*
+!.env.example
+
+# Node / Vercel
+node_modules/
+.vercel/
+.next/
+out/
+dist/
+build/
+
+# Test outputs
+coverage/
+.nyc_output/
+
+# Local/editor files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
