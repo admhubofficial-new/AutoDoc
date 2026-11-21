@@ -450,7 +450,6 @@
             <h1>Ringkasan operasional</h1>
             <p>Pantau distribusi dan kelola dokumen dalam satu tempat.</p>
           </div>
-          <button type="button" class="home-create-button" id="homeCreateShortcut">+ Buat Dokumen</button>
         </div>
         <section id="opsDashboard" class="home-dashboard" aria-label="Ringkasan operasional"></section>
       </section>
@@ -643,9 +642,6 @@
         setHomeNav("archive");
         window.AutoDocDocuments?.openArchive(date);
       };
-      document.getElementById("homeCreateShortcut").addEventListener("click", () => {
-        window.AutoDocOpenDocs("create");
-      });
       menuToggle.addEventListener("click", () => {
         const open = !homeNav.classList.contains("open");
         homeNav.classList.toggle("open", open);
@@ -710,7 +706,7 @@
   </script>
   <script src="./master-utils.js?v=master-csv-hardening-20261121" defer></script>
   <script src="./master.js?v=master-identitas-ahli-gizi-20261122" defer></script>
-  <script src="./documents.js?v=three-party-signatures-20261122" defer></script>
+  <script src="./documents.js?v=single-navigation-20261122" defer></script>
   <script src="./dashboard.js?v=operations-workspace-20261122" defer></script>
 </body>
 </html>
