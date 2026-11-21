@@ -351,9 +351,9 @@ function printDocuments(documents){
  if(!docs.length){status("Tidak ada dokumen untuk dicetak.",true);return}
  const htmls=docs.map(buildPrintHtml);
  const first=htmls[0];
- const style=(first.match(/<style>([\\s\\S]*?)<\\/style>/i)||[])[1]||"";
+ const style=(first.match(/<style>([\s\S]*?)<\/style>/i)||[])[1]||"";
  const bodyParts=htmls.map(item=>{
-  const match=item.match(/<body>([\\s\\S]*?)<\\/body>/i);
+  const match=item.match(/<body>([\s\S]*?)<\/body>/i);
   return match?match[1]:"";
  });
  const content=bodyParts.join("<div class='batch-page-break'></div>");
@@ -382,7 +382,7 @@ function printDocuments(documents){
   setTimeout(invokePrint,3000);
  }else setTimeout(invokePrint,350);
 }
-function printDocument(doc){printDocuments([doc])
+function printDocument(doc){printDocuments([doc])}
 function showRealization(card,doc){
  modal.querySelectorAll(".docs-realization").forEach(x=>x.remove());
  const snap=doc.snapshot_json||{},recipient=snap.penerima||{},old=doc.realisasi||{};
