@@ -75,16 +75,26 @@ function options(items,valueKey,labelKey,label){
  return html;
 }
 async function loadMaster(){
- status("Memuat data master...");
+ status("Memuat data penerima dari server...");
  const result=await api("master/list");
- master=result.data||{};
+ const data=result&&result.data;
+ if(!data||!Array.isArray(data.recipients)){
+  throw new Error("Server tidak mengirim daftar penerima dalam format yang benar. Coba muat ulang; jika tetap gagal, periksa endpoint master/list.");
+ }
+ master=data;
+ const activeCount=data.recipients.filter(isActiveRecipient).length;
  renderCreate();
- status("");
+ status(activeCount+" penerima aktif berhasil dimuat dari "+data.recipients.length+" data.");
+}
+function isActiveRecipient(recipient){
+ if(!recipient||typeof recipient!=="object")return false;
+ const value=recipient.aktif;
+ return value===true||value===1||value==="1"||(typeof value==="string"&&value.trim().toLowerCase()==="true");
 }
 function renderCreate(){
  const target=$(".docs-view-create",modal);
  if(!target)return;
- const recipients=(master.recipients||[]).filter(r=>r.aktif);
+ const recipients=(Array.isArray(master.recipients)?master.recipients:[]).filter(isActiveRecipient);
  const todayVal=today();
  target.innerHTML="<h3 class='docs-section-title'>Penerbitan dokumen distribusi</h3>"+
  "<p class='docs-note'>Pilih tanggal, informasi perjalanan, dan penerima. Sistem akan membuat satu Surat Jalan dan satu BAST per penerima terpilih. Penerbitan akan meminta verifikasi PIN ulang.</p>"+
@@ -110,7 +120,7 @@ function renderCreate(){
 function renderRecipients(recipients){
  const list=$("#docsRecipientList",modal);if(!list)return;
  list.innerHTML="";
- if(!recipients.length){list.append(node("div","docs-empty","Belum ada penerima aktif. Lengkapi Data Master terlebih dahulu."));return}
+ if(!recipients.length){list.append(node("div","docs-empty","Server berhasil dihubungi, tetapi tidak ada penerima dengan status aktif. Periksa kolom Status di Data Master."));return}
  recipients.forEach(r=>{
   const label=node("label","docs-recipient");label.dataset.search=(r.nama+" "+r.kelompok+" "+r.jenjang).toLowerCase();
   const check=node("input");check.type="checkbox";check.name="recipient";check.value=r.id;check.checked=true;
