@@ -65,6 +65,7 @@ function build(){
  const title=node("div");title.innerHTML="<h2 id='docsTitle'>Surat Jalan &amp; BAST MBG</h2><p>Buat dokumen distribusi, cetak, dan catat realisasi penerimaan.</p>";
  const closeBtn=node("button","docs-close","×");closeBtn.type="button";closeBtn.setAttribute("aria-label","Tutup");closeBtn.onclick=close;head.append(title,closeBtn);
  const tabs=node("nav","docs-tabs");
+ tabs.hidden=true;
  const body=node("div","docs-body");
  body.innerHTML="<div class='docs-view-create'></div><div class='docs-view-history' hidden></div><p class='docs-msg' role='status' aria-live='polite'></p>";
  dialog.append(head,tabs,body);modal.append(dialog);document.body.append(modal);
@@ -709,6 +710,8 @@ function init(){
   open(){
    show();
    tab="create";drawTabs();
+   $("#docsTitle",modal).textContent="Buat Dokumen";
+   $(".docs-head p",modal).textContent="Terbitkan Surat Jalan dan/atau BAST serta siapkan formulir uji organoleptik.";
    $(".docs-view-create",modal).hidden=false;
    $(".docs-view-history",modal).hidden=true;
   },
@@ -716,6 +719,8 @@ function init(){
   openArchive(date){
    show(false);
    tab="history";drawTabs();
+   $("#docsTitle",modal).textContent="Arsip Dokumen";
+   $(".docs-head p",modal).textContent="Cari distribusi, lihat dokumen terbit, cetak ulang, dan catat realisasi BAST.";
    $(".docs-view-create",modal).hidden=true;
    $(".docs-view-history",modal).hidden=false;
    if(date)loadHistory(date);
