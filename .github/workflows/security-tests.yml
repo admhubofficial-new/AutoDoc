@@ -34,6 +34,8 @@ jobs:
         run: node --check master.js
       - name: Periksa sintaks frontend dokumen
         run: node --check documents.js
+      - name: Periksa sintaks dashboard operasional
+        run: node --check dashboard.js
       - name: Periksa sintaks konfigurasi frontend
         run: node --check config.js
       - name: Jalankan unit test
