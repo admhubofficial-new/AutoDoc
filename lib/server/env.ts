@@ -1,5 +1,3 @@
-import type { Request } from "undici";
-
 export function sessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 32) {
@@ -10,10 +8,8 @@ export function sessionSecret(): string {
 
 export function sameOriginAllowed(request: Request): boolean {
   const origin = request.headers.get("origin");
-  if (!origin) return false;
-
   const configuredOrigin = process.env.APP_ORIGIN;
-  if (!configuredOrigin) return false;
+  if (!origin || !configuredOrigin) return false;
 
   try {
     return new URL(origin).origin === new URL(configuredOrigin).origin;
