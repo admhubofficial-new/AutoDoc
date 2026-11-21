@@ -30,3 +30,10 @@ test("printed status waits for all letterhead assets and follows the print dialo
   assert.match(source, /Promise\.all\(logos\.map\(imageReady\)\)/);
   assert.match(source, /try\{win\.focus\(\);win\.print\(\)\}catch\(_\)\{return\}[\s\S]*?api\("docs\/mark-printed"/);
 });
+
+
+test("creation trusts the session-protected endpoint that already filters active recipients", () => {
+  assert.match(source, /api\("master\\/recipients"\)/);
+  assert.match(source, /const recipients=Array\\.isArray\\(master\\.recipients\\)\\?master\\.recipients:\\[\\]/);
+  assert.doesNotMatch(source, /master\\.recipients\\)\\.filter\\(isActiveRecipient/);
+});
