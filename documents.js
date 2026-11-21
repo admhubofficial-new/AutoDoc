@@ -231,10 +231,12 @@ function showRealization(card,doc){
 }
 function init(){
  style();build();
- const grid=document.querySelector(".feature-grid");if(!grid)return;
- const launch=node("button","docs-launch");launch.type="button";
- launch.innerHTML="<span class='docs-launch-icon' aria-hidden='true'>▤</span><span><strong>Surat Jalan &amp; BAST MBG</strong><small>Buat dokumen otomatis, cetak, dan catat realisasi penerimaan</small></span>";
- launch.onclick=show;grid.after(launch);
+ const launch=document.querySelector("#docsLauncher");
+ if(!launch)return;
+ launch.addEventListener("click",show);
+ launch.addEventListener("keydown",event=>{
+  if(event.key==="Enter"||event.key===" "){event.preventDefault();show()}
+ });
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
