@@ -91,7 +91,7 @@
     ];
     metricRows.forEach(([label, value]) => {
       const item = el("div", "home-summary-item");
-      item.append(el("small", null, label), el("strong", null, typeof value === "number" ? num(value) : num(value)));
+      item.append(el("small", null, label), el("strong", null, num(value)));
       metrics.append(item);
     });
     summary.append(metrics);
