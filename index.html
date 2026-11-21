@@ -243,8 +243,8 @@
       .home-topbar{position:relative;padding:0 16px}
       .home-brand{min-width:0}
       .home-menu-toggle{display:inline-grid;place-items:center}
-      .home-nav{display:none;position:absolute;z-index:20;top:63px;left:0;right:0;padding:10px 16px 14px;border-bottom:1px solid #E1E6E2;background:#fff;box-shadow:0 12px 18px rgba(25,55,40,.08);flex-direction:column;align-items:stretch}
-      .home-nav.open{display:flex}
+      .home-nav{display:flex;position:absolute;z-index:20;top:63px;right:0;width:min(320px,calc(100vw - 24px));padding:10px 14px 14px;border:1px solid #E1E6E2;border-radius:0 0 0 14px;background:#fff;box-shadow:0 12px 24px rgba(25,55,40,.10);flex-direction:column;align-items:stretch;transform:translateX(110%);visibility:hidden;pointer-events:none;transition:transform .18s ease,visibility .18s ease}
+      .home-nav.open{transform:translateX(0);visibility:visible;pointer-events:auto}
       .home-nav button{text-align:left;min-height:42px}
       .home-actions{gap:7px}
       .home-content{width:calc(100% - 32px);padding:27px 0 42px}
@@ -552,11 +552,11 @@
         const launcher = document.getElementById("docsLauncher");
         if (!launcher) return;
         launcher.click();
-        if (tabName === "history") {
-          const tabs = document.querySelectorAll("#docsModal .docs-tab");
-          if (tabs[1]) tabs[1].click();
-        }
+        const tabs = document.querySelectorAll("#docsModal .docs-tab");
+        const target = tabName === "history" ? tabs[1] : tabs[0];
+        if (target) target.click();
       }
+      window.AutoDocOpenDocs = (tabName) => openDocsTab(tabName || "create");
       window.AutoDocOpenArchive = (date) => {
         openDocsTab("history");
         if (date) {
@@ -578,12 +578,12 @@
         if (!button) return;
         const action = button.dataset.homeNav;
         homeNav.querySelectorAll("button").forEach(item => item.removeAttribute("aria-current"));
-        if (action === "home") button.setAttribute("aria-current", "page");
+        button.setAttribute("aria-current", "page");
         closeHomeNav();
-        if (action === "print") openDocsTab("create");
+        if (action === "print") window.AutoDocOpenDocs("create");
         if (action === "archive") window.AutoDocOpenArchive();
         if (action === "master") {
-          const masterLauncher = document.querySelector(".home-legacy-launchers + .dm-launch");
+          const masterLauncher = document.querySelector(".home-legacy-launchers .dm-launch");
           if (masterLauncher) masterLauncher.click();
         }
       });
