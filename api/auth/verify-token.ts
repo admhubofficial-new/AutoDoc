@@ -1,7 +1,7 @@
-import { adminClient } from "../../lib/server/supabase.js";
-import { sameOriginAllowed, sessionSecret } from "../../lib/server/env.js";
-import { validSession } from "../../lib/server/session.js";
-import { json, methodNotAllowed, publicError, readJson } from "../../lib/server/http.js";
+import { sameOriginAllowed, sessionSecret } from "../../lib/server/env.ts";
+import { validSession } from "../../lib/server/session.ts";
+import { insertRow } from "../../lib/server/supabase.ts";
+import { json, methodNotAllowed, publicError, readJson } from "../../lib/server/http.ts";
 import {
   checkThrottle,
   clearFailedAttempts,
@@ -9,7 +9,7 @@ import {
   normalizeToken,
   recordFailedAttempt,
   tokenMatches,
-} from "../../lib/server/security.js";
+} from "../../lib/server/security.ts";
 
 interface VerifyBody extends Record<string, unknown> {
   token?: unknown;
@@ -33,9 +33,8 @@ export default {
       const token = normalizeToken(body.token);
       if (!token) return json({ message: "Masukkan kembali PIN/token." }, 400);
 
-      const client = adminClient();
       const keyHash = loginThrottleKey(sessionSecret());
-      const throttle = await checkThrottle(client, keyHash);
+      const throttle = await checkThrottle(keyHash);
       if (throttle.locked) {
         return json(
           { message: "Terlalu banyak percobaan. Akses dikunci selama 15 menit." },
@@ -44,20 +43,9 @@ export default {
         );
       }
 
-      const { data, error } = await client
-        .from("settings")
-        .select("token_hash, session_version")
-        .eq("id", 1)
-        .single();
-      if (error) throw error;
-
-      if (Number(data.session_version) !== session.sv) {
-        return json({ message: "Sesi tidak lagi berlaku. Silakan masuk kembali." }, 401);
-      }
-
-      const valid = await tokenMatches(token, data.token_hash);
+      const valid = await tokenMatches(token);
       if (!valid) {
-        const state = await recordFailedAttempt(client, keyHash);
+        const state = await recordFailedAttempt(keyHash);
         if (state.locked) {
           return json(
             { message: "Lima kali percobaan gagal. Akses dikunci selama 15 menit." },
@@ -68,12 +56,12 @@ export default {
         return json({ message: "PIN/token tidak sesuai." }, 401);
       }
 
-      await clearFailedAttempts(client, keyHash);
+      await clearFailedAttempts(keyHash);
       const purpose =
         typeof body.purpose === "string" && allowedPurposes.has(body.purpose)
           ? body.purpose
           : "lainnya";
-      const { error: auditError } = await client.from("audit_log").insert({
+      await insertRow("audit_log", {
         aksi: "token_diverifikasi_ulang",
         tabel: "settings",
         record_key: "1",
@@ -82,7 +70,6 @@ export default {
         nilai_baru: { verifikasi: "berhasil" },
         detail: { tujuan: purpose },
       });
-      if (auditError) throw auditError;
 
       return json({ valid: true, message: "Verifikasi PIN berhasil." });
     } catch (error) {
