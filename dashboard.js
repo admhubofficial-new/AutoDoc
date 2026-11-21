@@ -112,6 +112,9 @@
     if (Number(counts.sppg_missing_fields) > 0) {
       warnings.push({ label: "Identitas SPPG belum lengkap", entity: "settings" });
     }
+    if (Number(counts.ahli_gizi_missing) > 0) {
+      warnings.push({ label: "Nama Ahli Gizi Dapur belum diisi", entity: "settings" });
+    }
     if (Number(counts.drivers_active) === 0) warnings.push({ label: "Data pengemudi belum tersedia", entity: "drivers" });
     if (Number(counts.vehicles_active) === 0) warnings.push({ label: "Data kendaraan belum tersedia", entity: "vehicles" });
     if (Number(counts.staff_active) === 0) warnings.push({ label: "Data petugas belum tersedia", entity: "staff" });
