@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { Script } from "node:vm";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../supabase/functions/autodoc-auth/index.ts", import.meta.url), "utf8");
@@ -91,4 +92,11 @@ test("dashboard completion shortcuts open the matching Data Master section", () 
   assert.match(dashboardUi, /entity: "settings"/);
   assert.match(dashboardUi, /entity: "vehicles"/);
   assert.match(dashboardUi, /entity: "recipients"/);
+});
+
+
+test("inline application script remains syntactically valid", () => {
+  const scripts = [...indexHtml.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];
+  assert.ok(scripts.length > 0, "expected an inline application script");
+  scripts.forEach(match => new Script(match[1]));
 });
