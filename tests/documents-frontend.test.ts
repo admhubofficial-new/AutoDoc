@@ -16,3 +16,8 @@ test("status reporting recreates its live region if the modal markup is missing 
 test("partial document creation responses are handled as valid API results", () => {
   assert.match(source, /response\.status!==207/);
 });
+
+
+test("printed status is updated only after the print dialog has been invoked", () => {
+  assert.match(source, /setTimeout\(\(\)=>\{[\s\S]*?win\.print\(\)[\s\S]*?api\("docs\/mark-printed"/);
+});
