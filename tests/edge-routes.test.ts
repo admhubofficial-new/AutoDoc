@@ -88,7 +88,7 @@ test("navigation opens document and master modules through public module APIs, n
 });
 
 test("dashboard completion shortcuts open the matching Data Master section", () => {
-  assert.match(dashboardUi, /window\.AutoDocMaster\?\.open\(warning\.entity\)/);
+  assert.match(dashboardUi, /window\.AutoDocMaster\?\.open\(warning\.entity, warning\.query\)/);
   assert.match(dashboardUi, /entity: "settings"/);
   assert.match(dashboardUi, /entity: "vehicles"/);
   assert.match(dashboardUi, /entity: "recipients"/);
