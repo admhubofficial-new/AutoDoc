@@ -1,14 +1,13 @@
 import { sameOriginAllowed, sessionSecret } from "../../lib/server/env.ts";
 import { json, methodNotAllowed, publicError, readJson } from "../../lib/server/http.ts";
-import { createSessionCookie, currentSessionVersion } from "../../lib/server/session.ts";
-import { insertRow, selectOne } from "../../lib/server/supabase.ts";
+import { createSessionCookie } from "../../lib/server/session.ts";
+import { insertRow, selectOne, rpc } from "../../lib/server/supabase.ts";
 import {
   checkThrottle,
   clearFailedAttempts,
   loginThrottleKey,
   normalizeToken,
   recordFailedAttempt,
-  tokenMatches,
 } from "../../lib/server/security.ts";
 
 interface LoginBody extends Record<string, unknown> {
@@ -25,17 +24,13 @@ export default {
     try {
       const body = await readJson<LoginBody>(request);
       const token = normalizeToken(body.token);
-      if (!token) {
-        return json({ message: "Masukkan PIN/token yang valid." }, 400);
-      }
+      if (!token) return json({ message: "Masukkan PIN/token yang valid." }, 400);
 
       const settings = await selectOne<{
         setup_completed_at: string | null;
-        session_version: number;
-        token_hash: string | null;
-      }>("settings", "setup_completed_at,session_version,token_hash", { id: "eq.1" });
+      }>("settings", "setup_completed_at", { id: "eq.1" });
 
-      if (!settings?.setup_completed_at || !settings.token_hash) {
+      if (!settings?.setup_completed_at) {
         return json({ code: "SETUP_REQUIRED", message: "Setup Awal harus diselesaikan terlebih dahulu." }, 409);
       }
 
@@ -49,8 +44,13 @@ export default {
         );
       }
 
-      const valid = await tokenMatches(token);
-      if (!valid) {
+      // Verifies bcrypt and returns the exact session version from the same
+      // database statement, protected from a concurrent token rotation.
+      const sessionVersion = await rpc<number | null>("authenticate_access_token", {
+        p_token: token,
+      });
+
+      if (sessionVersion === null) {
         const state = await recordFailedAttempt(keyHash);
         if (state.locked) {
           return json(
@@ -73,11 +73,10 @@ export default {
         detail: { metode: "PIN/token", hasil: "berhasil" },
       });
 
-      const version = await currentSessionVersion();
       return json(
         { success: true, message: "Berhasil masuk." },
         200,
-        { "Set-Cookie": createSessionCookie(request, version) },
+        { "Set-Cookie": createSessionCookie(request, Number(sessionVersion)) },
       );
     } catch (error) {
       return publicError(error);
