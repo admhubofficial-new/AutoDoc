@@ -216,10 +216,11 @@ async function validSession(request: Request): Promise<{ version: number } | nul
 
   let payload: { v?: number; iat?: number; exp?: number };
   try {
+    const signature = new Uint8Array(fromBase64Url(parts[1]));
     const valid = await crypto.subtle.verify(
       "HMAC",
       await hmacKey(),
-      fromBase64Url(parts[1]),
+      signature.buffer as ArrayBuffer,
       encoder.encode(parts[0]),
     );
     if (!valid) return null;
