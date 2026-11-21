@@ -16,7 +16,7 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 ### Tahap 2 — Setup dan autentikasi PIN
 
 - Frontend statis dipublikasikan melalui GitHub Pages.
-- Backend autentikasi dijalankan melalui Supabase Edge Function `autodoc-auth`; folder `api/` bukan backend untuk GitHub Pages.
+- Backend autentikasi dijalankan melalui Supabase Edge Function `autodoc-auth`.
 - Secret awal dibaca di server dari Supabase Edge Function Secrets dengan nama `PIN MASUK` (juga mendukung nama `PIN_MASUK`).
 - Saat Setup Awal, pengguna memasukkan PIN yang sudah disimpan di Supabase. Edge Function mencocokkannya di server, kemudian mengirim PIN itu langsung ke RPC database untuk disimpan sebagai hash; PIN asli tidak disimpan ke tabel atau dikembalikan ke browser.
 - PIN/token minimal 6 dan maksimal 128 karakter; database memakai SHA-256 pre-hash lalu bcrypt cost 12 melalui pgcrypto.
@@ -63,7 +63,8 @@ Edge Function memakai variabel default proyek Supabase:
 
 ### Pengujian
 
-- `npm test` — unit test sesi dan PIN.
+- `npm test` — unit test langsung terhadap helper sesi dan validasi PIN yang dipakai Edge Function aktif.
+- Modul server lama berbasis API routes dihapus agar tidak ada dua implementasi autentikasi yang membingungkan.
 - `deno check supabase/functions/autodoc-auth/index.ts` — pemeriksaan tipe Edge Function.
 
 ### Catatan data sumber
