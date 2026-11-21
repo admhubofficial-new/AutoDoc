@@ -1,8 +1,8 @@
-import { adminClient } from "../../lib/server/supabase.js";
-import { sameOriginAllowed } from "../../lib/server/env.js";
-import { json, methodNotAllowed, publicError, readJson } from "../../lib/server/http.js";
-import { createSessionCookie } from "../../lib/server/session.js";
-import { hashToken, normalizeToken } from "../../lib/server/security.js";
+import { sameOriginAllowed } from "../../lib/server/env.ts";
+import { json, methodNotAllowed, publicError, readJson } from "../../lib/server/http.ts";
+import { currentSessionVersion, createSessionCookie } from "../../lib/server/session.ts";
+import { rpc } from "../../lib/server/supabase.ts";
+import { normalizeToken } from "../../lib/server/security.ts";
 
 interface SetupBody extends Record<string, unknown> {
   token?: unknown;
@@ -40,38 +40,26 @@ export default {
         return json({ message: "Nomor awal SJ dan BAST harus bilangan bulat minimal 1." }, 400);
       }
 
-      const tokenHash = await hashToken(token);
-      const client = adminClient();
-      const { error } = await client.rpc("selesaikan_setup_awal", {
-        p_token_hash: tokenHash,
+      await rpc("selesaikan_setup_awal_dengan_pin", {
+        p_token: token,
         p_start_sj: startNumberSj,
         p_start_bast: startNumberBast,
       });
 
-      if (error) {
-        if (error.code === "55000") {
-          return json({ message: "Setup Awal sudah pernah diselesaikan atau tidak lagi tersedia." }, 409);
-        }
-        if (error.code === "22023") {
-          return json({ message: error.message }, 400);
-        }
-        throw error;
-      }
-
-      const { data, error: settingsError } = await client
-        .from("settings")
-        .select("session_version")
-        .eq("id", 1)
-        .single();
-
-      if (settingsError) throw settingsError;
-
+      const version = await currentSessionVersion();
       return json(
         { success: true, message: "Setup Awal berhasil. Selamat datang di AutoDoc." },
         200,
-        { "Set-Cookie": createSessionCookie(request, Number(data.session_version)) },
+        { "Set-Cookie": createSessionCookie(request, version) },
       );
     } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (code === "55000") {
+        return json({ message: "Setup Awal sudah pernah diselesaikan atau tidak lagi tersedia." }, 409);
+      }
+      if (code === "22023") {
+        return json({ message: "Data Setup Awal tidak valid." }, 400);
+      }
       return publicError(error);
     }
   },
