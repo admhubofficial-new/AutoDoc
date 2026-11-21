@@ -124,14 +124,14 @@ test("home dashboard avoids duplicate latest distribution and emphasizes global 
   assert.match(dashboardUi, /"Distribusi sebelumnya"/);
   assert.match(dashboardUi, /action\("Buat dokumen", true/);
   assert.doesNotMatch(dashboardUi, /action\("Lihat arsip", false/);
-  assert.match(indexHtml, /dashboard\.js\?v=home-summary-polish-20261121/);
+  assert.match(indexHtml, /dashboard\.js\?v=ahli-gizi-reminder-20261122/);
 });
 
 test("SPPG identity exposes separate Kepala SPPG, Kepala SPPI, and Ahli Gizi Dapur fields", () => {
   assert.match(masterUi, /\["nama_kepala_sppg","Nama Kepala SPPG","text"\]/);
   assert.match(masterUi, /\["nama_kepala_sppi","Nama Kepala SPPI","text"\]/);
   assert.match(masterUi, /\["nama_ahli_gizi","Nama Ahli Gizi Dapur","text"\]/);
-  assert.match(masterUi, /data\.nama_kepala_sppg/);
+  assert.match(masterUi, /input\.dataset\.key=key/);
   assert.match(masterUi, /wrap\.append\(el\("small","dm-hint"/);
   assert.match(source, /if \("nama_kepala_sppi" in input\)/);
   assert.match(source, /if \("nama_ahli_gizi" in input\)/);
