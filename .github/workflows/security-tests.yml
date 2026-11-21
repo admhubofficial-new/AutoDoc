@@ -29,5 +29,7 @@ jobs:
           deno-version: v2.x
       - name: Periksa tipe Supabase Edge Function
         run: deno check supabase/functions/autodoc-auth/index.ts
+      - name: Periksa sintaks frontend Data Master
+        run: node --check master.js
       - name: Jalankan unit test
         run: npm test
