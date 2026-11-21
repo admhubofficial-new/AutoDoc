@@ -439,14 +439,19 @@ async function loadDistributions(initialOffset=0){
   }
  }
  selectAll.addEventListener("change",()=>{
+  const selecting=selectAll.checked;
+  let capped=false;
   rows.forEach(row=>{
    const id=String(row.id);
-   if(selectAll.checked){
-    if(!selectedIds.has(id)&&selectedIds.size<60){selectedIds.add(id);selectedDetails.set(id,row)}
+   if(selecting){
+    if(!selectedIds.has(id)){
+     if(selectedIds.size<60){selectedIds.add(id);selectedDetails.set(id,row)}
+     else capped=true;
+    }
    }else{selectedIds.delete(id);selectedDetails.delete(id)}
   });
   updateSelection();
-  if(selectAll.checked&&selectedIds.size>=60&&rows.some(row=>!selectedIds.has(String(row.id))))status("Batas pilihan 60 riwayat tercapai. Hapus pilihan lain untuk menambah data.",true);
+  if(capped)status("Batas pilihan 60 riwayat tercapai. Hapus pilihan lain untuk menambah data.",true);
  });
  previous.onclick=()=>loadPage(Math.max(0,offset-60));
  next.onclick=()=>loadPage(offset+60);
