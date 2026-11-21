@@ -134,10 +134,9 @@ export async function validSession(
   const data = await selectOne<{
     session_version: number;
     setup_completed_at: string | null;
-    token_hash: string | null;
-  }>("settings", "session_version,setup_completed_at,token_hash", { id: "eq.1" });
+  }>("settings", "session_version,setup_completed_at", { id: "eq.1" });
 
-  if (!data?.setup_completed_at || !data.token_hash) return null;
+  if (!data?.setup_completed_at) return null;
   if (Number(data.session_version) !== payload.sv) return null;
 
   return payload;
@@ -147,10 +146,9 @@ export async function currentSessionVersion(): Promise<number> {
   const data = await selectOne<{
     session_version: number;
     setup_completed_at: string | null;
-    token_hash: string | null;
-  }>("settings", "session_version,setup_completed_at,token_hash", { id: "eq.1" });
+  }>("settings", "session_version,setup_completed_at", { id: "eq.1" });
 
-  if (!data?.setup_completed_at || !data.token_hash) {
+  if (!data?.setup_completed_at) {
     throw new Error("Setup Awal belum selesai.");
   }
   return Number(data.session_version);
