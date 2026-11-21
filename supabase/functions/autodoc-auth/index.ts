@@ -598,7 +598,7 @@ Deno.serve(async (request: Request) => {
     const functionMarker = "/autodoc-auth";
     const markerIndex = pathname.indexOf(functionMarker);
     const route = markerIndex >= 0
-      ? pathname.slice(markerIndex + functionMarker.length).replace(/^\\/+/, "")
+      ? pathname.slice(markerIndex + functionMarker.length).split("/").filter(Boolean).join("/")
       : "";
     switch (route) {
       case "setup/status": return await handleSetupStatus(request);
