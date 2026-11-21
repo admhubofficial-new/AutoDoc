@@ -8,36 +8,48 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 
 - 13 tabel aplikasi dengan Row Level Security aktif.
 - Tidak ada policy untuk role `anon` maupun `authenticated`.
-- Akses data aplikasi hanya melalui backend tepercaya menggunakan `SUPABASE_SERVICE_ROLE_KEY`.
+- Akses data aplikasi hanya melalui backend tepercaya menggunakan kunci Supabase server-side.
 - Nomor SJ dan BAST memakai counter terpisah, dengan fungsi PostgreSQL atomik.
 - Bucket `assets` untuk logo dan `bast-ttd` privat untuk scan BAST.
 - Data awal: 17 penerima, 443 porsi kecil, 1.751 porsi besar, total 2.194.
 
-### Tahap 2 — Setup dan autentikasi token
+### Tahap 2 — Setup dan autentikasi PIN
 
-- Setup awal hanya dapat diselesaikan satu kali.
-- PIN/token minimal 6 dan maksimal 128 karakter; PIN dipre-hash SHA-256 lalu di-hash bcrypt cost 12 di PostgreSQL melalui pgcrypto (aman untuk PIN hingga 128 karakter).
-- Cookie sesi ditandatangani HMAC-SHA256, HttpOnly, SameSite=Strict, dan berlaku 12 jam.
-- Lima kegagalan token mengunci akses bersama selama 15 menit.
-- Mengganti token mewajibkan PIN lama dan menaikkan `session_version`, sehingga sesi lama seluruh perangkat tidak berlaku.
-- `/api/auth/verify-token` memverifikasi ulang token untuk alur sensitif. Endpoint mutasi sensitif tetap harus meminta PIN pada permintaan mutasinya sendiri.
-- Seluruh akses database dilakukan server-side memakai REST API Supabase dengan `SUPABASE_SERVICE_ROLE_KEY`. Kunci ini tidak pernah dikirim ke browser.
-- API memakai Web Fetch API bawaan Node.js/Vercel; tidak ada dependensi runtime pihak ketiga.
+- Frontend statis dipublikasikan melalui GitHub Pages.
+- Backend autentikasi dijalankan melalui Supabase Edge Function `autodoc-auth`; folder `api/` bukan backend untuk GitHub Pages.
+- Secret awal dibaca di server dari Supabase Edge Function Secrets dengan nama `PIN MASUK` (juga mendukung nama `PIN_MASUK`).
+- Saat Setup Awal, pengguna memasukkan PIN yang sudah disimpan di Supabase. Edge Function mencocokkannya di server, kemudian mengirim PIN itu langsung ke RPC database untuk disimpan sebagai hash; PIN asli tidak disimpan ke tabel atau dikembalikan ke browser.
+- PIN/token minimal 6 dan maksimal 128 karakter; database memakai SHA-256 pre-hash lalu bcrypt cost 12 melalui pgcrypto.
+- Setelah setup awal, login membandingkan PIN terhadap hash di database. Perubahan PIN berikutnya menggunakan mekanisme rotasi token database dan tidak mengubah secret bootstrap.
+- Cookie sesi HMAC-SHA256, HttpOnly, Secure, SameSite=None dan Partitioned untuk panggilan lintas situs GitHub Pages ↔ Supabase, berlaku 12 jam.
+- Lima kegagalan PIN berturut-turut mengunci akses bersama selama 15 menit.
+- Validasi sesi memeriksa `session_version` di database; perubahan PIN membatalkan sesi lama semua perangkat.
+- Endpoint verifikasi ulang PIN tersedia untuk alur sensitif. Setiap endpoint mutasi sensitif tetap wajib memverifikasi PIN di dalam permintaan mutasinya sendiri.
+- Kunci backend Supabase hanya dibaca Edge Function; yang ada di frontend hanya publishable key yang memang boleh dipublikasikan.
+- CORS hanya mengizinkan origin `https://admhubofficial-new.github.io`.
 
-### Menjalankan lokal
+### Konfigurasi Supabase
 
-1. Gunakan Node.js 22 (lihat `.nvmrc`).
-2. Salin `.env.example` menjadi `.env.local`.
-3. Isi variabel berikut:
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `SESSION_SECRET` (buat dengan `openssl rand -base64 48`)
-   - `APP_ORIGIN` (contoh `http://localhost:3000`)
-4. Jalankan proyek melalui Vercel lokal atau deploy ke Vercel. API menggunakan Vercel Node.js Functions di direktori `api/`.
+Pastikan secret yang sudah dibuat tetap tersimpan di:
+
+**Supabase → Edge Functions → Secrets**
+
+Nama yang saat ini dikenali oleh kode: `PIN MASUK`. Kode juga mendukung `PIN_MASUK` jika key tersebut diubah ke format underscore. Jangan menyalin nilai PIN ke GitHub, source code, atau chat.
+
+Edge Function memakai variabel default proyek Supabase:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY` legacy, atau `SUPABASE_SECRET_KEYS` jika proyek memakai secret API key baru.
+
+### Deployment
+
+- Push ke `main` memicu GitHub Pages untuk memperbarui frontend statis.
+- Edge Function `autodoc-auth` perlu dideploy ke proyek Supabase dengan JWT gateway verification dimatikan; fungsi melakukan validasi origin, PIN, session, dan pembatasan percobaan sendiri.
+- Publishable key di `index.html` adalah public key dan memang untuk frontend. Jangan pernah menaruh `service_role` atau `sb_secret` di sana.
 
 ### Pengujian
 
-- `npm test`
+- `npm test` — unit test sesi dan PIN.
+- `deno check supabase/functions/autodoc-auth/index.ts` — pemeriksaan tipe Edge Function.
 
 ### Catatan data sumber
 
