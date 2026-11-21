@@ -453,7 +453,12 @@ async function handleMasterList(request: Request): Promise<Response> {
   if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
   const data: Record<string, unknown> = {};
+  const includeRecipients = new URL(request.url).searchParams.get("include_recipients") !== "false";
   for (const entity of Object.keys(MASTER_CONFIG) as MasterEntity[]) {
+    if (entity === "recipients" && !includeRecipients) {
+      data[entity] = [];
+      continue;
+    }
     const config = MASTER_CONFIG[entity];
     const query = new URLSearchParams({ select: config.columns, order: config.order });
     if (entity === "settings") query.set("id", "eq.1");
@@ -534,9 +539,9 @@ function validIsoDate(value: unknown): value is string {
   return isValidIsoDate(value);
 }
 
-function uuidList(value: unknown): string[] {
-  const result = normalizeUuidList(value);
-  if (!result) throw new AppError(400, "Pilih 1 sampai 100 penerima dengan identitas yang valid.");
+function uuidList(value: unknown, maxItems = 100, label = "penerima"): string[] {
+  const result = normalizeUuidList(value, maxItems);
+  if (!result) throw new AppError(400, `Pilih 1 sampai ${maxItems} ${label} dengan identitas yang valid.`);
   return result;
 }
 
@@ -686,7 +691,7 @@ async function handleDocsCreate(request: Request): Promise<Response> {
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
 
   if (!validIsoDate(body.tanggal)) throw new AppError(400, "Tanggal distribusi tidak valid.");
-  const recipientIds = uuidList(body.recipient_ids);
+  const recipientIds = uuidList(body.recipient_ids, 100, "penerima");
 
   let menuItems: string[];
   let documentKinds: Array<"SJ" | "BAST">;
@@ -876,10 +881,7 @@ async function handleDocsDeleteHistory(request: Request): Promise<Response> {
   if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
   const body = await readJson(request);
   await verifyMutationPin(request, body.token, "hapus_riwayat_distribusi");
-  const distributionIds = uuidList(body.distribution_ids);
-  if (distributionIds.length > 60) {
-    throw new AppError(400, "Penghapusan dibatasi maksimal 60 riwayat dalam satu tindakan.");
-  }
+  const distributionIds = uuidList(body.distribution_ids, 60, "riwayat distribusi");
   const result = await rpc<Record<string, unknown>>("hapus_riwayat_distribusi", {
     p_distribution_ids: distributionIds,
   });
@@ -972,7 +974,9 @@ async function handleDocsMarkPrinted(request: Request): Promise<Response> {
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({ status: "dicetak" }),
   });
-  return respond(request, { success: true, updated: Array.isArray(rows) && rows.length > 0 });
+  if (Array.isArray(rows) && rows.length > 0) return respond(request, { success: true, updated: true });
+  const existing = await selectOne<Record<string, unknown>>("documents", "id,status", { id: "eq." + body.document_id });
+  return respond(request, { success: true, updated: existing?.status === "dicetak" });
 }
 
 async function handleDocsRealization(request: Request): Promise<Response> {
