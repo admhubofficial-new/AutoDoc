@@ -37,19 +37,22 @@ function init(){
    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
   }
  });
- search.addEventListener("input",()=>{
+ function applySearch(){
   const query=search.value.trim().toLocaleLowerCase("id-ID");
   table.querySelectorAll("tbody tr").forEach(row=>{row.hidden=!!query&&!row.dataset.search.includes(query)});
- });
- function open(nextEntity){
+ }
+ search.addEventListener("input",applySearch);
+ function open(nextEntity,initialSearch){
   if(nextEntity&&Object.prototype.hasOwnProperty.call(defs,nextEntity))entity=nextEntity;
+  const requestedSearch=String(initialSearch||"");
   returnFocusEl=document.activeElement;
-  modal.hidden=false;document.body.style.overflow="hidden";search.value="";render();load();
+  modal.hidden=false;document.body.style.overflow="hidden";search.value="";render();
   document.querySelectorAll("[data-home-nav]").forEach(button=>{
    if(button.dataset.homeNav==="master")button.setAttribute("aria-current","page");
    else button.removeAttribute("aria-current");
   });
   closeBtn.focus();
+  load().then(()=>{search.value=requestedSearch;applySearch()});
  }
  window.AutoDocMaster=Object.freeze({open,close});
  function render(){
@@ -60,7 +63,11 @@ function init(){
   const cols=entity==="settings"?["nama_sppg","kode_sppg","alamat","kecamatan","kabupaten","nama_kepala_sppg"]:entity==="recipients"?["nama","kelompok","jenjang","total_porsi","alamat","aktif","perlu_verifikasi"]:entity==="vehicles"?["no_kendaraan","aktif"]:entity==="menus"?["teks_menu","aktif"]:["nama",...(entity==="staff"?["jabatan"]:[]),"aktif"];
   const labels={nama_sppg:"Nama SPPG",kode_sppg:"Kode",alamat:"Alamat",kecamatan:"Kecamatan",kabupaten:"Kabupaten",nama_kepala_sppg:"Kepala SPPG",nama:"Nama",kelompok:"Kelompok",jenjang:"Jenjang",total_porsi:"Porsi",aktif:"Status",perlu_verifikasi:"Verifikasi",no_kendaraan:"Kendaraan",teks_menu:"Menu",jabatan:"Jabatan"};
   const t=el("table","dm-table"),thead=el("thead"),tr=el("tr");cols.concat(["Aksi"]).forEach(c=>tr.append(el("th",null,labels[c]||c)));thead.append(tr);const tb=el("tbody");
-  (cache[entity]||[]).forEach(row=>{const r=el("tr");r.dataset.search=Object.values(row).filter(v=>v!==null&&v!==undefined).join(" ").toLocaleLowerCase("id-ID");cols.forEach(c=>{let v=row[c];if(c==="aktif")v=v?"Aktif":"Nonaktif";if(c==="perlu_verifikasi")v=v?"Perlu cek":"—";r.append(el("td",null,v??"—"))});const td=el("td");const b=el("button",null,"Ubah");b.onclick=()=>form(row);td.append(b);r.append(td);tb.append(r)});
+  (cache[entity]||[]).forEach(row=>{const r=el("tr");r.dataset.search=Object.entries(row).map(([key,value])=>{
+    if(key==="perlu_verifikasi")return value?"true perlu verifikasi perlu cek":"false";
+    if(key==="alamat"&&!String(value||"").trim())return "alamat kosong alamat belum dilengkapi";
+    return value===null||value===undefined?"":String(value);
+   }).join(" ").toLocaleLowerCase("id-ID");cols.forEach(c=>{let v=row[c];if(c==="aktif")v=v?"Aktif":"Nonaktif";if(c==="perlu_verifikasi")v=v?"Perlu cek":"—";r.append(el("td",null,v??"—"))});const td=el("td");const b=el("button",null,"Ubah");b.onclick=()=>form(row);td.append(b);r.append(td);tb.append(r)});
   if(!(cache[entity]||[]).length){const r=el("tr");const d=el("td",null,"Belum ada data.");d.colSpan=cols.length+1;r.append(d);tb.append(r)}t.append(thead,tb);table.innerHTML="";table.append(t);formSlot.innerHTML="";
   if(entity==="settings"&&(cache.settings||[])[0])form(cache.settings[0]);
  }
