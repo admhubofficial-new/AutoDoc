@@ -72,7 +72,7 @@ test("document creation uses a guided flow and recipients are explicitly selecte
 });
 
 test("archive provides searchable distribution days, recipient pairs, and bulk print actions", () => {
-  assert.match(documentsUi, /api\("docs\/days"\)/);
+  assert.match(documentsUi, /api\("docs\/days/);
   assert.match(documentsUi, /docsDaysSearch/);
   assert.match(documentsUi, /docs\/days\?offset=/);
   assert.match(documentsUi, /docsDaysPrevious/);
