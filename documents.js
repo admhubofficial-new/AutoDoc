@@ -259,22 +259,21 @@ async function createDocs(event){
  }catch(e){status(e.message,true)}
  finally{button.disabled=false;button.textContent="Buat Surat Jalan & BAST"}
 }
-async function loadDistributions(){
+async function loadDistributions(initialOffset=0){
  const target=$(".docs-view-history",modal);if(!target)return;
- target.innerHTML="<div class='docs-days-toolbar'><div><h3 class='docs-section-title'>Arsip distribusi</h3><p class='docs-note' style='margin:4px 0 0'>Pilih tanggal distribusi untuk melihat pasangan Surat Jalan dan BAST.</p></div><input id='docsDaysSearch' type='search' placeholder='Cari tanggal, menu, petugas, atau pengemudi...' aria-label='Cari arsip distribusi'></div><div id='docsDaysList' class='docs-days-list'><div class='docs-empty'>Memuat arsip…</div></div>";
- status("Memuat daftar distribusi...");
- try{
-  const result=await api("docs/days");
-  const rows=Array.isArray(result.distributions)?result.distributions:[];
-  const list=$("#docsDaysList",target);
-  const input=$("#docsDaysSearch",target);
-  function renderDays(){
-   const query=input.value.trim().toLocaleLowerCase("id-ID");
-   const filtered=rows.filter(row=>[
-    row.tanggal,row.menu,row.nama_petugas,row.nama_pengemudi,row.no_kendaraan
-   ].some(value=>String(value||"").toLocaleLowerCase("id-ID").includes(query)));
-   list.innerHTML="";
-   if(!filtered.length){list.append(node("div","docs-empty",rows.length?"Tidak ada distribusi yang cocok dengan pencarian.":"Belum ada distribusi yang tercatat."));return}
+ target.innerHTML="<div class='docs-days-toolbar'><div><h3 class='docs-section-title'>Arsip distribusi</h3><p class='docs-note' style='margin:4px 0 0'>Telusuri distribusi terbaru, lalu gunakan halaman berikutnya untuk arsip yang lebih lama.</p></div><input id='docsDaysSearch' type='search' placeholder='Cari tanggal, menu, petugas, atau pengemudi...' aria-label='Cari arsip distribusi'></div><div id='docsDaysList' class='docs-days-list'><div class='docs-empty'>Memuat arsip…</div></div><div class='docs-days-pagination'><button type='button' class='docs-btn' id='docsDaysPrevious'>Lebih baru</button><span id='docsDaysPage' class='docs-note'>Memuat halaman…</span><button type='button' class='docs-btn primary' id='docsDaysNext'>Lebih lama</button></div>";
+ const list=$("#docsDaysList",target),input=$("#docsDaysSearch",target);
+ const previous=$("#docsDaysPrevious",target),next=$("#docsDaysNext",target),pageLabel=$("#docsDaysPage",target);
+ let offset=0,hasMore=false,rows=[];
+ function renderDays(){
+  const query=input.value.trim().toLocaleLowerCase("id-ID");
+  const filtered=rows.filter(row=>[
+   row.tanggal,row.menu,row.nama_petugas,row.nama_pengemudi,row.no_kendaraan
+  ].some(value=>String(value||"").toLocaleLowerCase("id-ID").includes(query)));
+  list.innerHTML="";
+  if(!filtered.length){
+   list.append(node("div","docs-empty",rows.length?"Tidak ada distribusi yang cocok pada halaman ini.":"Belum ada distribusi pada halaman ini."));
+  }else{
    filtered.forEach(row=>{
     const card=node("article","docs-day-card");
     const detail=node("div");
@@ -287,10 +286,32 @@ async function loadDistributions(){
     actions.append(open);card.append(detail,actions);list.append(card);
    });
   }
-  input.addEventListener("input",renderDays);
-  renderDays();
-  status(rows.length+" distribusi ditemukan.");
- }catch(error){status(error.message,true)}
+  const first=rows.length?offset+1:0,last=offset+rows.length;
+  pageLabel.textContent=rows.length?"Distribusi "+first+"–"+last+" · Cari pada halaman ini":"Tidak ada distribusi";
+  previous.disabled=offset===0;
+  next.disabled=!hasMore;
+ }
+ async function loadPage(nextOffset){
+  status("Memuat arsip distribusi…");
+  previous.disabled=true;next.disabled=true;
+  try{
+   const result=await api("docs/days?offset="+encodeURIComponent(nextOffset));
+   rows=Array.isArray(result.distributions)?result.distributions:[];
+   offset=Number(result.offset||0);
+   hasMore=Boolean(result.has_more);
+   renderDays();
+   status(rows.length+" distribusi dimuat pada halaman ini.");
+  }catch(error){
+   status(error.message,true);
+   list.replaceChildren(node("div","docs-empty","Arsip gagal dimuat. Periksa sesi dan koneksi, lalu coba lagi."));
+   previous.disabled=offset===0;
+   next.disabled=true;
+  }
+ }
+ input.addEventListener("input",renderDays);
+ previous.onclick=()=>loadPage(Math.max(0,offset-60));
+ next.onclick=()=>loadPage(offset+60);
+ await loadPage(Math.max(0,Number(initialOffset)||0));
 }
 async function loadHistory(date){
  const target=$(".docs-view-history",modal);if(!target)return;
