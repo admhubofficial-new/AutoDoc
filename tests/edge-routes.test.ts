@@ -61,25 +61,25 @@ test("retries cannot overwrite an issued distribution snapshot", () => {
 
 test("distribution archive endpoint requires a valid session and supports server-side global search", () => {
   const body = functionBody("handleDocsDays", "handleDocsDeleteHistory");
-  assert.match(body, /validSession\\(request\\)/);
-  assert.match(body, /order: "tanggal\\.desc"/);
+  assert.match(body, /validSession\(request\)/);
+  assert.match(body, /order: "tanggal\.desc"/);
   assert.match(body, /limit: "61"/);
   assert.match(body, /rawOffset/);
-  assert.match(body, /offset: String\\(offset\\)/);
-  assert.match(body, /has_more: rows\\.length > 60/);
-  assert.match(body, /url\\.searchParams\\.get\\("q"\\)/);
-  assert.match(body, /filters\\.or =/);
-  assert.match(body, /tanggal = "eq\\."/);
-  assert.match(source, /case "docs\\/days": return await handleDocsDays\\(request\\)/);
+  assert.match(body, /offset: String\(offset\)/);
+  assert.match(body, /has_more: rows\.length > 60/);
+  assert.match(body, /url\.searchParams\.get\("q"\)/);
+  assert.match(body, /filters\.or =/);
+  assert.match(body, /tanggal = "eq\."/);
+  assert.match(source, /case "docs\/days": return await handleDocsDays\(request\)/);
 });
 
 test("bulk history deletion requires a session, a valid PIN, and bounded unique distribution IDs", () => {
   const body = functionBody("handleDocsDeleteHistory", "handleDocsList");
-  assert.match(body, /verifyMutationPin\\(request, body\\.token, "hapus_riwayat_distribusi"\\)/);
-  assert.match(body, /uuidList\\(body\\.distribution_ids\\)/);
-  assert.match(body, /distributionIds\\.length > 60/);
+  assert.match(body, /verifyMutationPin\(request, body\.token, "hapus_riwayat_distribusi"\)/);
+  assert.match(body, /uuidList\(body\.distribution_ids\)/);
+  assert.match(body, /distributionIds\.length > 60/);
   assert.match(body, /hapus_riwayat_distribusi/);
-  assert.match(source, /case "docs\\/delete-history": return await handleDocsDeleteHistory\\(request\\)/);
+  assert.match(source, /case "docs\/delete-history": return await handleDocsDeleteHistory\(request\)/);
 });
 
 test("document creation uses a guided flow and recipients are explicitly selected", () => {
@@ -90,16 +90,22 @@ test("document creation uses a guided flow and recipients are explicitly selecte
   assert.match(documentsUi, /Pilih minimal satu penerima/);
 });
 
-test("archive provides searchable distribution days, recipient pairs, and bulk print actions", () => {
-  assert.match(documentsUi, /api\("docs\/days/);
+test("archive provides global search, page selection, and PIN-confirmed bulk deletion controls", () => {
+  assert.match(documentsUi, /api\("docs\/days"\+query\)/);
   assert.match(documentsUi, /docsDaysSearch/);
-  assert.match(documentsUi, /docs\/days\?offset=/);
-  assert.match(documentsUi, /docsDaysPrevious/);
-  assert.match(documentsUi, /docsDaysNext/);
+  assert.match(documentsUi, /docsDaysSelectAll/);
+  assert.match(documentsUi, /Pilih semua pada halaman ini/);
+  assert.match(documentsUi, /docsDaysDelete/);
+  assert.match(documentsUi, /docs-delete-panel/);
+  assert.match(documentsUi, /docsDeletePin/);
+  assert.match(documentsUi, /docs\/delete-history/);
+  assert.match(documentsUi, /distribution_ids:ids/);
   assert.match(documentsUi, /function renderDocumentGroup/);
   assert.match(documentsUi, /function printDocuments/);
   assert.match(documentsUi, /docsPrintSj/);
   assert.match(documentsUi, /docsPrintBast/);
+  assert.match(documentsUi, /docsDaysPrevious/);
+  assert.match(documentsUi, /docsDaysNext/);
 });
 
 test("navigation opens document and master modules through public module APIs, not hidden launchers", () => {
