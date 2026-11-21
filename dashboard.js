@@ -81,9 +81,9 @@
 
     const metrics = el("div", "home-summary-grid");
     const metricRows = [
-      ["Jumlah dokumen", latest ? latest.documents_count : 0],
-      ["BAST menunggu realisasi", latest ? latest.bast_pending : 0],
-      ["Status menu", latest && String(latest.menu || "").trim() ? "Terisi" : "Belum diisi"]
+      ["Dokumen pada distribusi terakhir", latest ? latest.documents_count : 0],
+      ["BAST belum direalisasi", counts.bast_pending],
+      ["Total distribusi tercatat", counts.distributions]
     ];
     metricRows.forEach(([label, value]) => {
       const item = el("div", "home-summary-item");
@@ -100,8 +100,7 @@
     }
     const summaryActions = el("div", "home-summary-actions");
     summaryActions.append(
-      action("Lihat arsip", false, () => window.AutoDocOpenArchive && window.AutoDocOpenArchive()),
-      action("Buat & cetak dokumen", true, () => window.AutoDocOpenDocs && window.AutoDocOpenDocs("create"))
+      action("Buat dokumen", true, () => window.AutoDocOpenDocs && window.AutoDocOpenDocs("create"))
     );
     summary.append(summaryActions);
     host.append(summary);
@@ -136,14 +135,13 @@
       host.append(panel);
     }
 
-    const recentPanel = el("section", "home-panel");
-    if (!warnings.length) recentPanel.style.gridColumn = "1 / -1";
-    recentPanel.append(el("h2", null, "Distribusi terbaru"));
-    const recentList = el("div", "home-recent-list");
-    if (!rows.length) {
-      recentList.append(el("p", "home-empty", "Belum ada distribusi yang tercatat."));
-    } else {
-      rows.forEach(row => {
+    const earlierRows = rows.slice(1);
+    if (earlierRows.length) {
+      const recentPanel = el("section", "home-panel");
+      if (!warnings.length) recentPanel.style.gridColumn = "1 / -1";
+      recentPanel.append(el("h2", null, "Distribusi sebelumnya"));
+      const recentList = el("div", "home-recent-list");
+      earlierRows.forEach(row => {
         const item = el("div", "home-recent-row");
         const details = el("div");
         details.append(
@@ -155,9 +153,9 @@
         item.append(details, open);
         recentList.append(item);
       });
+      recentPanel.append(recentList);
+      host.append(recentPanel);
     }
-    recentPanel.append(recentList);
-    host.append(recentPanel);
   }
 
   async function load() {
