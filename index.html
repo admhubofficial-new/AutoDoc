@@ -185,7 +185,7 @@
     .section-heading { margin: 38px 0 16px; font-size: 18px; letter-spacing: -.4px; color: #25382d; }
     .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
     .feature-card { min-height: 170px; padding: 22px; border: 1px solid #e4eae3; border-radius: 16px; background: #fff; box-shadow: 0 5px 18px rgba(32,60,40,.035); }
-    .docs-feature-card { cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+    .docs-feature-card { display: block; width: 100%; padding: 22px; border: 1px solid #e4eae3; background: #fff; color: inherit; font: inherit; text-align: left; appearance: none; -webkit-appearance: none; cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
     .docs-feature-card:hover, .docs-feature-card:focus-visible { border-color: #9dbba2; box-shadow: 0 9px 24px rgba(32,60,40,.09); outline: none; transform: translateY(-2px); }
     .feature-icon { width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 18px; border-radius: 12px; background: var(--mint-2); color: var(--forest-2); }
     .feature-card h3 { margin: 0 0 7px; font-size: 14px; color: #2b3e32; }
@@ -436,10 +436,10 @@
           <div class="feature-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4.5 7h15v12h-15zM8 7V5h8v2M8 11h8M8 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <div><h3>Riwayat dokumen</h3><p>Lihat kembali dokumen yang pernah dibuat.</p></div>
         </article>
-        <article class="feature-card docs-feature-card" id="docsLauncher" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Buka menu Surat Jalan dan BAST MBG">
+        <button type="button" class="feature-card docs-feature-card" id="docsLauncher" aria-haspopup="dialog" aria-label="Buka menu Surat Jalan dan BAST MBG">
           <div class="feature-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M6 3.5h8l4 4V20H6zM14 3.5V8h4M9 12h6M9 15h6M9 18h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <div><h3>Surat Jalan &amp; BAST MBG</h3><p>Buat dokumen distribusi, cetak A4, dan catat realisasi penerimaan.</p></div>
-        </article>
+        </button>
       </div>
       <p class="home-footnote">Kelola Data Master terlebih dahulu, lalu terbitkan Surat Jalan dan BAST dari menu di atas.</p>
     </section>
@@ -633,6 +633,6 @@
     })();
   </script>
   <script src="./master.js" defer></script>
-  <script src="./documents.js?v=phase4-menu-fix" defer></script>
+  <script src="./documents.js?v=phase4-click-fix-20261121" defer></script>
 </body>
 </html>
