@@ -26,7 +26,7 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 
 ### Menjalankan lokal
 
-1. Instal Node.js 22 atau lebih baru.
+1. Gunakan Node.js 22 (lihat `.nvmrc`).
 2. Salin `.env.example` menjadi `.env.local`.
 3. Isi variabel berikut:
    - `SUPABASE_URL`
