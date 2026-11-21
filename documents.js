@@ -414,7 +414,15 @@ function showRealization(card,doc){
 }
 function init(){
  style();build();
- window.AutoDocDocuments=Object.freeze({open:show,close,openArchive:loadDistributions});
+ window.AutoDocDocuments=Object.freeze({
+  open:show,
+  close,
+  openArchive(date){
+   show();
+   switchTab("history");
+   if(date)loadHistory(date);
+  }
+ });
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
