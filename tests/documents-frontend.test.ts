@@ -74,3 +74,48 @@ test("creation sends menu components, meal time, and only selected numbered docu
 test("meal time supports pagi, siang, and sore with siang selected by default", () => {
   assert.match(source, /id='docsMealTime'><option value='pagi'>Pagi<\/option><option value='siang' selected>Siang<\/option><option value='sore'>Sore<\/option>/);
 });
+
+test("organoleptic printing matches the approved A4 portrait template", () => {
+  assert.match(source, /FORMULIR UJI ORGANOLEPTIK/);
+  assert.match(source, /@page\{size:A4 portrait;margin:0\}/);
+  assert.match(source, /break-after:page/);
+  assert.match(source, /function organolepticSheet/);
+  assert.match(source, /function organolepticTable/);
+  for (const aspect of ["Aroma", "Suhu", "Penampilan", "Citarasa", "Tekstur"]) assert.match(source, new RegExp(aspect));
+});
+
+test("organoleptic checkboxes and handwritten fields stay blank", () => {
+  assert.match(source, /for\(let i=0;i<10;i\+\+\)row\.append\(doc\.createElement\("td"\)\)/);
+  assert.match(source, /organolepticElement\(doc,"div","followup","Tindak Lanjut:"\)/);
+  assert.match(source, /organolepticElement\(doc,"div","dots"\)/);
+});
+
+test("organoleptic forms use distribution snapshots and five blank menu rows", () => {
+  assert.match(source, /currentDistribution\.nama_ahli_gizi/);
+  assert.match(source, /currentDistribution\.waktu_makan/);
+  assert.match(source, /currentDistribution\.menu_items/);
+  assert.match(source, /Array\(5\)\.fill\(""\)/);
+  assert.match(source, /Nama Posyandu/);
+  assert.match(source, /Nama Sekolah/);
+});
+
+test("organoleptic output is available in bulk, per recipient, and from wizard print selection", () => {
+  assert.match(source, /docsPrintOrganoleptic/);
+  assert.match(source, /Cetak Uji Organoleptik/);
+  assert.match(source, /Semua Uji Organoleptik/);
+  assert.match(source, /docsIncludeOrganoleptic/);
+  assert.match(source, /Formulir uji organoleptik/);
+  assert.match(source, /getRecipientsByIds/);
+});
+
+test("organoleptic printing does not create or update numbered documents", () => {
+  const body = source.slice(source.indexOf("function printOrganolepticForms"), source.indexOf("function showRealization"));
+  assert.doesNotMatch(body, /api\(/);
+  assert.doesNotMatch(body, /docs\/create|mark-printed|counters/);
+});
+
+test("organoleptic user data is inserted with textContent rather than HTML interpolation", () => {
+  const body = source.slice(source.indexOf("function organolepticElement"), source.indexOf("function showRealization"));
+  assert.match(body, /element\.textContent=String\(text\?\?" "\)/);
+  assert.doesNotMatch(body, /innerHTML|insertAdjacentHTML/);
+});
