@@ -36,7 +36,7 @@ function close(){
  document.body.style.overflow="";
  if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();
 }
-function show(){
+function show(loadFormData=true){
  if(!modal){style();build()}
  returnFocusEl=document.activeElement;
  modal.hidden=false;
@@ -46,7 +46,7 @@ function show(){
  modal.setAttribute("aria-hidden","false");
  document.body.style.overflow="hidden";
  $(".docs-close",modal)?.focus();
- loadMaster().catch(e=>status(e.message,true));
+ if(loadFormData)loadMaster().catch(e=>status(e.message,true));
 }
 function style(){
  if($("#docsStyles"))return;
@@ -71,7 +71,7 @@ function build(){
   if(modal.hidden)return;
   if(e.key==="Escape"){close();return}
   if(e.key==="Tab"){
-   const focusable=Array.from(modal.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])")).filter(el=>!el.hidden);
+   const focusable=Array.from(modal.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])")).filter(el=>!el.closest("[hidden]")&&el.getClientRects().length>0);
    if(!focusable.length)return;
    const first=focusable[0],last=focusable[focusable.length-1];
    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
@@ -131,9 +131,9 @@ function renderCreate(){
  "<p class='docs-note'>Ikuti tiga langkah singkat. Nomor dokumen baru diterbitkan setelah pemeriksaan akhir.</p>"+
  "<form id='docsCreateForm' autocomplete='off'>"+
  "<nav class='docs-wizard-steps' aria-label='Tahapan penerbitan'>"+
- "<button type='button' class='docs-wizard-step' data-wizard-step='1' aria-current='step'>1. Distribusi</button>"+
- "<button type='button' class='docs-wizard-step' data-wizard-step='2'>2. Penerima</button>"+
- "<button type='button' class='docs-wizard-step' data-wizard-step='3'>3. Periksa</button></nav>"+
+ "<span class='docs-wizard-step' data-wizard-step='1' aria-current='step'>1. Distribusi</span>"+
+ "<span class='docs-wizard-step' data-wizard-step='2'>2. Penerima</span>"+
+ "<span class='docs-wizard-step' data-wizard-step='3'>3. Periksa</span></nav>"+
  "<section class='docs-step-pane' data-step-pane='1'>"+
  "<h4 class='docs-section-title'>Informasi distribusi</h4>"+
  "<div class='docs-grid'>"+
@@ -434,7 +434,7 @@ function init(){
   },
   close,
   openArchive(date){
-   show();
+   show(false);
    tab="history";drawTabs();
    $(".docs-view-create",modal).hidden=true;
    $(".docs-view-history",modal).hidden=false;
