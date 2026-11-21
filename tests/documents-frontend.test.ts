@@ -23,17 +23,22 @@ test("printed documents use the public BGN logo in the letterhead", () => {
   assert.match(source, /class='top-logo' src='/);
 });
 
-test("printed status waits for all letterhead assets and follows the print dialog", () => {
+test("printed status is recorded only after an explicit user confirmation", () => {
   assert.match(source, /const logos=Array\.from\(win\.document\.querySelectorAll\("\.top-logo"\)\)/);
   assert.match(source, /logo\.addEventListener\("load",resolve/);
   assert.match(source, /logo\.addEventListener\("error",resolve/);
   assert.match(source, /Promise\.all\(logos\.map\(imageReady\)\)/);
-  assert.match(source, /try\{win\.focus\(\);win\.print\(\)\}catch\(_\)\{return\}[\s\S]*?api\("docs\/mark-printed"/);
+  assert.match(source, /const markButton=win\.document\.createElement\("button"\)/);
+  assert.match(source, /Konfirmasi sudah dicetak/);
+  assert.match(source, /markButton\.addEventListener\("click",async\(\)=>\{/);
+  assert.match(source, /api\("docs\/mark-printed"/);
+  assert.doesNotMatch(source, /try\{win\.focus\(\);win\.print\(\)\}catch\(_\)\{return\}[\s\S]*?api\("docs\/mark-printed"/);
 });
 
 
 test("creation trusts the session-protected endpoint that already filters active recipients", () => {
   assert.ok(source.includes('api("master/recipients")'));
+  assert.ok(source.includes('api("master/list?include_recipients=false")'));
   assert.ok(source.includes("const recipients=Array.isArray(master.recipients)?master.recipients:[]"));
   assert.ok(!source.includes("master.recipients).filter(isActiveRecipient"));
 });
