@@ -27,4 +27,6 @@ test("primary navigation is a responsive workspace sidebar", () => {
   assert.match(index, /Buat Dokumen/);
   assert.match(index, /Arsip/);
   assert.match(index, /Data Master/);
+  assert.match(index, /body \.docs-overlay \.docs-dialog/);
+  assert.match(index, /body \.dm-overlay \.dm-dialog/);
 });
