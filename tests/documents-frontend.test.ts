@@ -116,6 +116,6 @@ test("organoleptic printing does not create or update numbered documents", () =>
 
 test("organoleptic user data is inserted with textContent rather than HTML interpolation", () => {
   const body = source.slice(source.indexOf("function organolepticElement"), source.indexOf("function showRealization"));
-  assert.match(body, /element\.textContent=String\(text\?\?" "\)/);
+  assert.match(body, /element\.textContent=String\(text\?\?"?"\)/);
   assert.doesNotMatch(body, /innerHTML|insertAdjacentHTML/);
 });
