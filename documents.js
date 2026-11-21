@@ -75,16 +75,23 @@ function options(items,valueKey,labelKey,label){
  return html;
 }
 async function loadMaster(){
- status("Memuat data penerima dari server...");
- const result=await api("master/list");
- const data=result&&result.data;
- if(!data||!Array.isArray(data.recipients)){
-  throw new Error("Server tidak mengirim daftar penerima dalam format yang benar. Coba muat ulang; jika tetap gagal, periksa endpoint master/list.");
+ status("Memuat daftar penerima dan data pendukung...");
+ const [masterResult,recipientResult]=await Promise.allSettled([
+  api("master/list"),
+  api("master/recipients")
+ ]);
+ if(recipientResult.status!=="fulfilled"){
+  const reason=recipientResult.reason;
+  throw new Error("Daftar penerima gagal dimuat: "+(reason&&reason.message?reason.message:"kesalahan jaringan")+". Periksa sesi login dan endpoint master/recipients.");
  }
- master=data;
- const activeCount=data.recipients.filter(isActiveRecipient).length;
+ const recipients=recipientResult.value&&recipientResult.value.recipients;
+ if(!Array.isArray(recipients)) throw new Error("Server tidak mengirim daftar penerima dalam format yang benar.");
+ master=masterResult.status==="fulfilled"&&masterResult.value&&masterResult.value.data?masterResult.value.data:{};
+ master.recipients=recipients;
  renderCreate();
- status(activeCount+" penerima aktif berhasil dimuat dari "+data.recipients.length+" data.");
+ const activeCount=recipients.filter(isActiveRecipient).length;
+ const warning=masterResult.status==="rejected"?" Data pendukung (menu/petugas/kendaraan/pengemudi) gagal dimuat; daftar penerima tetap tersedia.":"";
+ status(activeCount+" penerima aktif berhasil dimuat dari "+recipients.length+" data."+warning,masterResult.status==="rejected");
 }
 function isActiveRecipient(recipient){
  if(!recipient||typeof recipient!=="object")return false;
@@ -97,7 +104,7 @@ function renderCreate(){
  const recipients=(Array.isArray(master.recipients)?master.recipients:[]).filter(isActiveRecipient);
  const todayVal=today();
  target.innerHTML="<h3 class='docs-section-title'>Penerbitan dokumen distribusi</h3>"+
- "<p class='docs-note'>Pilih tanggal, informasi perjalanan, dan penerima. Sistem akan membuat satu Surat Jalan dan satu BAST per penerima terpilih. Penerbitan akan meminta verifikasi PIN ulang.</p>"+
+ "<p class='docs-note'>Pilih tanggal, informasi perjalanan, dan penerima. Sistem akan membuat satu Surat Jalan dan satu BAST per penerima terpilih. Penerbitan hanya memerlukan sesi login aktif.</p>"+
  "<form id='docsCreateForm' autocomplete='off'>"+
  "<div class='docs-grid'>"+
  "<div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div>"+
@@ -109,7 +116,7 @@ function renderCreate(){
  "</div>"+
  "<section class='docs-recipient-box'><div class='docs-recipient-head'><strong>Penerima manfaat <span id='docsSelectedCount'></span></strong><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari penerima...'><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua</button><button type='button' class='docs-btn' id='docsClearAll'>Kosongkan</button></div></div>"+
  "<div class='docs-recipient-list' id='docsRecipientList'></div></section>"+
- "<div class='docs-pin-row'><div class='docs-field'><label for='docsPin'>Konfirmasi PIN akses *</label><input id='docsPin' type='password' minlength='6' maxlength='128' autocomplete='current-password' placeholder='Masukkan PIN untuk menerbitkan' required></div><button class='docs-btn primary' id='docsCreateButton' type='submit'>Buat Surat Jalan &amp; BAST</button></div>"+
+ "<div class='docs-form-actions'><button class='docs-btn primary' id='docsCreateButton' type='submit'>Buat Surat Jalan &amp; BAST</button></div>"+
  "</form><div id='docsCreateResult'></div>";
  renderRecipients(recipients);
  $("#docsRecipientSearch",target).addEventListener("input",filterRecipients);
@@ -146,8 +153,6 @@ async function createDocs(event){
  event.preventDefault();status("");
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
  if(!selected.length){status("Pilih minimal satu penerima.",true);return}
- const token=$("#docsPin",modal).value.trim();
- if(token.length<6){status("PIN minimal 6 karakter.",true);$("#docsPin",modal).focus();return}
  const body={
   tanggal:$("#docsDate",modal).value,
   jam_berangkat:$("#docsTime",modal).value,
@@ -162,7 +167,6 @@ async function createDocs(event){
  const button=$("#docsCreateButton",modal);button.disabled=true;button.textContent="Menerbitkan dokumen...";
  try{
   const result=await api("docs/create",body);
-  $("#docsPin",modal).value="";
   const failed=(result.errors||[]).length;
   const summary=node("div","docs-result");
   summary.textContent=result.berhasil+" dari "+result.requested+" dokumen berhasil disiapkan ("+Math.floor(result.berhasil/2)+" pasangan SJ/BAST). "+(failed?"Masih ada "+failed+" dokumen gagal; ulangi tanggal yang sama untuk melanjutkan.":"Nomor yang sudah terbit tidak akan dibuat ulang.");
