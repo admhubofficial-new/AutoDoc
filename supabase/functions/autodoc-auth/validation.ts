@@ -46,7 +46,7 @@ export function normalizeUuidList(value: unknown): string[] | null {
 
 export function parseContentRangeTotal(value: string | null): number | null {
   if (typeof value !== "string") return null;
-  const match = /\/(\d+)$/.exec(value.trim());
+  const match = /^(?:\d+-\d+|\*)\/(\d+)$/.exec(value.trim());
   if (!match) return null;
   const total = Number(match[1]);
   return Number.isSafeInteger(total) && total >= 0 ? total : null;
