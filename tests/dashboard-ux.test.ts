@@ -27,6 +27,10 @@ test("primary navigation is a responsive workspace sidebar", () => {
   assert.match(index, /sidebar-collapsed/);
   assert.match(index, /mobile-nav-open/);
   assert.match(index, /homeSidebarBackdrop/);
+  assert.ok(index.indexOf('<aside class="home-topbar" id="homeSidebar"') < index.indexOf('id="homeMenuToggle"'));
+  assert.ok(index.indexOf('id="homeMenuToggle"') < index.indexOf('<nav class="home-nav"'));
+  assert.doesNotMatch(index, /<header class="home-pagebar">[\\s]*<button[^>]*home-menu-toggle/);
+  assert.ok(index.includes('translateX(calc(-100% + 52px))'));
   assert.match(index, /Ciutkan sidebar/);
   assert.match(index, /window\.matchMedia\("\(max-width: 720px\)"\)/);
   assert.match(index, /Buat Dokumen/);
