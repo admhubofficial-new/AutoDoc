@@ -101,12 +101,9 @@ export function createSessionCookie(
   );
 }
 
-export function clearAuthCookies(request: Request): string[] {
+export function clearAuthCookies(request: Request): string {
   const secure = secureRequest(request) ? "; Secure" : "";
-  return [
-    SESSION_COOKIE + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + secure,
-    "autodoc_stepup=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + secure,
-  ];
+  return SESSION_COOKIE + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + secure;
 }
 
 function cookieValue(request: Request, name: string): string | null {
