@@ -1,9 +1,9 @@
 export class HttpError extends Error {
-  constructor(
-    public readonly status: number,
-    message: string,
-  ) {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
     super(message);
+    this.status = status;
     this.name = "HttpError";
   }
 }
@@ -63,7 +63,6 @@ export function publicError(error: unknown): Response {
   if (error instanceof HttpError) {
     return json({ message: error.message }, error.status);
   }
-  // Log only server-side diagnostics; never return SQL or secret details.
   console.error("AutoDoc API error:", error instanceof Error ? error.message : "unknown");
   return json({ message: "Terjadi kesalahan pada server. Silakan coba kembali." }, 500);
 }
