@@ -147,5 +147,5 @@ test("archive global search and bulk deletion use explicit page selection and re
   assert.match(source, /docsDeletePin/);
   assert.match(source, /api\("docs\/delete-history"/);
   assert.match(source, /distribution_ids:ids/);
-  assert.match(source, /const token=pin\\.value/);
+  assert.match(source, /const token=pin\.value/);
 });
