@@ -53,22 +53,22 @@ test("retries cannot overwrite an issued distribution snapshot", () => {
 
 test("distribution archive endpoint requires a valid session and reads only recent distributions", () => {
   const body = functionBody("handleDocsDays", "handleDocsList");
-  assert.match(body, /validSession\\(request\\)/);
-  assert.match(body, /order: "tanggal\\.desc"/);
+  assert.match(body, /validSession\(request\)/);
+  assert.match(body, /order: "tanggal\.desc"/);
   assert.match(body, /limit: "60"/);
-  assert.match(source, /case "docs\\/days": return await handleDocsDays\\(request\\)/);
+  assert.match(source, /case "docs\/days": return await handleDocsDays\(request\)/);
 });
 
 test("document creation uses a guided flow and recipients are explicitly selected", () => {
   assert.match(documentsUi, /data-wizard-step='1'/);
-  assert.match(documentsUi, /function goWizardStep\\(step\\)/);
+  assert.match(documentsUi, /function goWizardStep\(step\)/);
   assert.match(documentsUi, /docsReviewSummary/);
-  assert.match(documentsUi, /check\\.checked=false/);
+  assert.match(documentsUi, /check\.checked=false/);
   assert.match(documentsUi, /Pilih minimal satu penerima/);
 });
 
 test("archive provides searchable distribution days, recipient pairs, and bulk print actions", () => {
-  assert.match(documentsUi, /api\\("docs\\/days"\\)/);
+  assert.match(documentsUi, /api\("docs\/days"\)/);
   assert.match(documentsUi, /docsDaysSearch/);
   assert.match(documentsUi, /function renderDocumentGroup/);
   assert.match(documentsUi, /function printDocuments/);
@@ -78,16 +78,16 @@ test("archive provides searchable distribution days, recipient pairs, and bulk p
 
 test("navigation opens document and master modules through public module APIs, not hidden launchers", () => {
   assert.match(indexHtml, /Buat Dokumen/);
-  assert.match(indexHtml, /window\\.AutoDocDocuments\\.open\\(\\)/);
-  assert.match(indexHtml, /window\\.AutoDocMaster\\?\\.open\\("recipients"\\)/);
+  assert.match(indexHtml, /window\.AutoDocDocuments\.open\(\)/);
+  assert.match(indexHtml, /window\.AutoDocMaster\?\.open\("recipients"\)/);
   assert.doesNotMatch(indexHtml, /id="docsLauncher"/);
-  assert.match(documentsUi, /window\\.AutoDocDocuments=Object\\.freeze/);
-  assert.match(masterUi, /window\\.AutoDocMaster=Object\\.freeze/);
+  assert.match(documentsUi, /window\.AutoDocDocuments=Object\.freeze/);
+  assert.match(masterUi, /window\.AutoDocMaster=Object\.freeze/);
   assert.match(masterUi, /placeholder="Cari data pada bagian ini/);
 });
 
 test("dashboard completion shortcuts open the matching Data Master section", () => {
-  assert.match(dashboardUi, /window\\.AutoDocMaster\\?\\.open\\(warning\\.entity\\)/);
+  assert.match(dashboardUi, /window\.AutoDocMaster\?\.open\(warning\.entity\)/);
   assert.match(dashboardUi, /entity: "settings"/);
   assert.match(dashboardUi, /entity: "vehicles"/);
   assert.match(dashboardUi, /entity: "recipients"/);
