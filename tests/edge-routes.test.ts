@@ -28,3 +28,18 @@ test("master imports remain bounded and use a conflict-safe upsert key", () => {
   assert.match(body, /body\.rows\.length > 500/);
   assert.match(body, /on_conflict: "kelompok,nama"/);
 });
+
+
+test("dashboard endpoint is protected by an active session and reads aggregate counts", () => {
+  const body = functionBody("handleDashboardSummary", "handleDocsCreate");
+  assert.match(body, /validSession\(request\)/);
+  assert.match(body, /countRows\("documents"/);
+  assert.match(body, /recent_distributions/);
+});
+
+test("retries cannot overwrite an issued distribution snapshot", () => {
+  const body = functionBody("handleDocsCreate", "handleDocsDays");
+  assert.match(body, /error\.code === "55000"/);
+  assert.match(body, /new AppError\(\s*409/);
+  assert.match(body, /snapshot dokumen lama tidak berubah/);
+});

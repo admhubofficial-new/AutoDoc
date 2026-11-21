@@ -30,7 +30,7 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 
 
 
-### Tahap 4 — Surat Jalan & BAST MBG
+### Tahap 3 — Dashboard operasional\n\n- Ringkasan jumlah distribusi, dokumen SJ/BAST, status dokumen, dan BAST yang menunggu realisasi.\n- Pemantauan kelengkapan Data Master dan daftar lima distribusi terbaru.\n- Ringkasan dibaca melalui Edge Function dengan sesi aktif; tidak ada akses langsung browser ke tabel Supabase.\n\n### Tahap 4 — Surat Jalan & BAST MBG
 
 - Penerbitan pasangan Surat Jalan dan BAST per penerima pada tanggal distribusi.
 - Nomor SJ dan BAST menggunakan counter database terpisah dan fungsi PostgreSQL atomik yang sudah tersedia.
@@ -65,8 +65,8 @@ Edge Function memakai variabel default proyek Supabase:
 
 ### Pengujian
 
-- `npm test` — unit test helper sesi/PIN, tanggal, waktu, UUID, bilangan bulat, parser CSV, dan kontrak alur endpoint dokumen.
-- Pengujian integrasi produksi yang menulis data tidak dijalankan otomatis agar tidak mengonsumsi nomor dokumen atau mengubah data operasional.
+- `npm test` — unit test helper sesi/PIN, tanggal, waktu, UUID, bilangan bulat, content-range count, parser CSV, dan kontrak alur endpoint dokumen/dashboard.
+- Pengujian integrasi produksi yang menulis data tidak dijalankan otomatis agar tidak mengonsumsi nomor dokumen atau mengubah data operasional. Dashboard hanya menjalankan permintaan HEAD/GET dan tidak menulis database.\n- Pengulangan tanggal distribusi dengan dokumen yang sudah terbit harus menggunakan detail perjalanan yang sama; backend mengubah percobaan pengubahan snapshot menjadi konflik HTTP 409 yang mudah dipahami.
 - `deno check supabase/functions/autodoc-auth/index.ts` — pemeriksaan tipe Edge Function.
 
 ### Catatan data sumber
