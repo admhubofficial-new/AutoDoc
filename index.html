@@ -156,6 +156,17 @@
     .form-footer strong { color: #78877c; font-weight: 750; }
     .prototype-note { margin-top: 12px; color: #9a8a63; font-size: 10px; line-height: 1.5; text-align: center; }
 
+    .setup-form { margin-top: 27px; }
+    .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .setup-field { min-width: 0; }
+    .setup-field .field-label { margin-bottom: 8px; }
+    .setup-field .token-input { height: 54px; padding-right: 14px; }
+    .setup-helper { margin: 10px 0 0; color: #78877d; font-size: 11px; line-height: 1.6; }
+    .setup-error { min-height: 18px; margin: 10px 0 0; color: #a43c32; font-size: 12px; }
+    .auth-status { min-height: 18px; margin: 13px 0 0; color: #66756d; font-size: 11px; line-height: 1.6; text-align: center; }
+    .auth-status[data-state="error"] { color: #a43c32; }
+    .auth-status[data-state="success"] { color: #286548; }
+
     /* Beranda awal — ditampilkan setelah tombol masuk pada pratinjau desain. */
     .home-page { min-height: 100vh; min-height: 100svh; background: #f5f7f4; }
     .home-topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 19px clamp(20px, 5vw, 74px); border-bottom: 1px solid var(--line); background: #fff; }
@@ -224,6 +235,7 @@
       .feature-icon { margin: 0; flex: 0 0 auto; }
       .feature-card h3 { margin-bottom: 4px; }
       .logout-button { padding: 9px 10px; font-size: 11px; }
+      .setup-grid { grid-template-columns: 1fr; gap: 0; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
@@ -298,49 +310,96 @@
 
       <section class="form-panel" aria-labelledby="loginTitle">
         <div class="form-wrap">
-          <div class="welcome-tag">
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 12 7l4.5 2-4.5 2-2 4.5L8 11l-4.5-2L8 7l2-4.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
-            Portal kerja internal
-          </div>
-          <h2 id="loginTitle" class="form-title">Selamat datang!</h2>
-          <p class="form-intro">Masukkan token atau PIN akses Anda untuk melanjutkan ke beranda AutoDoc.</p>
-
-          <form id="loginForm" class="login-form">
-            <label class="field-label" for="accessToken">Token / PIN akses</label>
-            <div class="input-wrap">
-              <input
-                class="token-input"
-                id="accessToken"
-                name="accessToken"
-                type="password"
-                placeholder="Masukkan token atau PIN"
-                autocomplete="off"
-                autocapitalize="none"
-                spellcheck="false"
-                required
-                aria-describedby="tokenHint loginError"
-              >
-              <button class="toggle-visibility" id="toggleVisibility" type="button" aria-label="Tampilkan token" aria-pressed="false">
-                <svg id="eyeIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.3-6 9.5-6 9.5 6 9.5 6-3.3 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.6"/></svg>
-              </button>
+          <section id="loginPanel" aria-labelledby="loginTitle">
+            <div class="welcome-tag">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 12 7l4.5 2-4.5 2-2 4.5L8 11l-4.5-2L8 7l2-4.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+              Portal kerja internal
             </div>
-            <p id="tokenHint" class="field-hint">Gunakan token atau PIN yang diberikan oleh administrator.</p>
-            <p id="loginError" class="error-message" role="alert" aria-live="polite"></p>
-            <button class="submit-button" type="submit">
-              Masuk ke Beranda
-              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </form>
+            <h2 id="loginTitle" class="form-title">Selamat datang!</h2>
+            <p class="form-intro">Masukkan token atau PIN akses Anda untuk melanjutkan ke beranda AutoDoc.</p>
 
-          <div class="secure-note">
-            <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 16 5v4.7c0 3.7-2.5 6.2-6 7.8-3.5-1.6-6-4.1-6-7.8V5l6-2.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m7.4 9.9 1.7 1.7 3.6-3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>Akses AutoDoc diperuntukkan bagi petugas yang memiliki token atau PIN resmi. Jangan membagikan kode akses Anda kepada orang lain.</span>
-          </div>
+            <form id="loginForm" class="login-form">
+              <label class="field-label" for="accessToken">Token / PIN akses</label>
+              <div class="input-wrap">
+                <input
+                  class="token-input"
+                  id="accessToken"
+                  name="accessToken"
+                  type="password"
+                  placeholder="Masukkan token atau PIN"
+                  autocomplete="current-password"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  required
+                  minlength="6"
+                  maxlength="128"
+                  aria-describedby="tokenHint loginError"
+                >
+                <button class="toggle-visibility" id="toggleVisibility" type="button" aria-label="Tampilkan token" aria-pressed="false">
+                  <svg id="eyeIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.3-6 9.5-6 9.5 6 9.5 6-3.3 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.6"/></svg>
+                </button>
+              </div>
+              <p id="tokenHint" class="field-hint">Gunakan token atau PIN resmi yang telah dibuat pada Setup Awal.</p>
+              <p id="loginError" class="error-message" role="alert" aria-live="polite"></p>
+              <button class="submit-button" id="loginButton" type="submit">
+                Masuk ke Beranda
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </form>
+
+            <div class="secure-note">
+              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 16 5v4.7c0 3.7-2.5 6.2-6 7.8-3.5-1.6-6-4.1-6-7.8V5l6-2.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m7.4 9.9 1.7 1.7 3.6-3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Lima kali percobaan salah akan mengunci akses selama 15 menit. Jangan bagikan PIN kepada orang lain.</span>
+            </div>
+          </section>
+
+          <section id="setupPanel" aria-labelledby="setupTitle" hidden>
+            <div class="welcome-tag">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 12 7l4.5 2-4.5 2-2 4.5L8 11l-4.5-2L8 7l2-4.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+              Konfigurasi pertama kali
+            </div>
+            <h2 id="setupTitle" class="form-title">Setup Awal AutoDoc</h2>
+            <p class="form-intro">Buat PIN rahasia dan tentukan nomor awal kedua jenis dokumen. Pengaturan ini hanya dapat diselesaikan satu kali.</p>
+
+            <form id="setupForm" class="setup-form">
+              <div class="setup-field">
+                <label class="field-label" for="setupToken">Buat token / PIN baru</label>
+                <input class="token-input" id="setupToken" type="password" autocomplete="new-password" minlength="6" maxlength="128" placeholder="Minimal 6 karakter" required>
+              </div>
+              <div class="setup-field" style="margin-top:14px">
+                <label class="field-label" for="setupTokenConfirm">Ulangi token / PIN</label>
+                <input class="token-input" id="setupTokenConfirm" type="password" autocomplete="new-password" minlength="6" maxlength="128" placeholder="Masukkan kembali PIN" required>
+              </div>
+
+              <div class="setup-grid">
+                <div class="setup-field">
+                  <label class="field-label" for="startNumberSj">Nomor awal Surat Jalan</label>
+                  <input class="token-input" id="startNumberSj" type="number" min="1" step="1" inputmode="numeric" placeholder="Contoh: 1" required>
+                </div>
+                <div class="setup-field">
+                  <label class="field-label" for="startNumberBast">Nomor awal BAST</label>
+                  <input class="token-input" id="startNumberBast" type="number" min="1" step="1" inputmode="numeric" placeholder="Contoh: 1" required>
+                </div>
+              </div>
+              <p class="setup-helper">Nomor awal akan dikunci setelah setup. Siapkan PIN dengan aman karena PIN ini menjadi satu-satunya akses ke AutoDoc.</p>
+              <p id="setupError" class="setup-error" role="alert" aria-live="polite"></p>
+              <button class="submit-button" id="setupButton" type="submit">
+                Simpan Setup & Masuk
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </form>
+
+            <div class="secure-note">
+              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 16 5v4.7c0 3.7-2.5 6.2-6 7.8-3.5-1.6-6-4.1-6-7.8V5l6-2.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m7.4 9.9 1.7 1.7 3.6-3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>PIN tidak disimpan dalam bentuk teks biasa. Setelah Setup Awal selesai, nomor awal tidak dapat diubah tanpa verifikasi PIN.</span>
+            </div>
+          </section>
+
+          <p id="authStatus" class="auth-status" role="status" aria-live="polite"></p>
           <div class="form-footer">
             <strong>AutoDoc</strong> · SPPG Darmaraja 01<br>
             Sistem administrasi dan dokumentasi internal
           </div>
-          <div class="prototype-note">Pratinjau desain — verifikasi token akan dihubungkan ke Supabase pada tahap berikutnya.</div>
         </div>
       </section>
     </div>
@@ -361,7 +420,7 @@
     </header>
     <section class="home-content">
       <div class="home-greeting">
-        <span class="preview-badge">Pratinjau beranda</span>
+        <span class="preview-badge">Ruang kerja internal</span>
         <h1>Selamat datang di AutoDoc</h1>
         <p>Ruang kerja digital untuk membantu pengelolaan dokumen penunjang kegiatan Satuan Pelayanan Pemenuhan Gizi Gratis Darmaraja 01.</p>
       </div>
@@ -380,20 +439,82 @@
           <div><h3>Riwayat dokumen</h3><p>Lihat kembali dokumen yang pernah dibuat.</p></div>
         </article>
       </div>
-      <p class="home-footnote">Ini adalah beranda awal untuk pratinjau desain. Menu dan data dokumen akan dikembangkan pada tahap berikutnya. Token yang dimasukkan pada pratinjau ini belum diverifikasi.</p>
+      <p class="home-footnote">Beranda awal AutoDoc. Menu pengelolaan Surat Jalan dan BAST akan diaktifkan pada tahap pengembangan berikutnya.</p>
     </section>
   </main>
 
   <script>
     (() => {
-      const form = document.getElementById("loginForm");
+      const loginForm = document.getElementById("loginForm");
+      const setupForm = document.getElementById("setupForm");
       const tokenInput = document.getElementById("accessToken");
       const toggleButton = document.getElementById("toggleVisibility");
       const eyeIcon = document.getElementById("eyeIcon");
-      const error = document.getElementById("loginError");
+      const loginError = document.getElementById("loginError");
+      const setupError = document.getElementById("setupError");
+      const authStatus = document.getElementById("authStatus");
+      const loginPanel = document.getElementById("loginPanel");
+      const setupPanel = document.getElementById("setupPanel");
       const authPage = document.getElementById("authPage");
       const homePage = document.getElementById("homePage");
       const logoutButton = document.getElementById("logoutButton");
+      const loginButton = document.getElementById("loginButton");
+      const setupButton = document.getElementById("setupButton");
+
+      function setStatus(message, state) {
+        authStatus.textContent = message || "";
+        authStatus.dataset.state = state || "";
+      }
+
+      function showHome() {
+        authPage.hidden = true;
+        homePage.hidden = false;
+        setStatus("", "");
+        document.title = "Beranda — AutoDoc";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function showLogin() {
+        homePage.hidden = true;
+        authPage.hidden = false;
+        loginPanel.hidden = false;
+        setupPanel.hidden = true;
+        setStatus("", "");
+        document.title = "AutoDoc — Darmaraja 01";
+      }
+
+      function showSetup() {
+        homePage.hidden = true;
+        authPage.hidden = false;
+        loginPanel.hidden = true;
+        setupPanel.hidden = false;
+        setStatus("Lengkapi Setup Awal untuk mulai menggunakan AutoDoc.", "success");
+        document.title = "Setup Awal — AutoDoc";
+      }
+
+      async function requestJson(url, options) {
+        const response = await fetch(url, {
+          credentials: "same-origin",
+          cache: "no-store",
+          ...options
+        });
+        let payload = {};
+        try { payload = await response.json(); } catch (_) {}
+        if (!response.ok) {
+          const error = new Error(payload.message || "Permintaan tidak berhasil.");
+          error.status = response.status;
+          throw error;
+        }
+        return payload;
+      }
+
+      async function postJson(url, body) {
+        return requestJson(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+      }
 
       toggleButton.addEventListener("click", () => {
         const shouldShow = tokenInput.type === "password";
@@ -405,37 +526,107 @@
           : '<path d="M2.5 12s3.3-6 9.5-6 9.5 6 9.5 6-3.3 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.6"/>';
       });
 
-      form.addEventListener("submit", (event) => {
+      loginForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+        loginError.textContent = "";
         const token = tokenInput.value.trim();
-        if (!token) {
-          error.textContent = "Masukkan token atau PIN akses terlebih dahulu.";
+        if (token.length < 6) {
+          loginError.textContent = "PIN/token minimal 6 karakter.";
           tokenInput.focus();
           return;
         }
-        // Prototipe UI: jangan menganggap input ini sebagai autentikasi sungguhan.
-        // Validasi token akan dihubungkan ke backend Supabase pada tahap implementasi.
-        error.textContent = "";
-        authPage.hidden = true;
-        homePage.hidden = false;
-        document.title = "Beranda — AutoDoc";
-        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        loginButton.disabled = true;
+        loginButton.textContent = "Memeriksa akses...";
+        try {
+          await postJson("/api/auth/login", { token });
+          tokenInput.value = "";
+          showHome();
+        } catch (error) {
+          loginError.textContent = error.message || "Tidak dapat masuk. Periksa PIN dan koneksi.";
+          if (error.status === 409) showSetup();
+        } finally {
+          loginButton.disabled = false;
+          loginButton.innerHTML = 'Masuk ke Beranda <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
       });
 
-      tokenInput.addEventListener("input", () => { error.textContent = ""; });
+      tokenInput.addEventListener("input", () => { loginError.textContent = ""; });
 
-      logoutButton.addEventListener("click", () => {
-        tokenInput.value = "";
-        tokenInput.type = "password";
-        toggleButton.setAttribute("aria-label", "Tampilkan token");
-        toggleButton.setAttribute("aria-pressed", "false");
-        eyeIcon.innerHTML = '<path d="M2.5 12s3.3-6 9.5-6 9.5 6 9.5 6-3.3 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.6"/>';
-        homePage.hidden = true;
+      setupForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setupError.textContent = "";
+
+        const token = document.getElementById("setupToken").value.trim();
+        const confirmToken = document.getElementById("setupTokenConfirm").value.trim();
+        const startNumberSj = Number(document.getElementById("startNumberSj").value);
+        const startNumberBast = Number(document.getElementById("startNumberBast").value);
+
+        if (token.length < 6 || token.length > 128) {
+          setupError.textContent = "PIN/token harus berisi 6 sampai 128 karakter.";
+          return;
+        }
+        if (token !== confirmToken) {
+          setupError.textContent = "Konfirmasi PIN/token tidak sama.";
+          return;
+        }
+        if (!Number.isSafeInteger(startNumberSj) || startNumberSj < 1 ||
+            !Number.isSafeInteger(startNumberBast) || startNumberBast < 1) {
+          setupError.textContent = "Nomor awal Surat Jalan dan BAST harus minimal 1.";
+          return;
+        }
+
+        setupButton.disabled = true;
+        setupButton.textContent = "Menyimpan pengaturan...";
+        try {
+          await postJson("/api/setup/complete", {
+            token, confirmToken, startNumberSj, startNumberBast
+          });
+          document.getElementById("setupToken").value = "";
+          document.getElementById("setupTokenConfirm").value = "";
+          showHome();
+        } catch (error) {
+          setupError.textContent = error.message || "Setup Awal tidak berhasil.";
+        } finally {
+          setupButton.disabled = false;
+          setupButton.innerHTML = 'Simpan Setup & Masuk <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
+      });
+
+      logoutButton.addEventListener("click", async () => {
+        logoutButton.disabled = true;
+        try {
+          await postJson("/api/auth/logout", {});
+          tokenInput.value = "";
+          showLogin();
+          tokenInput.focus();
+        } catch (error) {
+          setStatus(error.message || "Tidak dapat mengakhiri sesi.", "error");
+        } finally {
+          logoutButton.disabled = false;
+        }
+      });
+
+      async function initialize() {
         authPage.hidden = false;
-        document.title = "AutoDoc — Darmaraja 01";
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        tokenInput.focus();
-      });
+        homePage.hidden = true;
+        try {
+          const setup = await requestJson("/api/setup/status");
+          if (setup.setupRequired) {
+            showSetup();
+            return;
+          }
+
+          showLogin();
+          const session = await requestJson("/api/auth/session");
+          if (session.authenticated) showHome();
+        } catch (error) {
+          showLogin();
+          setStatus("Layanan AutoDoc belum terhubung. Periksa konfigurasi server dan Supabase.", "error");
+        }
+      }
+
+      initialize();
     })();
   </script>
 </body>
