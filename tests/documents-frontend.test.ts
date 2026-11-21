@@ -37,3 +37,40 @@ test("creation trusts the session-protected endpoint that already filters active
   assert.ok(source.includes("const recipients=Array.isArray(master.recipients)?master.recipients:[]"));
   assert.ok(!source.includes("master.recipients).filter(isActiveRecipient"));
 });
+
+test("wizard offers SJ and BAST selected by default and requires a numbered document", () => {
+  assert.match(source, /id='docsKindSj' type='checkbox' checked/);
+  assert.match(source, /id='docsKindBast' type='checkbox' checked/);
+  assert.match(source, /function selectedDocumentKinds\(\)/);
+  assert.match(source, /Pilih minimal Surat Jalan atau BAST/);
+});
+
+test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
+  assert.match(source, /menuComponents\.length>=8/);
+  assert.match(source, /docsMenuSuggestions/);
+  assert.match(source, /Geser .* ke atas/);
+  assert.match(source, /Geser .* ke bawah/);
+  assert.match(source, /Hapus komponen/);
+  assert.match(source, /function readMenuComponents\(\)/);
+  assert.match(source, /docsAddMenuItem/);
+});
+
+test("wizard can copy the ordered menu from the latest distribution archive", () => {
+  assert.match(source, /function copyLastMenu\(\)/);
+  assert.match(source, /api\("docs\/days\?offset=0"\)/);
+  assert.match(source, /api\("docs\/list\?tanggal="/);
+  assert.match(source, /distribution\.menu_items/);
+  assert.match(source, /Salin dari distribusi terakhir/);
+});
+
+test("creation sends menu components, meal time, and only selected numbered document types", () => {
+  assert.match(source, /menu_items:menuItems/);
+  assert.match(source, /waktu_makan:\$\("#docsMealTime",modal\)\.value/);
+  assert.match(source, /jenis_dokumen:kinds/);
+  assert.match(source, /const values=\{[\s\S]*?"Jumlah dokumen bernomor":selected\.length\*kinds\.length/);
+  assert.doesNotMatch(source, /menu:\$\("#docsMenu",modal\)\.value/);
+});
+
+test("meal time supports pagi, siang, and sore with siang selected by default", () => {
+  assert.match(source, /id='docsMealTime'><option value='pagi'>Pagi<\/option><option value='siang' selected>Siang<\/option><option value='sore'>Sore<\/option>/);
+});
