@@ -140,7 +140,7 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
   assert.match(printRendererSource, /Mengetahui,/);
   assert.match(printRendererSource, /Kepala SPPI/);
   assert.match(printRendererSource, /const signatures=isBast/);
-  assert.match(printRendererSource, /esc\(dist\.nama_petugas\|\|""\)/);
+  assert.match(printRendererSource, /escapeHtml\(dist\.nama_petugas\|\|""\)/);
 });
 
 test("archive global search and bulk deletion use explicit page selection and require a PIN", () => {
