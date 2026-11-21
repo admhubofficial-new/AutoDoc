@@ -136,3 +136,16 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
   assert.match(source, /const signatures=isBast/);
   assert.match(source, /esc\(dist\.nama_petugas\|\|""\)/);
 });
+
+test("archive global search and bulk deletion use explicit page selection and require a PIN", () => {
+  assert.match(source, /async function loadDistributions/);
+  assert.match(source, /api\("docs\/days"\+query\)/);
+  assert.match(source, /docsDaysSelectAll/);
+  assert.match(source, /Pilih semua pada halaman ini/);
+  assert.match(source, /selectedIds\.add/);
+  assert.match(source, /docsDaysDelete/);
+  assert.match(source, /docsDeletePin/);
+  assert.match(source, /api\("docs\/delete-history"/);
+  assert.match(source, /distribution_ids:ids/);
+  assert.match(source, /verifyMutationPin/);
+});
