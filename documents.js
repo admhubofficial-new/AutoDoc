@@ -5,7 +5,7 @@ const $=(selector,root=document)=>root.querySelector(selector);
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LETTERHEAD_LOGO_URL="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png";
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false;
+let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[];
 
 async function api(route,body){
  const headers={"apikey":KEY,"Accept":"application/json"};
@@ -52,6 +52,7 @@ function style(){
  if($("#docsStyles"))return;
  const css=node("style");css.id="docsStyles";
  css.textContent=".docs-launch{display:flex;align-items:center;gap:14px;width:100%;margin-top:14px;padding:18px 20px;border:1px solid #dce8dc;border-radius:15px;background:#fff;color:#244434;text-align:left;box-shadow:0 5px 18px rgba(32,60,40,.035)}.docs-launch:hover{border-color:#9dbba2;background:#fbfdf9}.docs-launch-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#edf5ed;font-size:21px}.docs-launch strong{display:block;font-size:14px}.docs-launch small{display:block;margin-top:4px;color:#7b887f;font-size:11px}.docs-overlay[hidden]{display:none}.docs-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(12,31,22,.6)}.docs-dialog{width:min(1120px,100%);max-height:94vh;overflow:auto;border-radius:18px;background:#fbfcfa;box-shadow:0 28px 90px rgba(0,0,0,.26)}.docs-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:19px 23px;border-bottom:1px solid #e4eae3;background:#fff}.docs-head h2{margin:0;color:#1b3f2e;font-size:20px}.docs-head p{margin:5px 0 0;color:#7a887e;font-size:12px}.docs-close{width:38px;height:38px;border:1px solid #e1e8e0;border-radius:10px;background:#fff;color:#526258;font-size:21px}.docs-tabs{display:flex;gap:8px;padding:13px 20px;border-bottom:1px solid #e5ebe4;background:#fff}.docs-tab{padding:9px 14px;border:1px solid #dce6dc;border-radius:9px;background:#fff;color:#526258;font-size:12px;font-weight:750}.docs-tab[aria-selected=true]{border-color:#1e5b43;background:#eaf3ea;color:#174b39}.docs-body{padding:22px}.docs-section-title{margin:0 0 6px;color:#284234;font-size:16px}.docs-note{margin:0 0 16px;color:#77847b;font-size:11px;line-height:1.65}.docs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.docs-field{display:flex;flex-direction:column;gap:6px;min-width:0}.docs-field.wide{grid-column:span 2}.docs-field label{color:#536258;font-size:11px;font-weight:750}.docs-field input,.docs-field select,.docs-field textarea{width:100%;min-height:40px;padding:9px 10px;border:1px solid #dce5dc;border-radius:8px;background:#fff;color:#24392d;font:inherit;font-size:12px}.docs-field textarea{min-height:66px;resize:vertical}.docs-recipient-box{margin-top:18px;padding:16px;border:1px solid #e0e8df;border-radius:13px;background:#fff}.docs-recipient-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.docs-recipient-head strong{color:#294536;font-size:13px}.docs-recipient-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.docs-recipient-tools input{min-height:35px;padding:7px 9px;border:1px solid #dce5dc;border-radius:8px;font-size:11px}.docs-btn{padding:9px 12px;border:1px solid #dce6dc;border-radius:9px;background:#fff;color:#31513d;font-size:11px;font-weight:750}.docs-btn.primary{border-color:#174b39;background:#174b39;color:#fff}.docs-btn:disabled{opacity:.55;cursor:wait}.docs-recipient-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:13px;max-height:310px;overflow:auto}.docs-recipient{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #edf0ec;border-radius:9px;background:#fcfdfb}.docs-recipient input{margin-top:3px}.docs-recipient strong{display:block;color:#33483b;font-size:11px}.docs-recipient small{display:block;margin-top:3px;color:#7d897f;font-size:10px;line-height:1.5}.docs-verify{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:5px;background:#fff4dc;color:#92651e;font-size:9px;font-weight:700}.docs-pin-row{display:grid;grid-template-columns:1fr auto;align-items:end;gap:12px;margin-top:17px;padding:15px;border:1px solid #e8e3d6;border-radius:12px;background:#fffdf6}.docs-result{margin-top:15px;padding:13px;border:1px solid #dce8dc;border-radius:10px;background:#f4f9f3;color:#31513d;font-size:11px;line-height:1.6}.docs-msg{min-height:18px;margin:12px 0 0;color:#66756d;font-size:11px}.docs-msg.error{color:#a43c32}.docs-history-toolbar{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:15px}.docs-list{display:grid;grid-template-columns:1fr;gap:10px}.docs-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:15px;border:1px solid #e1e9e0;border-radius:12px;background:#fff}.docs-card h4{margin:0;color:#294536;font-size:13px}.docs-card p{margin:5px 0 0;color:#7a887e;font-size:10px;line-height:1.6}.docs-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.docs-kind{display:inline-block;margin-right:6px;padding:4px 7px;border-radius:6px;background:#edf4ed;color:#24563a;font-size:9px;font-weight:800}.docs-kind.bast{background:#f6f0e2;color:#806327}.docs-status{display:inline-block;margin-left:6px;padding:4px 7px;border-radius:6px;background:#f1f3f0;color:#647066;font-size:9px;font-weight:750}.docs-status.selesai{background:#e8f4e9;color:#2b6844}.docs-status.batal{background:#f8e9e7;color:#a43c32}.docs-realization{grid-column:1/-1;padding:14px;border:1px solid #e7e9df;border-radius:10px;background:#fbfcf8}.docs-realization h5{margin:0 0 12px;color:#31513d;font-size:12px}.docs-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}.docs-empty{padding:25px;text-align:center;color:#879289;font-size:11px;border:1px dashed #dce5dc;border-radius:10px;background:#fff}.docs-warning{color:#946b21}.docs-checkline{display:flex;align-items:center;gap:8px;min-height:40px;color:#526258;font-size:11px}.docs-print-table{width:100%;border-collapse:collapse;font-size:12px}.docs-print-table th,.docs-print-table td{padding:8px;border:1px solid #333;text-align:left}.docs-print-table th{background:#f3f4f1}.docs-signatures{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:45px;text-align:center;font-size:12px}.docs-sign-space{height:75px}.docs-print-head{text-align:center;margin-bottom:20px}.docs-print-head h1{margin:0 0 7px;font-size:18px;letter-spacing:.7px}.docs-print-head h2{margin:0;font-size:14px;text-decoration:underline}.docs-print-meta{display:flex;justify-content:space-between;gap:15px;margin:13px 0;font-size:12px}.docs-print-table{margin-top:14px}.docs-print-footer{margin-top:28px;font-size:10px;color:#555}.docs-wizard-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:0 0 20px}.docs-wizard-step{padding:9px 8px;border:1px solid #e1e8e0;border-radius:9px;background:#fff;color:#78857c;text-align:center;font-size:11px;font-weight:700}.docs-wizard-step[aria-current=step]{border-color:#1e5a43;background:#eaf3ea;color:#174b39}.docs-step-pane{padding:17px;border:1px solid #e1e8e0;border-radius:12px;background:#fff}.docs-step-actions{display:flex;justify-content:space-between;gap:9px;margin-top:16px}.docs-step-actions .docs-btn{min-height:42px}.docs-review{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}.docs-review-item{padding:12px;border:1px solid #edf0ec;border-radius:9px;background:#fafcf9}.docs-review-item small{display:block;color:#78857c;font-size:10px}.docs-review-item strong{display:block;margin-top:5px;color:#294536;font-size:13px;overflow-wrap:anywhere}.docs-days-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:13px}.docs-days-toolbar input{flex:1 1 220px;min-height:40px;padding:9px 11px;border:1px solid #dce5dc;border-radius:9px;font:inherit;font-size:12px}.docs-days-list{display:grid;gap:9px}.docs-days-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid #e8ede8}.docs-days-pagination .docs-note{margin:0;text-align:center}.docs-days-pagination .docs-btn:disabled{opacity:.45;cursor:not-allowed}.docs-day-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid #e1e9e0;border-radius:12px;background:#fff}.docs-day-card strong{display:block;color:#294536;font-size:13px}.docs-day-card small{display:block;margin-top:4px;color:#7a887e;font-size:11px;line-height:1.5}.docs-day-actions{display:flex;gap:7px;align-items:center}.docs-group-card{padding:14px;border:1px solid #e1e9e0;border-radius:12px;background:#fff}.docs-group-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.docs-group-head h4{margin:0;color:#294536;font-size:13px}.docs-group-head p{margin:4px 0 0;color:#7a887e;font-size:10px}.docs-group-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.docs-history-top{display:flex;align-items:end;gap:9px;flex-wrap:wrap;margin-bottom:14px}.docs-history-top .docs-field{flex:1 1 170px}.docs-history-top .docs-btn{min-height:40px}.docs-print-bulk{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:12px;border:1px solid #e1e9e0;border-radius:10px;background:#f8faf7}.docs-recipient-tools input{min-height:40px;font-size:12px}.docs-field input,.docs-field select,.docs-field textarea{min-height:44px;font-size:13px}.docs-btn{min-height:40px;font-size:12px}.docs-btn:focus-visible,.docs-tab:focus-visible,.docs-close:focus-visible{outline:3px solid #a9c9b7;outline-offset:2px}.docs-recipient{min-height:48px}.docs-dialog{font-family:Inter,ui-sans-serif,system-ui,sans-serif}@media(max-width:760px){.docs-overlay{padding:0;align-items:stretch}.docs-dialog{max-height:100vh;border-radius:0}.docs-head{padding:15px}.docs-body{padding:15px}.docs-grid{grid-template-columns:1fr 1fr}.docs-field.wide{grid-column:span 2}.docs-recipient-list{grid-template-columns:1fr}.docs-card{grid-template-columns:1fr}.docs-card-actions{justify-content:flex-start}.docs-pin-row{grid-template-columns:1fr}}@media(max-width:420px){.docs-review{grid-template-columns:1fr}.docs-days-pagination .docs-note{font-size:10px}.docs-grid{grid-template-columns:1fr}.docs-field.wide{grid-column:span 1}}";
+ css.textContent += ".docs-kind-group{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 16px;padding:13px 15px;border:1px solid #e1e8e0;border-radius:10px;background:#fbfdfb}.docs-kind-group legend{padding:0 5px;color:#536258;font-size:11px;font-weight:800}.docs-kind-choice{display:flex;align-items:center;gap:8px;color:#294536;font-size:12px;font-weight:700}.docs-kind-choice input{width:16px;height:16px;accent-color:#174b39}.docs-menu-box{margin:4px 0 16px;padding:14px;border:1px solid #e1e8e0;border-radius:12px;background:#fbfdfb}.docs-menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.docs-menu-head strong{color:#294536;font-size:12px}.docs-menu-tools{display:flex;gap:7px;flex-wrap:wrap}.docs-menu-count{margin:5px 0 10px;color:#7a887e;font-size:10px}.docs-menu-list{display:grid;gap:8px}.docs-menu-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:8px;align-items:center}.docs-menu-order{color:#7a887e;font-size:11px;font-weight:800;text-align:center}.docs-menu-input{width:100%;min-height:40px;padding:8px 10px;border:1px solid #dce5dc;border-radius:8px;background:#fff;color:#24392d;font:inherit;font-size:12px}.docs-menu-row-actions{display:flex;gap:4px}.docs-menu-row-actions button{width:31px;height:34px;border:1px solid #dce5dc;border-radius:7px;background:#fff;color:#526258;font-size:13px;font-weight:800}.docs-menu-row-actions button:disabled{opacity:.35;cursor:not-allowed}.docs-menu-empty{padding:12px;border:1px dashed #dce5dc;border-radius:8px;color:#879289;background:#fff;font-size:11px}.docs-menu-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.docs-menu-actions .docs-btn{min-height:36px}.docs-meal-field{max-width:240px;margin:0 0 12px}.docs-kind-choice:focus-within,.docs-menu-input:focus-visible,.docs-menu-row-actions button:focus-visible{outline:3px solid #a9c9b7;outline-offset:2px}@media(max-width:420px){.docs-menu-row{grid-template-columns:21px minmax(0,1fr) auto}.docs-menu-row-actions button{width:28px}}";
  document.head.append(css);
 }
 function build(){
@@ -124,28 +125,109 @@ function isActiveRecipient(recipient){
  const value=recipient.aktif;
  return value===true||value===1||value==="1"||(typeof value==="string"&&value.trim().toLowerCase()==="true");
 }
+function renderMenuComponents(){
+ const list=$("#docsMenuItems",modal);
+ if(!list)return;
+ list.innerHTML="";
+ if(!menuComponents.length){
+  list.append(node("div","docs-menu-empty","Belum ada komponen menu. Menu boleh dikosongkan untuk penerbitan SJ/BAST."));
+ }
+ menuComponents.forEach((value,index)=>{
+  const row=node("div","docs-menu-row");
+  row.append(node("span","docs-menu-order",String(index+1)+"."));
+  const input=node("input","docs-menu-input");
+  input.type="text";input.maxLength=180;input.placeholder="Contoh: Nasi Putih";input.value=value;
+  input.setAttribute("list","docsMenuSuggestions");
+  input.setAttribute("aria-label","Komponen menu "+(index+1));
+  input.addEventListener("input",()=>{menuComponents[index]=input.value});
+  const actions=node("div","docs-menu-row-actions");
+  const up=node("button",null,"↑");up.type="button";up.disabled=index===0;up.setAttribute("aria-label","Geser "+(index+1)+" ke atas");
+  up.onclick=()=>{if(index>0){[menuComponents[index-1],menuComponents[index]]=[menuComponents[index],menuComponents[index-1]];renderMenuComponents()}};
+  const down=node("button",null,"↓");down.type="button";down.disabled=index===menuComponents.length-1;down.setAttribute("aria-label","Geser "+(index+1)+" ke bawah");
+  down.onclick=()=>{if(index<menuComponents.length-1){[menuComponents[index+1],menuComponents[index]]=[menuComponents[index],menuComponents[index+1]];renderMenuComponents()}};
+  const remove=node("button",null,"×");remove.type="button";remove.setAttribute("aria-label","Hapus komponen "+(index+1));
+  remove.onclick=()=>{menuComponents.splice(index,1);renderMenuComponents()};
+  actions.append(up,down,remove);row.append(input,actions);list.append(row);
+ });
+ const count=$("#docsMenuCount",modal);
+ if(count)count.textContent=menuComponents.length+" dari 8 komponen";
+ const add=$("#docsAddMenuItem",modal);
+ if(add)add.disabled=menuComponents.length>=8;
+}
+function readMenuComponents(){
+ return menuComponents.map(value=>String(value||"").trim()).filter(Boolean);
+}
+function selectedDocumentKinds(){
+ const kinds=[];
+ if($("#docsKindSj",modal)?.checked)kinds.push("SJ");
+ if($("#docsKindBast",modal)?.checked)kinds.push("BAST");
+ return kinds;
+}
+function addMenuComponent(value=""){
+ if(menuComponents.length>=8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
+ menuComponents.push(value);renderMenuComponents();
+ const inputs=modal.querySelectorAll(".docs-menu-input");
+ inputs[inputs.length-1]?.focus();
+}
+async function copyLastMenu(){
+ const button=$("#docsCopyLastMenu",modal);
+ if(!button)return;
+ const oldText=button.textContent;button.disabled=true;button.textContent="Memuat menu terakhir...";
+ try{
+  const days=await api("docs/days?offset=0");
+  const latest=Array.isArray(days.distributions)?days.distributions[0]:null;
+  if(!latest){status("Belum ada distribusi sebelumnya untuk disalin.",true);return}
+  const detail=await api("docs/list?tanggal="+encodeURIComponent(latest.tanggal));
+  const distribution=detail.distribution||latest;
+  const items=Array.isArray(distribution.menu_items)
+   ? distribution.menu_items.map(item=>String(item.nama_komponen||"").trim()).filter(Boolean)
+   : [];
+  if(!items.length&&String(distribution.menu||"").trim())items.push(String(distribution.menu).trim());
+  if(!items.length){status("Distribusi terakhir belum memiliki komponen menu.",true);return}
+  menuComponents=items.slice(0,8);renderMenuComponents();
+  status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+menuComponents.length+" komponen).");
+ }catch(error){status(error.message,true)}
+ finally{button.disabled=false;button.textContent=oldText}
+}
 function renderCreate(){
  const target=$(".docs-view-create",modal);
  if(!target)return;
+ menuComponents=[];
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
  const todayVal=today();
- target.innerHTML="<h3 class='docs-section-title'>Buat Surat Jalan &amp; BAST</h3>"+
- "<p class='docs-note'>Ikuti tiga langkah singkat. Nomor dokumen baru diterbitkan setelah pemeriksaan akhir.</p>"+
+ const menuSuggestions=(Array.isArray(master.menus)?master.menus:[])
+  .filter(item=>item&&item.aktif!==false&&String(item.teks_menu||"").trim())
+  .map(item=>"<option value='"+esc(item.teks_menu)+"'></option>").join("");
+ target.innerHTML="<h3 class='docs-section-title'>Buat Dokumen Distribusi</h3>"+
+ "<p class='docs-note'>Pilih dokumen yang diterbitkan, lengkapi informasi distribusi, lalu tentukan penerimanya.</p>"+
  "<form id='docsCreateForm' autocomplete='off'>"+
  "<nav class='docs-wizard-steps' aria-label='Tahapan penerbitan'>"+
  "<span class='docs-wizard-step' data-wizard-step='1' aria-current='step'>1. Distribusi</span>"+
  "<span class='docs-wizard-step' data-wizard-step='2'>2. Penerima</span>"+
  "<span class='docs-wizard-step' data-wizard-step='3'>3. Periksa</span></nav>"+
  "<section class='docs-step-pane' data-step-pane='1'>"+
+ "<h4 class='docs-section-title'>Pilih dokumen</h4>"+
+ "<p class='docs-note'>Pilih minimal satu dokumen bernomor. Keduanya otomatis dipilih untuk alur penerbitan seperti biasa.</p>"+
+ "<fieldset class='docs-kind-group'><legend>Dokumen yang diterbitkan</legend>"+
+ "<label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan (SJ)</label>"+
+ "<label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> Berita Acara Serah Terima (BAST)</label>"+
+ "</fieldset>"+
  "<h4 class='docs-section-title'>Informasi distribusi</h4>"+
  "<div class='docs-grid'>"+
  "<div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div>"+
  "<div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div>"+
- "<div class='docs-field'><label for='docsMenu'>Menu makanan</label><select id='docsMenu'>"+options(master.menus,"teks_menu","teks_menu","Pilih menu")+"</select></div>"+
+ "<div class='docs-field docs-meal-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div>"+
  "<div class='docs-field'><label for='docsStaff'>Petugas</label><select id='docsStaff'>"+options(master.staff,"nama","nama","Pilih petugas")+"</select></div>"+
  "<div class='docs-field'><label for='docsDriver'>Pengemudi</label><select id='docsDriver'>"+options(master.drivers,"nama","nama","Pilih pengemudi")+"</select></div>"+
  "<div class='docs-field'><label for='docsVehicle'>Kendaraan</label><select id='docsVehicle'>"+options(master.vehicles,"no_kendaraan","no_kendaraan","Pilih kendaraan")+"</select></div>"+
- "</div><p class='docs-note'>Kolom yang belum tersedia di Data Master tetap dapat dibiarkan kosong sesuai aturan data saat ini.</p>"+
+ "</div>"+
+ "<div class='docs-menu-box'><div class='docs-menu-head'><strong>Menu Hari Ini</strong><div class='docs-menu-tools'><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin dari distribusi terakhir</button></div></div>"+
+ "<p class='docs-menu-count' id='docsMenuCount'>0 dari 8 komponen</p>"+
+ "<div class='docs-menu-list' id='docsMenuItems'></div>"+
+ "<datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
+ "<div class='docs-menu-actions'><button type='button' class='docs-btn primary' id='docsAddMenuItem'>+ Tambah komponen</button></div>"+
+ "<p class='docs-note' style='margin:10px 0 0'>Menu dapat dikosongkan untuk SJ/BAST. Gunakan tombol panah untuk mengatur urutan komponen.</p></div>"+
+ "<p class='docs-note'>Petugas, pengemudi, kendaraan, dan jam berangkat boleh dikosongkan bila belum tersedia.</p>"+
  "<div class='docs-step-actions'><span></span><button type='button' class='docs-btn primary' id='docsNextRecipients'>Lanjut: Pilih penerima</button></div></section>"+
  "<section class='docs-step-pane' data-step-pane='2' hidden>"+
  "<h4 class='docs-section-title'>Pilih penerima manfaat</h4>"+
@@ -155,15 +237,18 @@ function renderCreate(){
  "<div class='docs-step-actions'><button type='button' class='docs-btn' id='docsBackDistribution'>Kembali</button><button type='button' class='docs-btn primary' id='docsNextReview'>Lanjut: Periksa</button></div></section>"+
  "<section class='docs-step-pane' data-step-pane='3' hidden>"+
  "<h4 class='docs-section-title'>Periksa sebelum menerbitkan</h4>"+
- "<p class='docs-note'>Pastikan tanggal, informasi perjalanan, dan daftar penerima sudah benar. Setelah dokumen pertama diterbitkan, detail distribusi pada tanggal ini akan terkunci untuk menjaga snapshot dokumen.</p>"+
+ "<p class='docs-note'>Pastikan jenis dokumen, menu, waktu makan, dan daftar penerima sudah benar. Setelah dokumen pertama diterbitkan, detail distribusi pada tanggal ini akan terkunci.</p>"+
  "<div class='docs-review' id='docsReviewSummary'></div>"+
  "<div class='docs-recipient-box'><strong>Penerima yang akan mendapatkan dokumen</strong><div id='docsReviewRecipients' class='docs-note' style='margin:8px 0 0'></div></div>"+
- "<div class='docs-step-actions'><button type='button' class='docs-btn' id='docsBackRecipients'>Kembali</button><button class='docs-btn primary' id='docsCreateButton' type='submit'>Terbitkan SJ &amp; BAST</button></div></section>"+
+ "<div class='docs-step-actions'><button type='button' class='docs-btn' id='docsBackRecipients'>Kembali</button><button class='docs-btn primary' id='docsCreateButton' type='submit'>Terbitkan dokumen</button></div></section>"+
  "</form><div id='docsCreateResult'></div>";
+ renderMenuComponents();
  renderRecipients(recipients);
  $("#docsRecipientSearch",target).addEventListener("input",filterRecipients);
  $("#docsSelectAll",target).onclick=()=>setAllRecipients(true);
  $("#docsClearAll",target).onclick=()=>setAllRecipients(false);
+ $("#docsAddMenuItem",target).onclick=()=>addMenuComponent();
+ $("#docsCopyLastMenu",target).onclick=copyLastMenu;
  $("#docsNextRecipients",target).onclick=()=>goWizardStep(2);
  $("#docsBackDistribution",target).onclick=()=>goWizardStep(1);
  $("#docsNextReview",target).onclick=()=>goWizardStep(3);
@@ -176,18 +261,24 @@ function goWizardStep(step){
  if(step===2){
   const date=$("#docsDate",form);
   if(!date.value){date.reportValidity();return}
+  if(!selectedDocumentKinds().length){status("Pilih minimal Surat Jalan atau BAST.",true);return}
  }
  if(step===3){
   const selected=Array.from(form.querySelectorAll("input[name='recipient']:checked"));
+  const kinds=selectedDocumentKinds();
+  if(!kinds.length){status("Pilih minimal Surat Jalan atau BAST.",true);return}
   if(!selected.length){status("Pilih minimal satu penerima sebelum melanjutkan.",true);return}
+  const meal=$("#docsMealTime",form)?.value||"siang";
   const values={
+   "Jenis dokumen":kinds.map(kind=>kind==="SJ"?"Surat Jalan (SJ)":"Berita Acara Serah Terima (BAST)").join(" + "),
    "Tanggal":$("#docsDate",form).value,
-   "Menu":($("#docsMenu",form).value?$("#docsMenu",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
+   "Waktu makan":meal.charAt(0).toUpperCase()+meal.slice(1),
+   "Menu Hari Ini":readMenuComponents().join(", ")||"Belum diisi",
    "Petugas":($("#docsStaff",form).value?$("#docsStaff",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
    "Pengemudi":($("#docsDriver",form).value?$("#docsDriver",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
    "Kendaraan":($("#docsVehicle",form).value?$("#docsVehicle",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
    "Jumlah penerima":selected.length,
-   "Jumlah dokumen":selected.length*2
+   "Jumlah dokumen bernomor":selected.length*kinds.length
   };
   const summary=$("#docsReviewSummary",form);summary.innerHTML="";
   Object.entries(values).forEach(([label,value])=>{
@@ -234,30 +325,35 @@ async function createDocs(event){
  event.preventDefault();status("");
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
  if(!selected.length){status("Pilih minimal satu penerima.",true);return}
+ const kinds=selectedDocumentKinds();
+ if(!kinds.length){status("Pilih minimal Surat Jalan atau BAST.",true);goWizardStep(1);return}
+ const menuItems=readMenuComponents();
+ if(menuItems.length>8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
  const body={
   tanggal:$("#docsDate",modal).value,
   jam_berangkat:$("#docsTime",modal).value,
-  menu:$("#docsMenu",modal).value,
+  menu_items:menuItems,
+  waktu_makan:$("#docsMealTime",modal).value||"siang",
+  jenis_dokumen:kinds,
   nama_petugas:$("#docsStaff",modal).value,
   nama_pengemudi:$("#docsDriver",modal).value,
   no_kendaraan:$("#docsVehicle",modal).value,
-  recipient_ids:selected,
-
+  recipient_ids:selected
  };
- if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);return}
+ if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);goWizardStep(1);return}
  const button=$("#docsCreateButton",modal);button.disabled=true;button.textContent="Menerbitkan dokumen...";
  try{
   const result=await api("docs/create",body);window.dispatchEvent(new Event("autodoc:data-changed"));
   const failed=(result.errors||[]).length;
   const summary=node("div","docs-result");
-  summary.textContent=result.berhasil+" dari "+result.requested+" dokumen berhasil disiapkan ("+Math.floor(result.berhasil/2)+" pasangan SJ/BAST). "+(failed?"Masih ada "+failed+" dokumen gagal; ulangi tanggal yang sama untuk melanjutkan.":"Nomor yang sudah terbit tidak akan dibuat ulang.");
+  summary.textContent=result.berhasil+" dari "+result.requested+" dokumen berhasil disiapkan. "+(failed?"Masih ada "+failed+" dokumen gagal; ulangi tanggal yang sama untuk melanjutkan.":"Nomor yang sudah terbit tidak akan dibuat ulang.");
   $("#docsCreateResult",modal).innerHTML="";$("#docsCreateResult",modal).append(summary);
   status(result.message||"Selesai.",failed>0);
   await loadHistory(body.tanggal);
   tab="history";drawTabs();
   $(".docs-view-create",modal).hidden=true;$(".docs-view-history",modal).hidden=false;
  }catch(e){status(e.message,true)}
- finally{button.disabled=false;button.textContent="Buat Surat Jalan & BAST"}
+ finally{button.disabled=false;button.textContent="Terbitkan dokumen"}
 }
 async function loadDistributions(initialOffset=0){
  const target=$(".docs-view-history",modal);if(!target)return;
