@@ -6,7 +6,7 @@ const source = readFileSync(new URL("../supabase/functions/autodoc-auth/index.ts
 
 function functionBody(name: string, nextName: string): string {
   const start = source.indexOf("async function " + name + "(");
-  const end = source.indexOf("async function " + nextName + "(", start + 1);
+  const end = source.indexOf("function " + nextName + "(", start + 1);
   assert.ok(start >= 0 && end > start, "expected backend handler boundaries");
   return source.slice(start, end);
 }
