@@ -618,17 +618,27 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
     menusActive === 0,
   ].filter(Boolean).length;
 
-  const recentDistributions = await Promise.all(recentRows.map(async (row) => ({
-    id: String(row.id),
-    tanggal: String(row.tanggal),
-    menu: row.menu ?? null,
-    nama_petugas: row.nama_petugas ?? null,
-    nama_pengemudi: row.nama_pengemudi ?? null,
-    no_kendaraan: row.no_kendaraan ?? null,
-    documents_count: await countRows("documents", {
-      distribution_id: "eq." + String(row.id),
-    }),
-  })));
+  const recentDistributions = await Promise.all(recentRows.map(async (row) => {
+    const distributionId = String(row.id);
+    const [documentsCount, bastPendingCount] = await Promise.all([
+      countRows("documents", { distribution_id: "eq." + distributionId }),
+      countRows("documents", {
+        distribution_id: "eq." + distributionId,
+        jenis: "eq.BAST",
+        status: "in.(dibuat,dicetak,ditandatangani)",
+      }),
+    ]);
+    return {
+      id: distributionId,
+      tanggal: String(row.tanggal),
+      menu: row.menu ?? null,
+      nama_petugas: row.nama_petugas ?? null,
+      nama_pengemudi: row.nama_pengemudi ?? null,
+      no_kendaraan: row.no_kendaraan ?? null,
+      documents_count: documentsCount,
+      bast_pending: bastPendingCount,
+    };
+  }));
 
   return respond(request, {
     generated_at: new Date().toISOString(),

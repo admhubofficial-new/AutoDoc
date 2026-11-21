@@ -35,6 +35,8 @@ test("dashboard endpoint is protected by an active session and reads aggregate c
   assert.match(body, /validSession\(request\)/);
   assert.match(body, /countRows\("documents"/);
   assert.match(body, /recent_distributions/);
+  assert.match(body, /bast_pending: bastPendingCount/);
+  assert.match(body, /status: "in\.\(dibuat,dicetak,ditandatangani\)"/);
 });
 
 test("retries cannot overwrite an issued distribution snapshot", () => {
