@@ -28,6 +28,19 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 - Kunci backend Supabase hanya dibaca Edge Function; yang ada di frontend hanya publishable key yang memang boleh dipublikasikan.
 - CORS hanya mengizinkan origin `https://admhubofficial-new.github.io`.
 
+
+
+### Tahap 4 — Surat Jalan & BAST MBG
+
+- Penerbitan pasangan Surat Jalan dan BAST per penerima pada tanggal distribusi.
+- Nomor SJ dan BAST menggunakan counter database terpisah dan fungsi PostgreSQL atomik yang sudah tersedia.
+- Data distribusi, identitas SPPG, penerima, menu, petugas, pengemudi, kendaraan, dan rincian porsi disimpan sebagai snapshot immutable pada saat penerbitan.
+- Penerbitan dokumen dan penyimpanan realisasi BAST meminta verifikasi PIN ulang selain sesi aktif.
+- Dokumen dapat ditampilkan dan dicetak dengan layout A4 melalui dialog cetak browser (termasuk Save as PDF).
+- Realisasi BAST mencatat kondisi makanan, jam diterima, suhu, jumlah porsi diserahkan/diterima, ompreng, identitas penerima, dan catatan.
+- Jika proses penerbitan sebagian gagal, pengulangan untuk tanggal dan penerima yang sama menggunakan kembali nomor dokumen yang sudah berhasil dibuat dan melengkapi sisanya.
+- Cetak mengubah status dokumen dari dibuat menjadi dicetak; penyimpanan realisasi BAST mengubah status menjadi selesai.
+
 ### Konfigurasi Supabase
 
 Pastikan secret yang sudah dibuat tetap tersimpan di:

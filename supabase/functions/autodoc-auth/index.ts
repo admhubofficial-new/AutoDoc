@@ -492,6 +492,372 @@ async function handleMasterImport(request: Request): Promise<Response> {
   return respond(request, { success: true, imported: Array.isArray(result) ? result.length : rows.length });
 }
 
+
+
+async function verifyMutationPin(request: Request, rawToken: unknown, purpose: string): Promise<void> {
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const token = normalizeToken(rawToken);
+  if (!token) throw new AppError(400, "Masukkan PIN akses untuk mengonfirmasi tindakan ini.");
+  const keyHash = await throttleKey();
+  const locked = await requireUnlocked(request, keyHash);
+  if (locked) throw new AppError(429, "Akses terkunci sementara. Coba kembali setelah masa penguncian berakhir.");
+  const valid = await rpc<boolean>("verify_access_token", { p_token: token });
+  if (!valid) {
+    const state = await recordFailure(keyHash);
+    if (state.locked) throw new AppError(429, "Terlalu banyak percobaan. Akses dikunci selama 15 menit.");
+    throw new AppError(401, "PIN akses tidak sesuai.");
+  }
+  await clearFailures(keyHash);
+  await insertRow("audit_log", {
+    aksi: "pin_dikonfirmasi_ulang",
+    tabel: "settings",
+    record_key: "1",
+    actor: "token",
+    nilai_lama: null,
+    nilai_baru: { verifikasi: "berhasil" },
+    detail: { tujuan: purpose },
+  });
+}
+
+function validIsoDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + "T00:00:00.000Z");
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function uuidList(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 100) {
+    throw new AppError(400, "Pilih minimal satu dan maksimal 100 penerima.");
+  }
+  const values = value.map((entry) => {
+    if (typeof entry !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entry)) {
+      throw new AppError(400, "Daftar penerima tidak valid.");
+    }
+    return entry;
+  });
+  return [...new Set(values)];
+}
+
+function distributionSnapshotRows(recipient: Record<string, unknown>): Array<Record<string, unknown>> {
+  const definitions = [
+    ["siswa_kecil", "Siswa kecil", "Porsi Kecil"],
+    ["balita", "Balita", "Porsi Kecil"],
+    ["siswa_besar", "Siswa besar", "Porsi Besar"],
+    ["tendik", "Tenaga pendidik", "Porsi Besar"],
+    ["ibu_hamil", "Ibu hamil", "Porsi Besar"],
+    ["ibu_menyusui", "Ibu menyusui", "Porsi Besar"],
+    ["putus_sekolah", "Anak putus sekolah", "Porsi Besar"],
+    ["kader", "Kader", "Porsi Besar"],
+  ] as const;
+  return definitions.flatMap(([key, label, jenis]) => {
+    const jumlah = Number(recipient[key] ?? 0);
+    return jumlah > 0 ? [{ kelompok_sasaran: label, jenis_porsi: jenis, jumlah }] : [];
+  });
+}
+
+async function handleDocsCreate(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  const body = await readJson(request);
+  await verifyMutationPin(request, body.token, "penerbitan_surat_jalan_bast");
+
+  if (!validIsoDate(body.tanggal)) throw new AppError(400, "Tanggal distribusi tidak valid.");
+  const recipientIds = uuidList(body.recipient_ids);
+  const menu = cleanText(body.menu, "Menu", false, 500);
+  const namaPetugas = cleanText(body.nama_petugas, "Nama petugas", false, 180);
+  const namaPengemudi = cleanText(body.nama_pengemudi, "Nama pengemudi", false, 180);
+  const noKendaraan = cleanText(body.no_kendaraan, "Nomor kendaraan", false, 80);
+  const jamBerangkat = cleanText(body.jam_berangkat, "Jam berangkat", false, 8);
+  if (jamBerangkat && !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(jamBerangkat)) {
+    throw new AppError(400, "Format jam berangkat harus HH:MM.");
+  }
+
+  const [settings, recipients] = await Promise.all([
+    selectOne<Record<string, unknown>>(
+      "settings",
+      "nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,nama_kepala_sppg,logo_path",
+      { id: "eq.1" },
+    ),
+    supabaseRequest<Record<string, unknown>[]>(
+      "recipients?" + new URLSearchParams({
+        select: "id,kelompok,nama,jenjang,alamat,siswa_kecil,siswa_besar,tendik,ibu_hamil,ibu_menyusui,balita,putus_sekolah,kader,porsi_kecil,porsi_besar,total_porsi,keterangan,perlu_verifikasi,catatan_verifikasi,aktif,urutan",
+        id: "in.(" + recipientIds.join(",") + ")",
+        aktif: "eq.true",
+        order: "urutan.asc,nama.asc",
+      }).toString(),
+    ),
+  ]);
+  if (!settings) throw new AppError(503, "Identitas SPPG belum tersedia.");
+  if (recipients.length !== recipientIds.length) {
+    throw new AppError(400, "Ada penerima yang tidak ditemukan atau sudah nonaktif. Muat ulang daftar penerima.");
+  }
+
+  const distributionPayload = {
+    tanggal: body.tanggal,
+    menu,
+    nama_petugas: namaPetugas,
+    nama_pengemudi: namaPengemudi,
+    no_kendaraan: noKendaraan,
+    jam_berangkat: jamBerangkat,
+  };
+  const distributionRows = await supabaseRequest<Array<{ id: string; tanggal: string }>>(
+    "distributions?" + new URLSearchParams({
+      on_conflict: "tanggal",
+      select: "id,tanggal",
+    }).toString(),
+    {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(distributionPayload),
+    },
+  );
+  const distribution = distributionRows[0];
+  if (!distribution?.id) throw new AppError(500, "Data distribusi tidak berhasil disiapkan.");
+
+  const tasks = recipients.flatMap((recipient) => {
+    const detail = distributionSnapshotRows(recipient);
+    const snapshot = {
+      versi: 1,
+      dibuat_pada: new Date().toISOString(),
+      sppg: settings,
+      distribusi: { ...distributionPayload, id: distribution.id },
+      penerima: recipient,
+      rincian_porsi: detail,
+      ringkasan: {
+        porsi_kecil: Number(recipient.porsi_kecil ?? 0),
+        porsi_besar: Number(recipient.porsi_besar ?? 0),
+        total_porsi: Number(recipient.total_porsi ?? 0),
+      },
+    };
+    return (["SJ", "BAST"] as const).map((jenis) => ({
+      recipientId: String(recipient.id),
+      jenis,
+      snapshot,
+    }));
+  });
+
+  const results: Array<Record<string, unknown>> = [];
+  const failures: Array<Record<string, unknown>> = [];
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(4, tasks.length) }, async () => {
+    while (true) {
+      const index = cursor++;
+      if (index >= tasks.length) return;
+      const task = tasks[index];
+      try {
+        const result = await rpc<Record<string, unknown>>("buat_dokumen_dengan_nomor", {
+          p_distribution_id: distribution.id,
+          p_recipient_id: task.recipientId,
+          p_jenis: task.jenis,
+          p_snapshot_json: task.snapshot,
+        });
+        results.push({ ...result, jenis: task.jenis, recipient_id: task.recipientId });
+      } catch (error) {
+        failures.push({
+          jenis: task.jenis,
+          recipient_id: task.recipientId,
+          message: error instanceof Error ? error.message : "Gagal membuat dokumen.",
+        });
+      }
+    }
+  });
+  await Promise.all(workers);
+
+  return respond(request, {
+    success: failures.length === 0,
+    distribution_id: distribution.id,
+    tanggal: distribution.tanggal,
+    requested: tasks.length,
+    berhasil: results.length,
+    gagal: failures.length,
+    documents: results,
+    errors: failures,
+    message: failures.length === 0
+      ? "Dokumen berhasil disiapkan. Nomor dokumen yang sudah ada digunakan kembali."
+      : "Sebagian dokumen berhasil dibuat. Jalankan ulang tanggal yang sama untuk melengkapi dokumen yang gagal.",
+  }, failures.length === 0 ? 200 : 207);
+}
+
+async function handleDocsDays(request: Request): Promise<Response> {
+  if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const rows = await supabaseRequest<unknown[]>(
+    "distributions?" + new URLSearchParams({
+      select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,created_at",
+      order: "tanggal.desc",
+      limit: "60",
+    }).toString(),
+  );
+  return respond(request, { distributions: rows });
+}
+
+async function handleDocsList(request: Request): Promise<Response> {
+  if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const url = new URL(request.url);
+  const tanggal = url.searchParams.get("tanggal");
+  if (!validIsoDate(tanggal)) throw new AppError(400, "Tanggal riwayat tidak valid.");
+  const distribution = await selectOne<Record<string, unknown>>(
+    "distributions",
+    "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat",
+    { tanggal: "eq." + tanggal },
+  );
+  if (!distribution?.id) return respond(request, { distribution: null, documents: [] });
+  const docs = await supabaseRequest<Array<Record<string, unknown>>>(
+    "documents?" + new URLSearchParams({
+      select: "id,distribution_id,recipient_id,jenis,nomor_urut,nomor_lengkap,snapshot_json,status,alasan_batal,file_ttd_path,created_at",
+      distribution_id: "eq." + String(distribution.id),
+      order: "jenis.asc,nomor_urut.asc",
+      limit: "300",
+    }).toString(),
+  );
+  const bastIds = docs.filter((doc) => doc.jenis === "BAST").map((doc) => String(doc.id));
+  if (bastIds.length) {
+    const inFilter = "in.(" + bastIds.join(",") + ")";
+    const [realisasi, items] = await Promise.all([
+      supabaseRequest<Array<Record<string, unknown>>>(
+        "bast_realisasi?" + new URLSearchParams({
+          select: "document_id,kondisi,jam_diterima,suhu_c,ompreng_kembali,catatan,nama_penerima,jabatan_penerima",
+          document_id: inFilter,
+        }).toString(),
+      ),
+      supabaseRequest<Array<Record<string, unknown>>>(
+        "bast_realisasi_items?" + new URLSearchParams({
+          select: "document_id,urutan,kelompok_sasaran,jenis_porsi,jumlah_diserahkan,jumlah_diterima,keterangan",
+          document_id: inFilter,
+          order: "urutan.asc",
+        }).toString(),
+      ),
+    ]);
+    const byId = new Map(realisasi.map((row) => [String(row.document_id), row]));
+    const itemsById = new Map<string, Array<Record<string, unknown>>>();
+    for (const row of items) {
+      const id = String(row.document_id);
+      const current = itemsById.get(id) ?? [];
+      current.push(row);
+      itemsById.set(id, current);
+    }
+    for (const doc of docs) {
+      if (doc.jenis !== "BAST") continue;
+      const row = byId.get(String(doc.id));
+      doc.realisasi = row ? { ...row, items: itemsById.get(String(doc.id)) ?? [] } : null;
+    }
+  }
+  return respond(request, { distribution, documents: docs });
+}
+
+async function handleDocsMarkPrinted(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request);
+  if (typeof body.document_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.document_id)) {
+    throw new AppError(400, "Identitas dokumen tidak valid.");
+  }
+  const query = new URLSearchParams({
+    id: "eq." + body.document_id,
+    status: "eq.dibuat",
+    select: "id,status",
+  });
+  const rows = await supabaseRequest<Array<Record<string, unknown>>>("documents?" + query.toString(), {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ status: "dicetak" }),
+  });
+  return respond(request, { success: true, updated: Array.isArray(rows) && rows.length > 0 });
+}
+
+async function handleDocsRealization(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  const body = await readJson(request);
+  await verifyMutationPin(request, body.token, "realisasi_bast");
+
+  if (typeof body.document_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.document_id)) {
+    throw new AppError(400, "Identitas dokumen BAST tidak valid.");
+  }
+  const document = await selectOne<Record<string, unknown>>(
+    "documents",
+    "id,jenis,snapshot_json,status",
+    { id: "eq." + body.document_id },
+  );
+  if (!document || document.jenis !== "BAST") throw new AppError(404, "Dokumen BAST tidak ditemukan.");
+  if (document.status === "batal") throw new AppError(409, "Dokumen BAST yang dibatalkan tidak dapat direalisasikan.");
+
+  const condition = cleanText(body.kondisi, "Kondisi makanan", true, 20);
+  if (!["baik", "kurang baik", "tidak layak"].includes(condition ?? "")) {
+    throw new AppError(400, "Pilih kondisi makanan yang valid.");
+  }
+  const jamDiterima = cleanText(body.jam_diterima, "Jam diterima", true, 8);
+  if (!jamDiterima || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(jamDiterima)) {
+    throw new AppError(400, "Jam diterima harus berformat HH:MM.");
+  }
+  const snapshot = document.snapshot_json as Record<string, unknown>;
+  const recipient = (snapshot.penerima ?? {}) as Record<string, unknown>;
+  const deliveredSmall = Number(recipient.porsi_kecil ?? 0);
+  const deliveredLarge = Number(recipient.porsi_besar ?? 0);
+  const receivedSmall = cleanInteger(body.diterima_kecil, "Jumlah porsi kecil diterima", 0);
+  const receivedLarge = cleanInteger(body.diterima_besar, "Jumlah porsi besar diterima", 0);
+  if (receivedSmall > deliveredSmall || receivedLarge > deliveredLarge) {
+    throw new AppError(400, "Jumlah diterima tidak boleh melebihi jumlah yang diserahkan.");
+  }
+  let suhu: number | null = null;
+  if (body.suhu_c !== undefined && body.suhu_c !== null && body.suhu_c !== "") {
+    suhu = Number(body.suhu_c);
+    if (!Number.isFinite(suhu) || suhu < -50 || suhu > 100) throw new AppError(400, "Suhu harus berada pada rentang -50 sampai 100 °C.");
+  }
+  const ompreng = body.ompreng_kembali === undefined || body.ompreng_kembali === null || body.ompreng_kembali === ""
+    ? null
+    : cleanInteger(body.ompreng_kembali, "Jumlah ompreng kembali");
+  const realisasiPayload = {
+    document_id: document.id,
+    kondisi: condition,
+    jam_diterima: jamDiterima,
+    suhu_c: suhu,
+    ompreng_kembali: ompreng,
+    catatan: cleanText(body.catatan, "Catatan", false, 1000),
+    nama_penerima: cleanText(body.nama_penerima, "Nama penerima BAST", true, 180),
+    jabatan_penerima: cleanText(body.jabatan_penerima, "Jabatan penerima", false, 120),
+  };
+  await supabaseRequest<unknown>(
+    "bast_realisasi?" + new URLSearchParams({ on_conflict: "document_id" }).toString(),
+    {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify(realisasiPayload),
+    },
+  );
+  await supabaseRequest<unknown>(
+    "bast_realisasi_items?" + new URLSearchParams({ on_conflict: "document_id,urutan" }).toString(),
+    {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify([
+        {
+          document_id: document.id,
+          urutan: 1,
+          kelompok_sasaran: "Total",
+          jenis_porsi: "Porsi Kecil",
+          jumlah_diserahkan: deliveredSmall,
+          jumlah_diterima: receivedSmall,
+          keterangan: null,
+        },
+        {
+          document_id: document.id,
+          urutan: 2,
+          kelompok_sasaran: "Total",
+          jenis_porsi: "Porsi Besar",
+          jumlah_diserahkan: deliveredLarge,
+          jumlah_diterima: receivedLarge,
+          keterangan: null,
+        },
+      ]),
+    },
+  );
+  await supabaseRequest<unknown>(
+    "documents?" + new URLSearchParams({ id: "eq." + document.id, status: "neq.batal" }).toString(),
+    { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "selesai" }) },
+  );
+  return respond(request, { success: true, message: "Realisasi BAST berhasil disimpan." });
+}
+
 function lockResponse(request: Request, seconds: number): Response {
   return respond(
     request,
@@ -742,6 +1108,11 @@ Deno.serve(async (request: Request) => {
       case "master/list": return await handleMasterList(request);
       case "master/save": return await handleMasterSave(request);
       case "master/import": return await handleMasterImport(request);
+      case "docs/create": return await handleDocsCreate(request);
+      case "docs/days": return await handleDocsDays(request);
+      case "docs/list": return await handleDocsList(request);
+      case "docs/mark-printed": return await handleDocsMarkPrinted(request);
+      case "docs/realization": return await handleDocsRealization(request);
       default: return respond(request, { message: "Endpoint tidak ditemukan." }, 404);
     }
   } catch (error) {
