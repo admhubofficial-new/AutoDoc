@@ -593,8 +593,13 @@ Deno.serve(async (request: Request) => {
 
   try {
     const pathname = new URL(request.url).pathname;
-    const base = "/functions/v1/autodoc-auth";
-    const route = pathname.startsWith(base) ? pathname.slice(base.length).replace(/^\/+/, "") : "";
+    // Supabase Edge Runtime uses /<function-name>/<route> internally.
+    // Accept both that form and the public /functions/v1/<function-name> form.
+    const functionMarker = "/autodoc-auth";
+    const markerIndex = pathname.indexOf(functionMarker);
+    const route = markerIndex >= 0
+      ? pathname.slice(markerIndex + functionMarker.length).replace(/^\\/+/, "")
+      : "";
     switch (route) {
       case "setup/status": return await handleSetupStatus(request);
       case "setup/complete": return await handleSetupComplete(request);
