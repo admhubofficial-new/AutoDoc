@@ -24,7 +24,7 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 - Cookie sesi HMAC-SHA256, HttpOnly, Secure, SameSite=None dan Partitioned untuk panggilan lintas situs GitHub Pages ↔ Supabase, berlaku 12 jam.
 - Lima kegagalan PIN berturut-turut mengunci akses bersama selama 15 menit.
 - Validasi sesi memeriksa `session_version` di database; perubahan PIN membatalkan sesi lama semua perangkat.
-- Endpoint verifikasi ulang PIN tersedia untuk alur sensitif. Setiap endpoint mutasi sensitif tetap wajib memverifikasi PIN di dalam permintaan mutasinya sendiri.
+- Endpoint verifikasi ulang PIN tersedia untuk tindakan yang memerlukannya. Penerbitan SJ/BAST memerlukan sesi login aktif tanpa PIN ulang; realisasi BAST tetap memerlukan konfirmasi PIN di dalam permintaan mutasinya.
 - Kunci backend Supabase hanya dibaca Edge Function; yang ada di frontend hanya publishable key yang memang boleh dipublikasikan.
 - CORS hanya mengizinkan origin `https://admhubofficial-new.github.io`.
 
@@ -35,12 +35,14 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 - Penerbitan pasangan Surat Jalan dan BAST per penerima pada tanggal distribusi.
 - Nomor SJ dan BAST menggunakan counter database terpisah dan fungsi PostgreSQL atomik yang sudah tersedia.
 - Data distribusi, identitas SPPG, penerima, menu, petugas, pengemudi, kendaraan, dan rincian porsi disimpan sebagai snapshot immutable pada saat penerbitan.
-- Penerbitan dokumen dan penyimpanan realisasi BAST meminta verifikasi PIN ulang selain sesi aktif.
+- Penerbitan SJ/BAST hanya memerlukan sesi login aktif (tanpa PIN ulang). Penyimpanan realisasi BAST tetap memerlukan verifikasi PIN ulang.
 - Dokumen dapat ditampilkan dan dicetak dengan layout A4 melalui dialog cetak browser (termasuk Save as PDF).
 - Realisasi BAST mencatat kondisi makanan, jam diterima, suhu, jumlah porsi diserahkan/diterima, ompreng, identitas penerima, dan catatan.
 - Penyimpanan realisasi BAST dan perubahan status dokumen berjalan atomik dalam satu transaksi database.
 - Data distribusi dikunci dari perubahan setelah dokumen pertama diterbitkan agar riwayat dan snapshot dokumen tetap konsisten.
 - Jika proses penerbitan sebagian gagal, pengulangan untuk tanggal dan penerima yang sama menggunakan kembali nomor dokumen yang sudah berhasil dibuat dan melengkapi sisanya.
+- Status `dicetak` dicatat setelah dialog cetak browser dipanggil dan ditutup; browser tidak menyediakan sinyal andal untuk membedakan hasil cetak fisik dari pembatalan dialog.
+- Impor Data Master mendukung file CSV ber-delimiter koma, titik koma, atau tab, termasuk nilai berpetik dan status aktif yang kosong (default aktif).
 - Cetak mengubah status dokumen dari dibuat menjadi dicetak; penyimpanan realisasi BAST mengubah status menjadi selesai.
 
 ### Konfigurasi Supabase
@@ -63,7 +65,8 @@ Edge Function memakai variabel default proyek Supabase:
 
 ### Pengujian
 
-- `npm test` — unit test langsung terhadap helper sesi dan validasi PIN yang dipakai Edge Function aktif.
+- `npm test` — unit test helper sesi/PIN, tanggal, waktu, UUID, bilangan bulat, parser CSV, dan kontrak alur endpoint dokumen.
+- Pengujian integrasi produksi yang menulis data tidak dijalankan otomatis agar tidak mengonsumsi nomor dokumen atau mengubah data operasional.
 - `deno check supabase/functions/autodoc-auth/index.ts` — pemeriksaan tipe Edge Function.
 
 ### Catatan data sumber
