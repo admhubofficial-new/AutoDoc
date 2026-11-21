@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 
 const source = readFileSync(new URL("../documents.js", import.meta.url), "utf8");
 const organolepticSource = readFileSync(new URL("../organoleptic-print.js", import.meta.url), "utf8");
+const printRendererSource = readFileSync(new URL("../documents-print.js", import.meta.url), "utf8");
 const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
@@ -22,7 +24,7 @@ test("partial document creation responses are handled as valid API results", () 
 
 test("printed documents use the public BGN logo in the letterhead", () => {
   assert.match(source, /const LETTERHEAD_LOGO_URL="https:\/\/cnbomblvtddkmtojzpyd\.supabase\.co\/storage\/v1\/object\/public\/logo%20bgn\/logo-bgn%20\(1\)\.png"/);
-  assert.match(source, /class='top-logo' src='/);
+  assert.match(printRendererSource, /class='top-logo' src='/);
 });
 
 test("printed status is recorded only after an explicit user confirmation", () => {
@@ -125,20 +127,20 @@ test("organoleptic user data is inserted with textContent rather than HTML inter
 });
 
 test("printed Surat Jalan has three role-specific signatories", () => {
-  assert.match(source, /Yang Menyerahkan/);
-  assert.match(source, /Petugas Distribusi SPPG/);
-  assert.match(source, /Pengemudi/);
-  assert.match(source, /Yang Menerima/);
-  assert.match(source, /sign-name/);
-  assert.match(source, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(printRendererSource, /Yang Menyerahkan/);
+  assert.match(printRendererSource, /Petugas Distribusi SPPG/);
+  assert.match(printRendererSource, /Pengemudi/);
+  assert.match(printRendererSource, /Yang Menerima/);
+  assert.match(printRendererSource, /sign-name/);
+  assert.match(printRendererSource, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 });
 
 test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () => {
-  assert.match(source, /sppg\.nama_kepala_sppi/);
-  assert.match(source, /Mengetahui,/);
-  assert.match(source, /Kepala SPPI/);
-  assert.match(source, /const signatures=isBast/);
-  assert.match(source, /esc\(dist\.nama_petugas\|\|""\)/);
+  assert.match(printRendererSource, /sppg\.nama_kepala_sppi/);
+  assert.match(printRendererSource, /Mengetahui,/);
+  assert.match(printRendererSource, /Kepala SPPI/);
+  assert.match(printRendererSource, /const signatures=isBast/);
+  assert.match(printRendererSource, /esc\(dist\.nama_petugas\|\|""\)/);
 });
 
 test("archive global search and bulk deletion use explicit page selection and require a PIN", () => {
@@ -157,11 +159,47 @@ test("archive global search and bulk deletion use explicit page selection and re
 
 test("organoleptic renderer module loads before documents and exposes the expected API", () => {
   const rendererTag = htmlSource.indexOf('src="./organoleptic-print.js?v=organoleptic-render-module-20261122"');
-  const documentsTag = htmlSource.indexOf('src="./documents.js?v=documents-print-module-20261122"');
-  assert.ok(rendererTag >= 0 && documentsTag > rendererTag);
+  const printTag = htmlSource.indexOf('src="./documents-print.js?v=documents-print-renderer-20261122"');
+  const documentsTag = htmlSource.indexOf('src="./documents.js?v=documents-print-renderer-20261122"');
+  assert.ok(rendererTag >= 0 && printTag > rendererTag && documentsTag > printTag);
   assert.match(organolepticSource, /window\.AutoDocOrganolepticPrint\s*=\s*Object\.freeze/);
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
     assert.match(organolepticSource, new RegExp(name));
   }
   assert.match(source, /window\.AutoDocOrganolepticPrint/);
+  assert.match(printRendererSource, /window\.AutoDocPrintRenderer\s*=\s*Object\.freeze/);
+  assert.match(source, /window\.AutoDocPrintRenderer/);
+});
+
+
+test("document print renderer formats SJ and BAST snapshots and escapes user content", () => {
+  const sandbox = { window: {} };
+  runInNewContext(printRendererSource, sandbox);
+  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+  const snapshot = {
+    sppg: { nama_sppg: "SPPG Darmaraja", alamat: "Alamat", kecamatan: "Darmaraja", kabupaten: "Sumedang", kode_sppg: "01", nama_kepala_sppi: "Kepala SPPI" },
+    distribusi: { tanggal: "2026-11-22", jam_berangkat: "08:00", nama_petugas: "Petugas", nama_pengemudi: "Pengemudi", no_kendaraan: "D 1234 XX", menu: "Menu harian" },
+    penerima: { nama: "<img src=x onerror=alert(1)>", kelompok: "Sekolah", jenjang: "SD", alamat: "Alamat penerima" },
+    rincian_porsi: [{ kelompok_sasaran: "Kelas 1", jenis_porsi: "Porsi Kecil", jumlah: 10 }],
+    ringkasan: { total_porsi: 10 }
+  };
+  const sj = buildPrintHtml({ jenis: "SJ", nomor_lengkap: "SJ/001", snapshot_json: snapshot }, escapeHtml, "logo-bgn.png");
+  assert.match(sj, /SURAT JALAN/);
+  assert.match(sj, /src='logo-bgn\.png'/);
+  assert.match(sj, /&lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.doesNotMatch(sj, /<img src=x onerror=alert\(1\)>/);
+  assert.match(sj, /Petugas Distribusi SPPG/);
+  assert.match(sj, /Pengemudi/);
+  assert.match(sj, /class='sign-name'/);
+  const bast = buildPrintHtml({
+    jenis: "BAST", nomor_lengkap: "BAST/001", snapshot_json: snapshot,
+    realisasi: { document_id: "real-1", kondisi: "baik", jam_diterima: "09:00", suhu_c: 45, ompreng_kembali: 10, nama_penerima: "Penerima", jabatan_penerima: "Kepala Sekolah", items: [], catatan: "" }
+  }, escapeHtml, "logo-bgn.png");
+  assert.match(bast, /BERITA ACARA SERAH TERIMA/);
+  assert.match(bast, /Kepala SPPI/);
+  assert.match(bast, /Realisasi Penerimaan/);
+  assert.match(bast, /Penerima/);
 });
