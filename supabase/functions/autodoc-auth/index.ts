@@ -604,7 +604,7 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
     countRows("master_menu", { aktif: "eq.true" }),
     selectOne<Record<string, unknown>>(
       "settings",
-      "nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,nama_kepala_sppg",
+      "nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,nama_kepala_sppg,nama_kepala_sppi,nama_ahli_gizi",
       { id: "eq.1" },
     ),
     supabaseRequest<Array<Record<string, unknown>>>(
@@ -621,6 +621,7 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
     || !String(settings.kode_sppg ?? "").trim()
     || !String(settings.alamat ?? "").trim()
     || !String(settings.nama_kepala_sppg ?? "").trim();
+  const ahliGiziMissing = !settings || !String(settings.nama_ahli_gizi ?? "").trim();
   const supportMasterMissing = [
     driversActive === 0,
     vehiclesActive === 0,
@@ -673,6 +674,7 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
       menus_active: menusActive,
       support_master_missing: supportMasterMissing,
       sppg_missing_fields: missingSppgFields ? 1 : 0,
+      ahli_gizi_missing: ahliGiziMissing ? 1 : 0,
     },
     recent_distributions: recentDistributions,
   });
