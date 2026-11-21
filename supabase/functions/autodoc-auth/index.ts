@@ -4,6 +4,7 @@ import {
   isValidIsoDate,
   normalizeToken,
   normalizeUuidList,
+  parseContentRangeTotal,
   parseNonNegativeInteger,
 } from "./validation.ts";
 
@@ -123,6 +124,29 @@ async function selectOne<T>(
   const rows = await supabaseRequest<T[]>(table + "?" + query.toString());
   return rows[0] ?? null;
 }
+async function countRows(table: string, filters: Record<string, string> = {}): Promise<number> {
+  const config = adminConfig();
+  const query = new URLSearchParams({ select: "id", ...filters });
+  const headers = adminHeaders(config, {
+    Prefer: "count=exact",
+    "Range-Unit": "items",
+    Range: "0-0",
+  });
+  const response = await fetch(config.url + "/rest/v1/" + table + "?" + query.toString(), {
+    method: "HEAD",
+    headers,
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new AppError(response.status, "Gagal membaca ringkasan tabel " + table + ".");
+  }
+  const total = parseContentRangeTotal(response.headers.get("content-range"));
+  if (total === null) {
+    throw new AppError(502, "Server tidak mengirim jumlah data yang valid untuk " + table + ".");
+  }
+  return total;
+}
+
 
 async function insertRow(table: string, row: Record<string, unknown>): Promise<void> {
   await supabaseRequest<unknown>(table, {
@@ -523,6 +547,117 @@ function distributionSnapshotRows(recipient: Record<string, unknown>): Array<Rec
   });
 }
 
+
+async function handleDashboardSummary(request: Request): Promise<Response> {
+  if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+
+  const [
+    distributionsTotal,
+    documentsTotal,
+    documentsSj,
+    documentsBast,
+    statusDibuat,
+    statusDicetak,
+    statusDitandatangani,
+    statusSelesai,
+    statusBatal,
+    pendingBast,
+    recipientsTotal,
+    recipientsActive,
+    recipientsNeedingVerification,
+    recipientsMissingAddress,
+    driversActive,
+    vehiclesActive,
+    staffActive,
+    menusActive,
+    settings,
+    recentRows,
+  ] = await Promise.all([
+    countRows("distributions"),
+    countRows("documents"),
+    countRows("documents", { jenis: "eq.SJ" }),
+    countRows("documents", { jenis: "eq.BAST" }),
+    countRows("documents", { status: "eq.dibuat" }),
+    countRows("documents", { status: "eq.dicetak" }),
+    countRows("documents", { status: "eq.ditandatangani" }),
+    countRows("documents", { status: "eq.selesai" }),
+    countRows("documents", { status: "eq.batal" }),
+    countRows("documents", { jenis: "eq.BAST", status: "in.(dibuat,dicetak,ditandatangani)" }),
+    countRows("recipients"),
+    countRows("recipients", { aktif: "eq.true" }),
+    countRows("recipients", { aktif: "eq.true", perlu_verifikasi: "eq.true" }),
+    countRows("recipients", { aktif: "eq.true", or: "(alamat.is.null,alamat.eq.)" }),
+    countRows("master_pengemudi", { aktif: "eq.true" }),
+    countRows("master_kendaraan", { aktif: "eq.true" }),
+    countRows("master_petugas", { aktif: "eq.true" }),
+    countRows("master_menu", { aktif: "eq.true" }),
+    selectOne<Record<string, unknown>>(
+      "settings",
+      "nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,nama_kepala_sppg",
+      { id: "eq.1" },
+    ),
+    supabaseRequest<Array<Record<string, unknown>>>(
+      "distributions?" + new URLSearchParams({
+        select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan",
+        order: "tanggal.desc",
+        limit: "5",
+      }).toString(),
+    ),
+  ]);
+
+  const missingSppgFields = !settings
+    || !String(settings.nama_sppg ?? "").trim()
+    || !String(settings.kode_sppg ?? "").trim()
+    || !String(settings.alamat ?? "").trim()
+    || !String(settings.nama_kepala_sppg ?? "").trim();
+  const supportMasterMissing = [
+    driversActive === 0,
+    vehiclesActive === 0,
+    staffActive === 0,
+    menusActive === 0,
+  ].filter(Boolean).length;
+
+  const recentDistributions = await Promise.all(recentRows.map(async (row) => ({
+    id: String(row.id),
+    tanggal: String(row.tanggal),
+    menu: row.menu ?? null,
+    nama_petugas: row.nama_petugas ?? null,
+    nama_pengemudi: row.nama_pengemudi ?? null,
+    no_kendaraan: row.no_kendaraan ?? null,
+    documents_count: await countRows("documents", {
+      distribution_id: "eq." + String(row.id),
+    }),
+  })));
+
+  return respond(request, {
+    generated_at: new Date().toISOString(),
+    counts: {
+      distributions: distributionsTotal,
+      documents: documentsTotal,
+      surat_jalan: documentsSj,
+      bast: documentsBast,
+      bast_pending: pendingBast,
+      dibuat: statusDibuat,
+      dicetak: statusDicetak,
+      ditandatangani: statusDitandatangani,
+      selesai: statusSelesai,
+      batal: statusBatal,
+      recipients_total: recipientsTotal,
+      recipients_active: recipientsActive,
+      recipients_missing_address: recipientsMissingAddress,
+      recipients_need_verification: recipientsNeedingVerification,
+      drivers_active: driversActive,
+      vehicles_active: vehiclesActive,
+      staff_active: staffActive,
+      menus_active: menusActive,
+      support_master_missing: supportMasterMissing,
+      sppg_missing_fields: missingSppgFields ? 1 : 0,
+    },
+    recent_distributions: recentDistributions,
+  });
+}
+
 async function handleDocsCreate(request: Request): Promise<Response> {
   if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
   const body = await readJson(request);
@@ -567,17 +702,30 @@ async function handleDocsCreate(request: Request): Promise<Response> {
     no_kendaraan: noKendaraan,
     jam_berangkat: jamBerangkat,
   };
-  const distributionRows = await supabaseRequest<Array<{ id: string; tanggal: string }>>(
-    "distributions?" + new URLSearchParams({
-      on_conflict: "tanggal",
-      select: "id,tanggal",
-    }).toString(),
-    {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-      body: JSON.stringify(distributionPayload),
-    },
-  );
+  let distributionRows: Array<{ id: string; tanggal: string }>;
+  try {
+    distributionRows = await supabaseRequest<Array<{ id: string; tanggal: string }>>(
+      "distributions?" + new URLSearchParams({
+        on_conflict: "tanggal",
+        select: "id,tanggal",
+      }).toString(),
+      {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(distributionPayload),
+      },
+    );
+  } catch (error) {
+    // Once the first document is issued, the database freezes its distribution snapshot.
+    // Convert the trigger's SQLSTATE into a clear, actionable conflict for the UI.
+    if (error instanceof AppError && error.code === "55000") {
+      throw new AppError(
+        409,
+        "Tanggal ini sudah memiliki dokumen. Data menu, petugas, pengemudi, kendaraan, dan jam berangkat terkunci agar snapshot dokumen lama tidak berubah. Gunakan data perjalanan yang sama.",
+      );
+    }
+    throw error;
+  }
   const distribution = distributionRows[0];
   if (!distribution?.id) throw new AppError(500, "Data distribusi tidak berhasil disiapkan.");
 
@@ -1061,6 +1209,7 @@ Deno.serve(async (request: Request) => {
       case "master/recipients": return await handleMasterRecipients(request);
       case "master/save": return await handleMasterSave(request);
       case "master/import": return await handleMasterImport(request);
+      case "dashboard/summary": return await handleDashboardSummary(request);
       case "docs/create": return await handleDocsCreate(request);
       case "docs/days": return await handleDocsDays(request);
       case "docs/list": return await handleDocsList(request);
