@@ -4,7 +4,8 @@ import {
   isValidClockTime,
   isValidIsoDate,
   normalizeUuidList,
-  parseNonNegativeInteger,\n  parseContentRangeTotal,
+  parseNonNegativeInteger,
+  parseContentRangeTotal,
 } from "../supabase/functions/autodoc-auth/validation.ts";
 
 test("date validation accepts real ISO calendar dates and rejects impossible dates", () => {
