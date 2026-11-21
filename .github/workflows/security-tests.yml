@@ -31,5 +31,7 @@ jobs:
         run: deno check supabase/functions/autodoc-auth/index.ts
       - name: Periksa sintaks frontend Data Master
         run: node --check master.js
+      - name: Periksa sintaks frontend dokumen
+        run: node --check documents.js
       - name: Jalankan unit test
         run: npm test
