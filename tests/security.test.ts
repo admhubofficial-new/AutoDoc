@@ -36,7 +36,9 @@ test("active Edge Function session helper rejects a modified signature", async (
   const now = 1_800_000_000;
   const key = await keyPromise;
   const token = await signSessionPayload(await makePayload(now), key);
-  const altered = token.slice(0, -1) + (token.endsWith("a") ? "b" : "a");
+  const separator = token.indexOf(".");
+  const firstSignatureChar = token[separator + 1];
+  const altered = token.slice(0, separator + 1) + (firstSignatureChar === "A" ? "B" : "A") + token.slice(separator + 2);
   assert.equal(await verifySessionPayload(altered, key, now + 60, 12 * 60 * 60), null);
 });
 
