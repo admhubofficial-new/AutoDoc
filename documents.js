@@ -106,7 +106,7 @@ function options(items,valueKey,labelKey,label){
 async function loadMaster(){
  status("Memuat daftar penerima dan data pendukung...");
  const [masterResult,recipientResult]=await Promise.allSettled([
-  api("master/list"),
+  api("master/list?include_recipients=false"),
   api("master/recipients")
  ]);
  if(recipientResult.status!=="fulfilled"){
@@ -617,19 +617,45 @@ function printDocuments(documents){
  const win=window.open("","_blank");
  if(!win){status("Popup cetak diblokir. Izinkan popup untuk situs AutoDoc.",true);return}
  win.document.open();win.document.write(batchHtml);win.document.close();
+ const toolbar=win.document.createElement("div");
+ toolbar.className="autodoc-print-toolbar";
+ toolbar.style.cssText="position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;background:#173d2c;color:#fff;font:13px system-ui,sans-serif";
+ const note=win.document.createElement("span");
+ note.textContent="Setelah dialog cetak ditutup, konfirmasikan jika dokumen benar-benar sudah dicetak.";
+ const markButton=win.document.createElement("button");
+ markButton.type="button";markButton.textContent="Konfirmasi sudah dicetak";
+ markButton.style.cssText="padding:9px 13px;border:0;border-radius:8px;background:#fff;color:#173d2c;font:600 12px system-ui,sans-serif;cursor:pointer";
+ toolbar.append(note,markButton);win.document.body.prepend(toolbar);
+ const printStyle=win.document.createElement("style");
+ printStyle.textContent="@media print{.autodoc-print-toolbar{display:none!important}}";
+ win.document.head.append(printStyle);
+ markButton.addEventListener("click",async()=>{
+  markButton.disabled=true;markButton.textContent="Menyimpan…";
+  try{
+   const results=await Promise.all(docs.map(doc=>api("docs/mark-printed",{document_id:doc.id})));
+   if(results.every(result=>result.updated)){
+    markButton.textContent="Status cetak dicatat";
+    note.textContent="Konfirmasi cetak berhasil disimpan.";
+    window.dispatchEvent(new Event("autodoc:data-changed"));
+    if(!modal.hidden){
+     const dateField=$("#docsHistoryDate",modal);
+     if(dateField)loadHistory(dateField.value).catch(()=>{});
+    }
+   }else{
+    markButton.disabled=false;markButton.textContent="Ulangi konfirmasi";
+    note.textContent="Sebagian dokumen tidak dapat diperbarui. Periksa status arsip.";
+   }
+  }catch(error){
+   markButton.disabled=false;markButton.textContent="Ulangi konfirmasi";
+   note.textContent=error.message||"Gagal menyimpan konfirmasi cetak.";
+  }
+ });
  let printStarted=false;
  const invokePrint=()=>{
   if(printStarted)return;
   printStarted=true;
   if(win.closed||typeof win.print!=="function")return;
-  try{win.focus();win.print()}catch(_){return}
-  Promise.allSettled(docs.map(doc=>api("docs/mark-printed",{document_id:doc.id}))).then(()=>{
-   window.dispatchEvent(new Event("autodoc:data-changed"));
-   if(!modal.hidden){
-    const dateField=$("#docsHistoryDate",modal);
-    if(dateField)loadHistory(dateField.value).catch(()=>{});
-   }
-  });
+  try{win.focus();win.print()}catch(_){note.textContent="Dialog cetak gagal dibuka. Gunakan tombol cetak browser."}
  };
  const logos=Array.from(win.document.querySelectorAll(".top-logo"));
  const imageReady=logo=>{
