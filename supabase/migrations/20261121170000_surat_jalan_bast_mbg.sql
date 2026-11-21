@@ -225,7 +225,7 @@ create or replace function public.audit_row_change()
 returns trigger
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog
 as $$
 declare
   v_old jsonb;
@@ -322,7 +322,7 @@ create or replace function public.ensure_bast_document_type()
 returns trigger
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog
 as $$
 begin
   if not exists (
@@ -368,7 +368,7 @@ create or replace function public.selesaikan_setup_awal(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog
 as $$
 declare
   v_settings public.settings%rowtype;
@@ -459,7 +459,7 @@ create or replace function public.ubah_nomor_awal(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog
 as $$
 declare
   v_counter public.counters%rowtype;
@@ -518,7 +518,7 @@ create or replace function public.buat_dokumen_dengan_nomor(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog
 as $$
 declare
   v_tanggal date;
@@ -837,9 +837,24 @@ from public, anon, authenticated;
 
 grant usage on schema public to service_role;
 
-revoke all privileges on table public.settings from service_role;
-grant select, update on table public.settings to service_role;
+-- Clear any inherited/default service-role grants, then grant least privilege.
+revoke all privileges on table
+  public.settings,
+  public.counters,
+  public.recipients,
+  public.master_pengemudi,
+  public.master_kendaraan,
+  public.master_petugas,
+  public.master_menu,
+  public.distributions,
+  public.documents,
+  public.bast_realisasi,
+  public.bast_realisasi_items,
+  public.audit_log,
+  public.login_attempts
+from service_role;
 
+grant select, update on table public.settings to service_role;
 grant select on table public.counters to service_role;
 grant select, update on table public.documents to service_role;
 grant select, insert on table public.audit_log to service_role;
