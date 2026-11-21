@@ -178,7 +178,7 @@ async function createDocs(event){
  if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);return}
  const button=$("#docsCreateButton",modal);button.disabled=true;button.textContent="Menerbitkan dokumen...";
  try{
-  const result=await api("docs/create",body);
+  const result=await api("docs/create",body);window.dispatchEvent(new Event("autodoc:data-changed"));
   const failed=(result.errors||[]).length;
   const summary=node("div","docs-result");
   summary.textContent=result.berhasil+" dari "+result.requested+" dokumen berhasil disiapkan ("+Math.floor(result.berhasil/2)+" pasangan SJ/BAST). "+(failed?"Masih ada "+failed+" dokumen gagal; ulangi tanggal yang sama untuk melanjutkan.":"Nomor yang sudah terbit tidak akan dibuat ulang.");
@@ -243,7 +243,7 @@ function printDocument(doc){
   try{win.print()}catch(_){return}
   // Browser APIs cannot confirm whether the user printed or cancelled the dialog.
   // Record the print action only after the print dialog has been invoked and dismissed.
-  api("docs/mark-printed",{document_id:doc.id}).then(()=>{
+  api("docs/mark-printed",{document_id:doc.id}).then(()=>{window.dispatchEvent(new Event("autodoc:data-changed"));
    if(!modal.hidden){
     const dateField=$("#docsHistoryDate",modal);
     if(dateField)loadHistory(dateField.value).catch(()=>{});
@@ -275,7 +275,7 @@ function showRealization(card,doc){
  $("#docsRealizationForm",panel).onsubmit=async e=>{
   e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget).entries());data.document_id=doc.id;
   const button=$(".save-realization",panel);button.disabled=true;button.textContent="Menyimpan...";
-  try{await api("docs/realization",data);status("Realisasi BAST berhasil disimpan.");await loadHistory($("#docsHistoryDate",modal).value)}
+  try{await api("docs/realization",data);window.dispatchEvent(new Event("autodoc:data-changed"));status("Realisasi BAST berhasil disimpan.");await loadHistory($("#docsHistoryDate",modal).value)}
   catch(err){status(err.message,true);button.disabled=false;button.textContent="Simpan realisasi"}
  };
  panel.scrollIntoView({behavior:"smooth",block:"nearest"});
