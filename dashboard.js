@@ -108,27 +108,27 @@
 
     const warnings = [];
     if (Number(counts.recipients_missing_address) > 0) {
-      warnings.push(num(counts.recipients_missing_address) + " alamat penerima aktif belum dilengkapi");
+      warnings.push({ label: num(counts.recipients_missing_address) + " alamat penerima aktif belum dilengkapi", entity: "recipients" });
     }
     if (Number(counts.sppg_missing_fields) > 0) {
-      warnings.push("Identitas SPPG belum lengkap");
+      warnings.push({ label: "Identitas SPPG belum lengkap", entity: "settings" });
     }
-    if (Number(counts.support_master_missing) > 0) {
-      warnings.push("Pengemudi, kendaraan, petugas, atau menu belum lengkap (" + num(counts.support_master_missing) + " jenis)");
-    }
+    if (Number(counts.drivers_active) === 0) warnings.push({ label: "Data pengemudi belum tersedia", entity: "drivers" });
+    if (Number(counts.vehicles_active) === 0) warnings.push({ label: "Data kendaraan belum tersedia", entity: "vehicles" });
+    if (Number(counts.staff_active) === 0) warnings.push({ label: "Data petugas belum tersedia", entity: "staff" });
+    if (Number(counts.menus_active) === 0) warnings.push({ label: "Data menu makanan belum tersedia", entity: "menus" });
     if (Number(counts.recipients_need_verification) > 0) {
-      warnings.push(num(counts.recipients_need_verification) + " penerima perlu verifikasi");
+      warnings.push({ label: num(counts.recipients_need_verification) + " penerima perlu verifikasi", entity: "recipients" });
     }
 
     if (warnings.length) {
       const panel = el("section", "home-panel");
       panel.append(el("h2", null, "Perlu dilengkapi"));
       const list = el("div", "home-warning-list");
-      warnings.forEach(label => {
+      warnings.forEach(warning => {
         const row = el("div", "home-warning-row");
-        row.append(el("span", null, label), action("Data Master", false, () => {
-          const launcher = document.querySelector(".home-legacy-launchers .dm-launch");
-          if (launcher) launcher.click();
+        row.append(el("span", null, warning.label), action("Buka", false, () => {
+          window.AutoDocMaster?.open(warning.entity);
         }));
         list.append(row);
       });
