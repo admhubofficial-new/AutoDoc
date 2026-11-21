@@ -838,19 +838,56 @@ async function handleDocsDays(request: Request): Promise<Response> {
   if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1_000_000) {
     throw new AppError(400, "Halaman arsip tidak valid.");
   }
-
+  const rawSearch = (url.searchParams.get("q") ?? "").trim();
+  if (rawSearch.length > 100) throw new AppError(400, "Kata pencarian maksimal 100 karakter.");
+  const search = rawSearch.replace(/[^\\p{L}\\p{N}\\s./-]/gu, " ").replace(/\\s+/g, " ").trim().slice(0, 80);
+  const filters: Record<string, string> = {
+    select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,waktu_makan,nama_ahli_gizi,created_at",
+    order: "tanggal.desc",
+    limit: "61",
+    offset: String(offset),
+  };
+  if (search) {
+    let isoDate = search;
+    const localDate = /^(\\d{2})[/-](\\d{2})[/-](\\d{4})$/.exec(search);
+    if (localDate) isoDate = localDate[3] + "-" + localDate[2] + "-" + localDate[1];
+    if (isValidIsoDate(isoDate)) {
+      filters.tanggal = "eq." + isoDate;
+    } else {
+      const pattern = "*" + search.replace(/[,*()]/g, " ") + "*";
+      filters.or = "(menu.ilike." + pattern +
+        ",nama_petugas.ilike." + pattern +
+        ",nama_pengemudi.ilike." + pattern +
+        ",no_kendaraan.ilike." + pattern + ")";
+    }
+  }
   const rows = await supabaseRequest<unknown[]>(
-    "distributions?" + new URLSearchParams({
-      select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,waktu_makan,nama_ahli_gizi,created_at",
-      order: "tanggal.desc",
-      limit: "61",
-      offset: String(offset),
-    }).toString(),
+    "distributions?" + new URLSearchParams(filters).toString(),
   );
   return respond(request, {
     distributions: rows.slice(0, 60),
     offset,
     has_more: rows.length > 60,
+    search,
+  });
+}
+
+async function handleDocsDeleteHistory(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  const body = await readJson(request);
+  await verifyMutationPin(request, body.token, "hapus_riwayat_distribusi");
+  const distributionIds = uuidList(body.distribution_ids);
+  if (distributionIds.length > 60) {
+    throw new AppError(400, "Penghapusan dibatasi maksimal 60 riwayat dalam satu tindakan.");
+  }
+  const result = await rpc<Record<string, unknown>>("hapus_riwayat_distribusi", {
+    p_distribution_ids: distributionIds,
+  });
+  return respond(request, {
+    success: true,
+    deleted_distributions: Number(result?.deleted_distributions ?? 0),
+    deleted_documents: Number(result?.deleted_documents ?? 0),
+    message: "Riwayat distribusi dan dokumen terkait berhasil dihapus. Nomor dokumen tidak direset.",
   });
 }
 
@@ -1269,6 +1306,7 @@ Deno.serve(async (request: Request) => {
       case "dashboard/summary": return await handleDashboardSummary(request);
       case "docs/create": return await handleDocsCreate(request);
       case "docs/days": return await handleDocsDays(request);
+      case "docs/delete-history": return await handleDocsDeleteHistory(request);
       case "docs/list": return await handleDocsList(request);
       case "docs/mark-printed": return await handleDocsMarkPrinted(request);
       case "docs/realization": return await handleDocsRealization(request);
