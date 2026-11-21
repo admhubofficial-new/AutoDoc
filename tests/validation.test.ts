@@ -46,6 +46,8 @@ test("UUID recipient lists validate shape, enforce a maximum, and de-duplicate I
   assert.equal(normalizeUuidList(["not-a-uuid"]), null);
   assert.equal(normalizeUuidList([a, 1]), null);
   assert.equal(normalizeUuidList(Array(101).fill(a)), null);
+  assert.equal(normalizeUuidList(Array(60).fill(a), 60)?.length, 1);
+  assert.equal(normalizeUuidList(Array(61).fill(a), 60), null);
 });
 
 
