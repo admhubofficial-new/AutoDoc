@@ -698,9 +698,9 @@ async function handleDocsCreate(request: Request): Promise<Response> {
     throw error;
   }
 
-  const namaPetugas = cleanText(body.nama_petugas, "Nama petugas", true, 180);
-  const namaPengemudi = cleanText(body.nama_pengemudi, "Nama pengemudi", true, 180);
-  const noKendaraan = cleanText(body.no_kendaraan, "Nomor kendaraan", true, 80);
+  const namaPetugas = cleanText(body.nama_petugas, "Nama petugas", false, 180);
+  const namaPengemudi = cleanText(body.nama_pengemudi, "Nama pengemudi", false, 180);
+  const noKendaraan = cleanText(body.no_kendaraan, "Nomor kendaraan", false, 80);
   const jamBerangkat = cleanText(body.jam_berangkat, "Jam berangkat", false, 8);
   if (jamBerangkat && !isValidClockTime(jamBerangkat)) {
     throw new AppError(400, "Format jam berangkat harus HH:MM.");
