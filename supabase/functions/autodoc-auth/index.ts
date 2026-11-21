@@ -818,14 +818,14 @@ async function handleDocsDays(request: Request): Promise<Response> {
     "distributions?" + new URLSearchParams({
       select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,created_at",
       order: "tanggal.desc",
-      limit: "60",
+      limit: "61",
       offset: String(offset),
     }).toString(),
   );
   return respond(request, {
-    distributions: rows,
+    distributions: rows.slice(0, 60),
     offset,
-    has_more: rows.length === 60,
+    has_more: rows.length > 60,
   });
 }
 
