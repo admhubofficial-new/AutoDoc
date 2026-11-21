@@ -108,7 +108,7 @@
 
     const warnings = [];
     if (Number(counts.recipients_missing_address) > 0) {
-      warnings.push({ label: num(counts.recipients_missing_address) + " alamat penerima aktif belum dilengkapi", entity: "recipients" });
+      warnings.push({ label: num(counts.recipients_missing_address) + " alamat penerima aktif belum dilengkapi", entity: "recipients", query: "alamat belum dilengkapi" });
     }
     if (Number(counts.sppg_missing_fields) > 0) {
       warnings.push({ label: "Identitas SPPG belum lengkap", entity: "settings" });
@@ -118,7 +118,7 @@
     if (Number(counts.staff_active) === 0) warnings.push({ label: "Data petugas belum tersedia", entity: "staff" });
     if (Number(counts.menus_active) === 0) warnings.push({ label: "Data menu makanan belum tersedia", entity: "menus" });
     if (Number(counts.recipients_need_verification) > 0) {
-      warnings.push({ label: num(counts.recipients_need_verification) + " penerima perlu verifikasi", entity: "recipients" });
+      warnings.push({ label: num(counts.recipients_need_verification) + " penerima perlu verifikasi", entity: "recipients", query: "perlu verifikasi" });
     }
 
     if (warnings.length) {
@@ -128,7 +128,7 @@
       warnings.forEach(warning => {
         const row = el("div", "home-warning-row");
         row.append(el("span", null, warning.label), action("Buka", false, () => {
-          window.AutoDocMaster?.open(warning.entity);
+          window.AutoDocMaster?.open(warning.entity, warning.query);
         }));
         list.append(row);
       });
