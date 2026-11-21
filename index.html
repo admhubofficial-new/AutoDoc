@@ -544,13 +544,25 @@
           weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta"
         }).format(new Date());
       }
+      function setHomeNav(active) {
+        homeNav.querySelectorAll("button").forEach(item => {
+          if (item.dataset.homeNav === active) item.setAttribute("aria-current", "page");
+          else item.removeAttribute("aria-current");
+        });
+      }
       function openDocsTab(tabName) {
         if (!window.AutoDocDocuments) return;
         if (tabName === "history") window.AutoDocDocuments.openArchive();
         else window.AutoDocDocuments.open();
       }
-      window.AutoDocOpenDocs = (tabName) => openDocsTab(tabName || "create");
-      window.AutoDocOpenArchive = (date) => window.AutoDocDocuments?.openArchive(date);
+      window.AutoDocOpenDocs = (tabName) => {
+        setHomeNav("print");
+        openDocsTab(tabName || "create");
+      };
+      window.AutoDocOpenArchive = (date) => {
+        setHomeNav("archive");
+        window.AutoDocDocuments?.openArchive(date);
+      };
       menuToggle.addEventListener("click", () => {
         const open = !homeNav.classList.contains("open");
         homeNav.classList.toggle("open", open);
