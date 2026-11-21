@@ -840,7 +840,7 @@ async function handleDocsDays(request: Request): Promise<Response> {
   }
   const rawSearch = (url.searchParams.get("q") ?? "").trim();
   if (rawSearch.length > 100) throw new AppError(400, "Kata pencarian maksimal 100 karakter.");
-  const search = rawSearch.replace(/[^\\p{L}\\p{N}\\s./-]/gu, " ").replace(/\\s+/g, " ").trim().slice(0, 80);
+  const search = rawSearch.replace(/[^\p{L}\p{N}\s./-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80);
   const filters: Record<string, string> = {
     select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,waktu_makan,nama_ahli_gizi,created_at",
     order: "tanggal.desc",
@@ -849,7 +849,7 @@ async function handleDocsDays(request: Request): Promise<Response> {
   };
   if (search) {
     let isoDate = search;
-    const localDate = /^(\\d{2})[/-](\\d{2})[/-](\\d{4})$/.exec(search);
+    const localDate = /^(\d{2})[/-](\d{2})[/-](\d{4})$/.exec(search);
     if (localDate) isoDate = localDate[3] + "-" + localDate[2] + "-" + localDate[1];
     if (isValidIsoDate(isoDate)) {
       filters.tanggal = "eq." + isoDate;
