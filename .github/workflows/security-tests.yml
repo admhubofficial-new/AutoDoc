@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/token-setup-session-auth
   pull_request:
     branches:
       - main
@@ -33,5 +32,7 @@ jobs:
         run: node --check master.js
       - name: Periksa sintaks frontend dokumen
         run: node --check documents.js
+      - name: Periksa sintaks konfigurasi frontend
+        run: node --check config.js
       - name: Jalankan unit test
         run: npm test

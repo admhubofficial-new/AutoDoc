@@ -445,6 +445,7 @@
     </section>
   </main>
 
+  <script src="./config.js?v=shared-config-20261121"></script>
   <script>
     (() => {
       const loginForm = document.getElementById("loginForm");
@@ -463,8 +464,8 @@
       const loginButton = document.getElementById("loginButton");
       const setupButton = document.getElementById("setupButton");
 
-      const API_URL = "https://cnbomblvtddkmtojzpyd.supabase.co/functions/v1/autodoc-auth";
-      const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_xSbC7RqRGFkZVaqkFYJ7OA_DJ9qSuyv";
+      const API_URL = window.AutoDocConfig.apiUrl;
+      const SUPABASE_PUBLISHABLE_KEY = window.AutoDocConfig.publishableKey;
 
       function setStatus(message, state) {
         authStatus.textContent = message || "";

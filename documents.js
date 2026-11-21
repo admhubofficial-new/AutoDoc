@@ -1,7 +1,6 @@
 (() => {
 "use strict";
-const API="https://cnbomblvtddkmtojzpyd.supabase.co/functions/v1/autodoc-auth";
-const KEY="sb_publishable_xSbC7RqRGFkZVaqkFYJ7OA_DJ9qSuyv";
+const { apiUrl: API, publishableKey: KEY } = window.AutoDocConfig;
 const $=(selector,root=document)=>root.querySelector(selector);
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
