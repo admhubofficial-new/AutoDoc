@@ -137,6 +137,7 @@
     }
 
     const recentPanel = el("section", "home-panel");
+    if (!warnings.length) recentPanel.style.gridColumn = "1 / -1";
     recentPanel.append(el("h2", null, "Distribusi terbaru"));
     const recentList = el("div", "home-recent-list");
     if (!rows.length) {
