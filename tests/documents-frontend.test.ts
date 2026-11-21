@@ -18,6 +18,14 @@ test("partial document creation responses are handled as valid API results", () 
 });
 
 
+test("printed documents use the public BGN logo in the letterhead", () => {
+  assert.match(source, /const LETTERHEAD_LOGO_URL="https:\/\/cnbomblvtddkmtojzpyd\.supabase\.co\/storage\/v1\/object\/public\/logo%20bgn\/logo-bgn%20\(1\)\.png"/);
+  assert.match(source, /class='top-logo' src='/);
+});
+
 test("printed status is updated only after the print dialog has been invoked", () => {
-  assert.match(source, /setTimeout\(\(\)=>\{[\s\S]*?win\.print\(\)[\s\S]*?api\("docs\/mark-printed"/);
+  assert.match(source, /const logo=win\.document\.querySelector\("\.top-logo"\)/);
+  assert.match(source, /logo\.addEventListener\("load",invokePrint/);
+  assert.match(source, /logo\.addEventListener\("error",invokePrint/);
+  assert.match(source, /try\{win\.focus\(\);win\.print\(\)\}catch\(_\)\{return\}[\s\S]*?api\("docs\/mark-printed"/);
 });
