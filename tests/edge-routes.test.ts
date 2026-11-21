@@ -103,7 +103,7 @@ test("navigation opens document and master modules through public module APIs, n
 test("dashboard completion shortcuts open the matching Data Master section", () => {
   assert.match(dashboardUi, /window\.AutoDocMaster\?\.open\(warning\.entity, warning\.query\)/);
   assert.match(dashboardUi, /entity: "settings"/);
-  assert.match(dashboardUi, /entity: "vehicles"/);
+  assert.doesNotMatch(dashboardUi, /entity: "vehicles"|entity: "drivers"|entity: "staff"|entity: "menus"/);
   assert.match(dashboardUi, /entity: "recipients"/);
   assert.match(dashboardUi, /query: "alamat belum dilengkapi"/);
   assert.match(dashboardUi, /query: "perlu verifikasi"/);
@@ -118,13 +118,13 @@ test("inline application script remains syntactically valid", () => {
 });
 
 test("home dashboard avoids duplicate latest distribution and emphasizes global pending work", () => {
-  assert.match(dashboardUi, /\["BAST belum direalisasi", counts\.bast_pending\]/);
-  assert.match(dashboardUi, /\["Total distribusi tercatat", counts\.distributions\]/);
+  assert.match(dashboardUi, /\["BAST perlu realisasi", counts\.bast_pending\]/);
+  assert.match(dashboardUi, /\["Total distribusi", counts\.distributions\]/);
   assert.match(dashboardUi, /const earlierRows = rows\.slice\(1\)/);
   assert.match(dashboardUi, /"Distribusi sebelumnya"/);
-  assert.match(dashboardUi, /action\("Buat dokumen", true/);
-  assert.doesNotMatch(dashboardUi, /action\("Lihat arsip", false/);
-  assert.match(indexHtml, /dashboard\.js\?v=ahli-gizi-reminder-20261122/);
+  assert.match(dashboardUi, /action\("＋ Buat dokumen", true/);
+  assert.match(dashboardUi, /action\("Lihat arsip", false/);
+  assert.match(indexHtml, /dashboard\.js\?v=operations-workspace-20261122/);
 });
 
 test("SPPG identity exposes separate Kepala SPPG, Kepala SPPI, and Ahli Gizi Dapur fields", () => {
