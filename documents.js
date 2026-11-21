@@ -115,7 +115,7 @@ async function loadMaster(){
  master.recipients=recipients;
  masterLoaded=true;
  renderCreate();
- const activeCount=recipients.filter(isActiveRecipient).length;
+ const activeCount=recipients.length;
  const warning=masterResult.status==="rejected"?" Data pendukung (menu/petugas/kendaraan/pengemudi) gagal dimuat; daftar penerima tetap tersedia.":"";
  status(activeCount+" penerima aktif berhasil dimuat dari "+recipients.length+" data."+warning,masterResult.status==="rejected");
 }
@@ -127,7 +127,7 @@ function isActiveRecipient(recipient){
 function renderCreate(){
  const target=$(".docs-view-create",modal);
  if(!target)return;
- const recipients=(Array.isArray(master.recipients)?master.recipients:[]).filter(isActiveRecipient);
+ const recipients=Array.isArray(master.recipients)?master.recipients:[];
  const todayVal=today();
  target.innerHTML="<h3 class='docs-section-title'>Buat Surat Jalan &amp; BAST</h3>"+
  "<p class='docs-note'>Ikuti tiga langkah singkat. Nomor dokumen baru diterbitkan setelah pemeriksaan akhir.</p>"+
