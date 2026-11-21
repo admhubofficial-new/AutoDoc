@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { adminClient } from "./supabase.js";
-import { secureRequest, sessionSecret } from "./env.js";
+import { selectOne } from "./supabase.ts";
+import { secureRequest, sessionSecret } from "./env.ts";
 
 export const SESSION_COOKIE = "autodoc_session";
 export const SESSION_TTL_SECONDS = 12 * 60 * 60;
@@ -131,13 +131,12 @@ export async function validSession(
   const payload = verifyCookiePayload(value, sessionSecret());
   if (!payload) return null;
 
-  const { data, error } = await adminClient()
-    .from("settings")
-    .select("session_version, setup_completed_at, token_hash")
-    .eq("id", 1)
-    .maybeSingle();
+  const data = await selectOne<{
+    session_version: number;
+    setup_completed_at: string | null;
+    token_hash: string | null;
+  }>("settings", "session_version,setup_completed_at,token_hash", { id: "eq.1" });
 
-  if (error) throw error;
   if (!data?.setup_completed_at || !data.token_hash) return null;
   if (Number(data.session_version) !== payload.sv) return null;
 
@@ -145,14 +144,13 @@ export async function validSession(
 }
 
 export async function currentSessionVersion(): Promise<number> {
-  const { data, error } = await adminClient()
-    .from("settings")
-    .select("session_version, setup_completed_at, token_hash")
-    .eq("id", 1)
-    .single();
+  const data = await selectOne<{
+    session_version: number;
+    setup_completed_at: string | null;
+    token_hash: string | null;
+  }>("settings", "session_version,setup_completed_at,token_hash", { id: "eq.1" });
 
-  if (error) throw error;
-  if (!data.setup_completed_at || !data.token_hash) {
+  if (!data?.setup_completed_at || !data.token_hash) {
     throw new Error("Setup Awal belum selesai.");
   }
   return Number(data.session_version);
