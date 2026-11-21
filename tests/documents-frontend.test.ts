@@ -33,7 +33,7 @@ test("printed status waits for all letterhead assets and follows the print dialo
 
 
 test("creation trusts the session-protected endpoint that already filters active recipients", () => {
-  assert.match(source, /api\("master\\/recipients"\)/);
-  assert.match(source, /const recipients=Array\\.isArray\\(master\\.recipients\\)\\?master\\.recipients:\\[\\]/);
-  assert.doesNotMatch(source, /master\\.recipients\\)\\.filter\\(isActiveRecipient/);
+  assert.ok(source.includes('api("master/recipients")'));
+  assert.ok(source.includes("const recipients=Array.isArray(master.recipients)?master.recipients:[]"));
+  assert.ok(!source.includes("master.recipients).filter(isActiveRecipient"));
 });
