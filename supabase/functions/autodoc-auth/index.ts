@@ -297,11 +297,11 @@ function respond(
   return new Response(body === null ? null : JSON.stringify(body), { status, headers });
 }
 
-async function readJson(request: Request): Promise<Record<string, unknown>> {
+async function readJson(request: Request, maxBytes = MAX_BODY_BYTES): Promise<Record<string, unknown>> {
   const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > MAX_BODY_BYTES) throw new AppError(413, "Permintaan terlalu besar.");
+  if (declared > maxBytes) throw new AppError(413, "Permintaan terlalu besar.");
   const raw = await request.text();
-  if (encoder.encode(raw).length > MAX_BODY_BYTES) {
+  if (encoder.encode(raw).length > maxBytes) {
     throw new AppError(413, "Permintaan terlalu besar.");
   }
   try {
@@ -359,6 +359,137 @@ async function recordFailure(keyHash: string): Promise<ThrottleState> {
 
 async function clearFailures(keyHash: string): Promise<void> {
   await deleteRows("login_attempts", { key_hash: "eq." + keyHash });
+}
+
+
+
+const MASTER_CONFIG = {
+  settings: { table: "settings", columns: "id,nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,kabupaten_perlu_verifikasi,kabupaten_catatan_verifikasi,nama_kepala_sppg,logo_path", order: "id.asc" },
+  recipients: { table: "recipients", columns: "id,kelompok,nama,jenjang,aktif,urutan,alamat,siswa_kecil,siswa_besar,tendik,ibu_hamil,ibu_menyusui,balita,putus_sekolah,kader,porsi_kecil,porsi_besar,total_porsi,keterangan,perlu_verifikasi,catatan_verifikasi", order: "urutan.asc,nama.asc" },
+  drivers: { table: "master_pengemudi", columns: "id,nama,aktif,urutan", order: "urutan.asc,nama.asc" },
+  vehicles: { table: "master_kendaraan", columns: "id,no_kendaraan,aktif,urutan", order: "urutan.asc,no_kendaraan.asc" },
+  staff: { table: "master_petugas", columns: "id,nama,jabatan,aktif,urutan", order: "urutan.asc,nama.asc" },
+  menus: { table: "master_menu", columns: "id,teks_menu,aktif,urutan", order: "urutan.asc,teks_menu.asc" },
+} as const;
+
+type MasterEntity = keyof typeof MASTER_CONFIG;
+
+function masterEntity(value: unknown): MasterEntity {
+  if (typeof value !== "string" || !(value in MASTER_CONFIG)) {
+    throw new AppError(400, "Jenis data master tidak dikenal.");
+  }
+  return value as MasterEntity;
+}
+
+function cleanText(value: unknown, field: string, required = false, max = 300): string | null {
+  if (value === null || value === undefined || value === "") {
+    if (required) throw new AppError(400, field + " wajib diisi.");
+    return null;
+  }
+  if (typeof value !== "string") throw new AppError(400, field + " tidak valid.");
+  const result = value.trim();
+  if (required && !result) throw new AppError(400, field + " wajib diisi.");
+  if (result.length > max) throw new AppError(400, field + " terlalu panjang.");
+  return result || null;
+}
+
+function cleanInteger(value: unknown, field: string, fallback = 0): number {
+  if (value === null || value === undefined || value === "") return fallback;
+  const result = Number(value);
+  if (!Number.isSafeInteger(result) || result < 0) throw new AppError(400, field + " harus bilangan bulat minimal 0.");
+  return result;
+}
+
+function masterPayload(entity: MasterEntity, input: Record<string, unknown>): Record<string, unknown> {
+  const data: Record<string, unknown> = {};
+  if (entity === "settings") {
+    data.nama_sppg = cleanText(input.nama_sppg, "Nama SPPG", true, 150);
+    data.kode_sppg = cleanText(input.kode_sppg, "Kode SPPG", true, 40);
+    data.alamat = cleanText(input.alamat, "Alamat", false, 500);
+    data.kecamatan = cleanText(input.kecamatan, "Kecamatan", true, 100);
+    data.kabupaten = cleanText(input.kabupaten, "Kabupaten", true, 100);
+    data.nama_kepala_sppg = cleanText(input.nama_kepala_sppg, "Nama Kepala SPPG", false, 150);
+    data.kabupaten_perlu_verifikasi = input.kabupaten_perlu_verifikasi === true;
+    data.kabupaten_catatan_verifikasi = cleanText(input.kabupaten_catatan_verifikasi, "Catatan verifikasi", false, 500);
+    return data;
+  }
+  if (entity === "recipients") {
+    const kelompok = cleanText(input.kelompok, "Kelompok", true, 40);
+    if (kelompok !== "Sekolah/Lembaga" && kelompok !== "Posyandu") throw new AppError(400, "Kelompok penerima tidak valid.");
+    data.kelompok = kelompok;
+    data.nama = cleanText(input.nama, "Nama penerima", true, 180);
+    data.jenjang = cleanText(input.jenjang, "Jenjang", true, 80);
+    data.alamat = cleanText(input.alamat, "Alamat", false, 500);
+    for (const field of ["siswa_kecil","siswa_besar","tendik","ibu_hamil","ibu_menyusui","balita","putus_sekolah","kader","urutan"]) data[field] = cleanInteger(input[field], field, field === "urutan" ? 100 : 0);
+    data.aktif = input.aktif !== false;
+    data.keterangan = cleanText(input.keterangan, "Keterangan", false, 1000);
+    data.perlu_verifikasi = input.perlu_verifikasi === true;
+    data.catatan_verifikasi = cleanText(input.catatan_verifikasi, "Catatan verifikasi", false, 1000);
+    return data;
+  }
+  if (entity === "drivers" || entity === "staff" || entity === "menus" || entity === "vehicles") {
+    const field = entity === "vehicles" ? "no_kendaraan" : entity === "menus" ? "teks_menu" : "nama";
+    data[field] = cleanText(input[field], entity === "vehicles" ? "Nomor kendaraan" : entity === "menus" ? "Menu" : "Nama", true, 180);
+    if (entity === "staff") data.jabatan = cleanText(input.jabatan, "Jabatan", false, 120);
+    data.aktif = input.aktif !== false;
+    data.urutan = cleanInteger(input.urutan, "Urutan", 100);
+    return data;
+  }
+  throw new AppError(400, "Jenis data master tidak didukung.");
+}
+
+async function handleMasterList(request: Request): Promise<Response> {
+  if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const data: Record<string, unknown> = {};
+  for (const entity of Object.keys(MASTER_CONFIG) as MasterEntity[]) {
+    const config = MASTER_CONFIG[entity];
+    const query = new URLSearchParams({ select: config.columns, order: config.order });
+    if (entity === "settings") query.set("id", "eq.1");
+    data[entity] = await supabaseRequest<unknown[]>(config.table + "?" + query.toString());
+  }
+  return respond(request, { data });
+}
+
+async function handleMasterSave(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request);
+  const entity = masterEntity(body.entity);
+  if (!body.data || typeof body.data !== "object" || Array.isArray(body.data)) throw new AppError(400, "Data yang dikirim tidak valid.");
+  const input = body.data as Record<string, unknown>;
+  const data = masterPayload(entity, input);
+  const config = MASTER_CONFIG[entity];
+  const id = entity === "settings" ? "1" : typeof input.id === "string" ? input.id : "";
+  let result: unknown;
+  if (id) {
+    const query = new URLSearchParams({ id: "eq." + id, select: config.columns });
+    result = await supabaseRequest<unknown[]>(config.table + "?" + query.toString(), {
+      method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(data),
+    });
+    if (!Array.isArray(result) || result.length === 0) throw new AppError(404, "Data yang akan diperbarui tidak ditemukan.");
+  } else {
+    result = await supabaseRequest<unknown[]>(config.table + "?select=" + encodeURIComponent(config.columns), {
+      method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(data),
+    });
+  }
+  return respond(request, { success: true, data: Array.isArray(result) ? result[0] : result });
+}
+
+async function handleMasterImport(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request, 512 * 1024);
+  if (!Array.isArray(body.rows) || body.rows.length < 1 || body.rows.length > 500) throw new AppError(400, "Impor harus berisi 1 sampai 500 baris.");
+  const rows = body.rows.map((row) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) throw new AppError(400, "Format baris impor tidak valid.");
+    return masterPayload("recipients", row as Record<string, unknown>);
+  });
+  const query = new URLSearchParams({ on_conflict: "kelompok,nama", select: MASTER_CONFIG.recipients.columns });
+  const result = await supabaseRequest<unknown[]>(MASTER_CONFIG.recipients.table + "?" + query.toString(), {
+    method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(rows),
+  });
+  return respond(request, { success: true, imported: Array.isArray(result) ? result.length : rows.length });
 }
 
 function lockResponse(request: Request, seconds: number): Response {
@@ -608,6 +739,9 @@ Deno.serve(async (request: Request) => {
       case "auth/logout": return await handleLogout(request);
       case "auth/verify-token": return await handleVerifyToken(request);
       case "auth/change-token": return await handleChangeToken(request);
+      case "master/list": return await handleMasterList(request);
+      case "master/save": return await handleMasterSave(request);
+      case "master/import": return await handleMasterImport(request);
       default: return respond(request, { message: "Endpoint tidak ditemukan." }, 404);
     }
   } catch (error) {
