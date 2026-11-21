@@ -806,14 +806,27 @@ async function handleDocsCreate(request: Request): Promise<Response> {
 async function handleDocsDays(request: Request): Promise<Response> {
   if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+
+  const url = new URL(request.url);
+  const rawOffset = url.searchParams.get("offset");
+  const offset = rawOffset === null ? 0 : Number(rawOffset);
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1_000_000) {
+    throw new AppError(400, "Halaman arsip tidak valid.");
+  }
+
   const rows = await supabaseRequest<unknown[]>(
     "distributions?" + new URLSearchParams({
       select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,created_at",
       order: "tanggal.desc",
       limit: "60",
+      offset: String(offset),
     }).toString(),
   );
-  return respond(request, { distributions: rows });
+  return respond(request, {
+    distributions: rows,
+    offset,
+    has_more: rows.length === 60,
+  });
 }
 
 async function handleDocsList(request: Request): Promise<Response> {
