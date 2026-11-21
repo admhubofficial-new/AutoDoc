@@ -1,17 +1,14 @@
-import { adminClient } from "../../lib/server/supabase.js";
-import { sameOriginAllowed, sessionSecret } from "../../lib/server/env.js";
-import { validSession } from "../../lib/server/session.js";
-import { json, methodNotAllowed, publicError, readJson } from "../../lib/server/http.js";
+import { sameOriginAllowed, sessionSecret } from "../../lib/server/env.ts";
+import { validSession, clearAuthCookies } from "../../lib/server/session.ts";
+import { rpc } from "../../lib/server/supabase.ts";
+import { json, methodNotAllowed, publicError, readJson } from "../../lib/server/http.ts";
 import {
   checkThrottle,
   clearFailedAttempts,
-  hashToken,
   loginThrottleKey,
   normalizeToken,
   recordFailedAttempt,
-  tokenHashFingerprint,
-  tokenMatches,
-} from "../../lib/server/security.js";
+} from "../../lib/server/security.ts";
 
 interface ChangeTokenBody extends Record<string, unknown> {
   currentToken?: unknown;
@@ -45,9 +42,8 @@ export default {
         return json({ message: "PIN baru harus berbeda dari PIN lama." }, 400);
       }
 
-      const client = adminClient();
       const keyHash = loginThrottleKey(sessionSecret());
-      const throttle = await checkThrottle(client, keyHash);
+      const throttle = await checkThrottle(keyHash);
       if (throttle.locked) {
         return json(
           { message: "Terlalu banyak percobaan. Akses dikunci selama 15 menit." },
@@ -56,64 +52,38 @@ export default {
         );
       }
 
-      const { data: settings, error: settingsError } = await client
-        .from("settings")
-        .select("token_hash, session_version")
-        .eq("id", 1)
-        .single();
-      if (settingsError) throw settingsError;
-
-      if (Number(settings.session_version) !== session.sv) {
-        return json({ message: "Sesi tidak lagi berlaku. Silakan masuk kembali." }, 401);
-      }
-
-      const currentValid = await tokenMatches(currentToken, settings.token_hash);
-      if (!currentValid) {
-        const state = await recordFailedAttempt(client, keyHash);
-        if (state.locked) {
-          return json(
-            { message: "Lima kali percobaan gagal. Akses dikunci selama 15 menit." },
-            429,
-            { "Retry-After": String(state.retryAfterSeconds) },
-          );
+      try {
+        await rpc("change_access_token", {
+          p_current_token: currentToken,
+          p_new_token: newToken,
+        });
+      } catch (error) {
+        const code = (error as { code?: string })?.code;
+        if (code === "28000") {
+          const state = await recordFailedAttempt(keyHash);
+          if (state.locked) {
+            return json(
+              { message: "Lima kali percobaan gagal. Akses dikunci selama 15 menit." },
+              429,
+              { "Retry-After": String(state.retryAfterSeconds) },
+            );
+          }
+          return json({ message: "PIN lama tidak sesuai." }, 401);
         }
-        return json({ message: "PIN lama tidak sesuai." }, 401);
+        if (code === "22023") {
+          return json({ message: "PIN baru tidak valid atau sama dengan PIN lama." }, 400);
+        }
+        throw error;
       }
 
-      const nextHash = await hashToken(newToken);
-      const nextVersion = Number(settings.session_version) + 1;
-      const { error: updateError } = await client
-        .from("settings")
-        .update({ token_hash: nextHash, session_version: nextVersion })
-        .eq("id", 1);
-      if (updateError) throw updateError;
-
-      await clearFailedAttempts(client, keyHash);
-      const { error: auditError } = await client.from("audit_log").insert({
-        aksi: "token_diubah",
-        tabel: "settings",
-        record_key: "1",
-        actor: "token",
-        nilai_lama: { token_hash_sha256: tokenHashFingerprint(settings.token_hash) },
-        nilai_baru: { token_hash_sha256: tokenHashFingerprint(nextHash) },
-        detail: { session_version: { lama: settings.session_version, baru: nextVersion } },
-      });
-      if (auditError) throw auditError;
-
+      await clearFailedAttempts(keyHash);
       return json(
         {
           success: true,
           message: "PIN berhasil diubah. Semua sesi lama telah berakhir; silakan masuk dengan PIN baru.",
         },
         200,
-        {
-          "Set-Cookie": [
-            "autodoc_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" +
-              (new URL(request.url).protocol === "https:" ? "; Secure" : ""),
-            "autodoc_stepup=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" +
-              (new URL(request.url).protocol === "https:" ? "; Secure" : ""),
-          ],
-        },
+        { "Set-Cookie": clearAuthCookies(request) },
       );
     } catch (error) {
       return publicError(error);
