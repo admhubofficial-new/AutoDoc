@@ -23,9 +23,10 @@ test("printed documents use the public BGN logo in the letterhead", () => {
   assert.match(source, /class='top-logo' src='/);
 });
 
-test("printed status is updated only after the print dialog has been invoked", () => {
-  assert.match(source, /const logo=win\.document\.querySelector\("\.top-logo"\)/);
-  assert.match(source, /logo\.addEventListener\("load",invokePrint/);
-  assert.match(source, /logo\.addEventListener\("error",invokePrint/);
+test("printed status waits for all letterhead assets and follows the print dialog", () => {
+  assert.match(source, /const logos=Array\.from\(win\.document\.querySelectorAll\("\.top-logo"\)\)/);
+  assert.match(source, /logo\.addEventListener\("load",resolve/);
+  assert.match(source, /logo\.addEventListener\("error",resolve/);
+  assert.match(source, /Promise\.all\(logos\.map\(imageReady\)\)/);
   assert.match(source, /try\{win\.focus\(\);win\.print\(\)\}catch\(_\)\{return\}[\s\S]*?api\("docs\/mark-printed"/);
 });
