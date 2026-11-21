@@ -1,5 +1,13 @@
 import { signSessionPayload, toBase64Url, verifySessionPayload } from "./session.ts";
 import {
+  joinMenuComponents,
+  normalizeDocumentKinds,
+  normalizeMealTime,
+  normalizeMenuComponents,
+  settingsForDistributionSnapshot,
+  WorkflowValidationError,
+} from "./distribution-workflow.ts";
+import {
   isValidClockTime,
   isValidIsoDate,
   normalizeToken,
@@ -350,7 +358,7 @@ async function clearFailures(keyHash: string): Promise<void> {
 
 
 const MASTER_CONFIG = {
-  settings: { table: "settings", columns: "id,nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,kabupaten_perlu_verifikasi,kabupaten_catatan_verifikasi,nama_kepala_sppg,logo_path", order: "id.asc" },
+  settings: { table: "settings", columns: "id,nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,kabupaten_perlu_verifikasi,kabupaten_catatan_verifikasi,nama_kepala_sppg,nama_kepala_sppi,nama_ahli_gizi,logo_path", order: "id.asc" },
   recipients: { table: "recipients", columns: "id,kelompok,nama,jenjang,aktif,urutan,alamat,siswa_kecil,siswa_besar,tendik,ibu_hamil,ibu_menyusui,balita,putus_sekolah,kader,porsi_kecil,porsi_besar,total_porsi,keterangan,perlu_verifikasi,catatan_verifikasi", order: "urutan.asc,nama.asc" },
   drivers: { table: "master_pengemudi", columns: "id,nama,aktif,urutan", order: "urutan.asc,nama.asc" },
   vehicles: { table: "master_kendaraan", columns: "id,no_kendaraan,aktif,urutan", order: "urutan.asc,no_kendaraan.asc" },
@@ -400,6 +408,8 @@ function masterPayload(entity: MasterEntity, input: Record<string, unknown>): Re
     data.kecamatan = cleanText(input.kecamatan, "Kecamatan", true, 100);
     data.kabupaten = cleanText(input.kabupaten, "Kabupaten", true, 100);
     data.nama_kepala_sppg = cleanText(input.nama_kepala_sppg, "Nama Kepala SPPG", false, 150);
+    if ("nama_kepala_sppi" in input) data.nama_kepala_sppi = cleanText(input.nama_kepala_sppi, "Nama Kepala SPPI", false, 150);
+    if ("nama_ahli_gizi" in input) data.nama_ahli_gizi = cleanText(input.nama_ahli_gizi, "Nama Ahli Gizi Dapur", false, 150);
     data.kabupaten_perlu_verifikasi = input.kabupaten_perlu_verifikasi === true;
     data.kabupaten_catatan_verifikasi = cleanText(input.kabupaten_catatan_verifikasi, "Catatan verifikasi", false, 500);
     return data;
@@ -675,10 +685,22 @@ async function handleDocsCreate(request: Request): Promise<Response> {
 
   if (!validIsoDate(body.tanggal)) throw new AppError(400, "Tanggal distribusi tidak valid.");
   const recipientIds = uuidList(body.recipient_ids);
-  const menu = cleanText(body.menu, "Menu", false, 500);
-  const namaPetugas = cleanText(body.nama_petugas, "Nama petugas", false, 180);
-  const namaPengemudi = cleanText(body.nama_pengemudi, "Nama pengemudi", false, 180);
-  const noKendaraan = cleanText(body.no_kendaraan, "Nomor kendaraan", false, 80);
+
+  let menuItems: string[];
+  let documentKinds: Array<"SJ" | "BAST">;
+  let waktuMakan: "pagi" | "siang" | "sore";
+  try {
+    menuItems = normalizeMenuComponents(body.menu_items, body.menu);
+    documentKinds = normalizeDocumentKinds(body.jenis_dokumen);
+    waktuMakan = normalizeMealTime(body.waktu_makan);
+  } catch (error) {
+    if (error instanceof WorkflowValidationError) throw new AppError(400, error.message);
+    throw error;
+  }
+
+  const namaPetugas = cleanText(body.nama_petugas, "Nama petugas", true, 180);
+  const namaPengemudi = cleanText(body.nama_pengemudi, "Nama pengemudi", true, 180);
+  const noKendaraan = cleanText(body.no_kendaraan, "Nomor kendaraan", true, 80);
   const jamBerangkat = cleanText(body.jam_berangkat, "Jam berangkat", false, 8);
   if (jamBerangkat && !isValidClockTime(jamBerangkat)) {
     throw new AppError(400, "Format jam berangkat harus HH:MM.");
@@ -687,7 +709,7 @@ async function handleDocsCreate(request: Request): Promise<Response> {
   const [settings, recipients] = await Promise.all([
     selectOne<Record<string, unknown>>(
       "settings",
-      "nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,nama_kepala_sppg,logo_path",
+      "nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,nama_kepala_sppg,nama_kepala_sppi,nama_ahli_gizi,logo_path",
       { id: "eq.1" },
     ),
     supabaseRequest<Record<string, unknown>[]>(
@@ -704,47 +726,47 @@ async function handleDocsCreate(request: Request): Promise<Response> {
     throw new AppError(400, "Ada penerima yang tidak ditemukan atau sudah nonaktif. Muat ulang daftar penerima.");
   }
 
-  const distributionPayload = {
-    tanggal: body.tanggal,
-    menu,
-    nama_petugas: namaPetugas,
-    nama_pengemudi: namaPengemudi,
-    no_kendaraan: noKendaraan,
-    jam_berangkat: jamBerangkat,
-  };
-  let distributionRows: Array<{ id: string; tanggal: string }>;
+  let distribution: Record<string, unknown>;
   try {
-    distributionRows = await supabaseRequest<Array<{ id: string; tanggal: string }>>(
-      "distributions?" + new URLSearchParams({
-        on_conflict: "tanggal",
-        select: "id,tanggal",
-      }).toString(),
-      {
-        method: "POST",
-        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-        body: JSON.stringify(distributionPayload),
-      },
-    );
+    distribution = await rpc<Record<string, unknown>>("simpan_distribusi_dan_menu", {
+      p_tanggal: body.tanggal,
+      p_menu_items: menuItems,
+      p_waktu_makan: waktuMakan,
+      p_nama_petugas: namaPetugas,
+      p_nama_pengemudi: namaPengemudi,
+      p_no_kendaraan: noKendaraan,
+      p_jam_berangkat: jamBerangkat,
+    });
   } catch (error) {
-    // Once the first document is issued, the database freezes its distribution snapshot.
-    // Convert the trigger's SQLSTATE into a clear, actionable conflict for the UI.
     if (error instanceof AppError && error.code === "55000") {
       throw new AppError(
         409,
-        "Tanggal ini sudah memiliki dokumen. Data menu, petugas, pengemudi, kendaraan, dan jam berangkat terkunci agar snapshot dokumen lama tidak berubah. Gunakan data perjalanan yang sama.",
+        "Tanggal ini sudah memiliki dokumen. Menu, komponen menu, waktu makan, petugas, pengemudi, kendaraan, dan jam berangkat harus sama dengan data yang telah diterbitkan.",
       );
     }
     throw error;
   }
-  const distribution = distributionRows[0];
   if (!distribution?.id) throw new AppError(500, "Data distribusi tidak berhasil disiapkan.");
+
+  const distributionPayload = {
+    tanggal: body.tanggal,
+    menu: distribution.menu ?? joinMenuComponents(menuItems),
+    menu_items: distribution.menu_items ?? menuItems,
+    nama_petugas: namaPetugas,
+    nama_pengemudi: namaPengemudi,
+    no_kendaraan: noKendaraan,
+    jam_berangkat: jamBerangkat,
+    waktu_makan: distribution.waktu_makan ?? waktuMakan,
+    nama_ahli_gizi: distribution.nama_ahli_gizi ?? null,
+  };
+  const sppgSnapshot = settingsForDistributionSnapshot(settings, distribution);
 
   const tasks = recipients.flatMap((recipient) => {
     const detail = distributionSnapshotRows(recipient);
     const snapshot = {
-      versi: 1,
+      versi: 2,
       dibuat_pada: new Date().toISOString(),
-      sppg: settings,
+      sppg: sppgSnapshot,
       distribusi: { ...distributionPayload, id: distribution.id },
       penerima: recipient,
       rincian_porsi: detail,
@@ -754,7 +776,7 @@ async function handleDocsCreate(request: Request): Promise<Response> {
         total_porsi: Number(recipient.total_porsi ?? 0),
       },
     };
-    return (["SJ", "BAST"] as const).map((jenis) => ({
+    return documentKinds.map((jenis) => ({
       recipientId: String(recipient.id),
       jenis,
       snapshot,
@@ -771,7 +793,7 @@ async function handleDocsCreate(request: Request): Promise<Response> {
       const task = tasks[index];
       try {
         const result = await rpc<Record<string, unknown>>("buat_dokumen_dengan_nomor", {
-          p_distribution_id: distribution.id,
+          p_distribution_id: String(distribution.id),
           p_recipient_id: task.recipientId,
           p_jenis: task.jenis,
           p_snapshot_json: task.snapshot,
@@ -791,10 +813,11 @@ async function handleDocsCreate(request: Request): Promise<Response> {
   return respond(request, {
     success: failures.length === 0,
     distribution_id: distribution.id,
-    tanggal: distribution.tanggal,
+    tanggal: distribution.tanggal ?? body.tanggal,
     requested: tasks.length,
     berhasil: results.length,
     gagal: failures.length,
+    selected_document_kinds: documentKinds,
     documents: results,
     errors: failures,
     message: failures.length === 0
@@ -816,7 +839,7 @@ async function handleDocsDays(request: Request): Promise<Response> {
 
   const rows = await supabaseRequest<unknown[]>(
     "distributions?" + new URLSearchParams({
-      select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,created_at",
+      select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,waktu_makan,nama_ahli_gizi,created_at",
       order: "tanggal.desc",
       limit: "61",
       offset: String(offset),
@@ -837,10 +860,19 @@ async function handleDocsList(request: Request): Promise<Response> {
   if (!validIsoDate(tanggal)) throw new AppError(400, "Tanggal riwayat tidak valid.");
   const distribution = await selectOne<Record<string, unknown>>(
     "distributions",
-    "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat",
+    "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,waktu_makan,nama_ahli_gizi",
     { tanggal: "eq." + tanggal },
   );
   if (!distribution?.id) return respond(request, { distribution: null, documents: [] });
+  const menuItems = await supabaseRequest<Array<Record<string, unknown>>>(
+    "distribution_menu_items?" + new URLSearchParams({
+      select: "id,distribution_id,urutan,nama_komponen",
+      distribution_id: "eq." + String(distribution.id),
+      order: "urutan.asc",
+      limit: "8",
+    }).toString(),
+  );
+  (distribution as Record<string, unknown>).menu_items = menuItems;
   const docs = await supabaseRequest<Array<Record<string, unknown>>>(
     "documents?" + new URLSearchParams({
       select: "id,distribution_id,recipient_id,jenis,nomor_urut,nomor_lengkap,snapshot_json,status,alasan_batal,file_ttd_path,created_at",
