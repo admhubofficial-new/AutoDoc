@@ -1,6 +1,7 @@
 (() => {
 "use strict";
 const { apiUrl: API, publishableKey: KEY } = window.AutoDocConfig;
+const { parseCsv, parseCsvBoolean } = window.AutoDocMasterUtils;
 const defs={
  settings:{title:"Identitas SPPG",fields:[["nama_sppg","Nama SPPG","text",1],["kode_sppg","Kode SPPG","text",1],["alamat","Alamat","textarea"],["kecamatan","Kecamatan","text",1],["kabupaten","Kabupaten","text",1],["nama_kepala_sppg","Nama Kepala SPPG","text"],["kabupaten_perlu_verifikasi","Kabupaten perlu diverifikasi","checkbox"],["kabupaten_catatan_verifikasi","Catatan verifikasi","textarea"]]},
  recipients:{title:"Penerima manfaat",fields:[["kelompok","Kelompok","select",1,["Sekolah/Lembaga","Posyandu"]],["nama","Nama penerima","text",1],["jenjang","Jenjang","text",1],["alamat","Alamat","textarea"],["siswa_kecil","Siswa kecil","number"],["siswa_besar","Siswa besar","number"],["tendik","Tenaga pendidik","number"],["ibu_hamil","Ibu hamil","number"],["ibu_menyusui","Ibu menyusui","number"],["balita","Balita","number"],["putus_sekolah","Putus sekolah","number"],["kader","Kader","number"],["urutan","Urutan","number"],["keterangan","Keterangan","textarea"],["perlu_verifikasi","Perlu verifikasi","checkbox"],["catatan_verifikasi","Catatan verifikasi","textarea"],["aktif","Aktif","checkbox"]]},
@@ -28,7 +29,7 @@ function init(){
   tabs.innerHTML="";Object.entries(defs).forEach(([key,d])=>{const b=el("button",null,d.title);b.type="button";b.setAttribute("aria-selected",String(key===entity));b.onclick=()=>{entity=key;render()};tabs.append(b)});
   title.textContent=defs[entity].title;actions.innerHTML="";
   if(entity!=="settings"){const add=el("button","dm-btn primary","+ Tambah");add.onclick=()=>form(null);actions.append(add)}
-  if(entity==="recipients"){const imp=el("button","dm-btn","Impor CSV Excel");imp.onclick=importCsv;actions.append(imp)}
+  if(entity==="recipients"){const imp=el("button","dm-btn","Impor CSV");imp.onclick=importCsv;actions.append(imp)}
   const cols=entity==="settings"?["nama_sppg","kode_sppg","alamat","kecamatan","kabupaten","nama_kepala_sppg"]:entity==="recipients"?["nama","kelompok","jenjang","total_porsi","alamat","aktif","perlu_verifikasi"]:entity==="vehicles"?["no_kendaraan","aktif"]:entity==="menus"?["teks_menu","aktif"]:["nama",...(entity==="staff"?["jabatan"]:[]),"aktif"];
   const labels={nama_sppg:"Nama SPPG",kode_sppg:"Kode",alamat:"Alamat",kecamatan:"Kecamatan",kabupaten:"Kabupaten",nama_kepala_sppg:"Kepala SPPG",nama:"Nama",kelompok:"Kelompok",jenjang:"Jenjang",total_porsi:"Porsi",aktif:"Status",perlu_verifikasi:"Verifikasi",no_kendaraan:"Kendaraan",teks_menu:"Menu",jabatan:"Jabatan"};
   const t=el("table","dm-table"),thead=el("thead"),tr=el("tr");cols.concat(["Aksi"]).forEach(c=>tr.append(el("th",null,labels[c]||c)));thead.append(tr);const tb=el("tbody");
@@ -47,8 +48,36 @@ function init(){
   const buttons=el("div","dm-form-actions");const cancel=el("button","dm-btn","Batal");cancel.type="button";cancel.onclick=()=>formSlot.innerHTML="";const save=el("button","dm-btn primary","Simpan");save.type="submit";buttons.append(cancel,save);f.append(buttons);f.onsubmit=async e=>{e.preventDefault();const data={};f.querySelectorAll("[data-key]").forEach(x=>data[x.dataset.key]=x.type==="checkbox"?x.checked:x.value);save.disabled=true;try{await api("master/save",{entity,data});await load();message.textContent="Data berhasil disimpan."}catch(err){message.textContent=err.message;message.style.color="#a43c32";save.disabled=false}};formSlot.append(f);f.scrollIntoView({behavior:"smooth",block:"nearest"});
  }
  async function load(){message.textContent="Memuat data...";try{const d=await api("master/list");cache=d.data||{};render();message.textContent=""}catch(e){message.textContent=e.message;message.style.color="#a43c32"}}
- function parseCsv(s){const out=[];let row=[],cell="",q=false;for(let i=0;i<s.length;i++){const c=s[i];if(q){if(c==='"'&&s[i+1]==='"'){cell+='"';i++}else if(c==='"')q=false;else cell+=c}else if(c==='"')q=true;else if(c===","){row.push(cell);cell=""}else if(c==="\n"){row.push(cell.replace(/\r$/,""));out.push(row);row=[];cell=""}else cell+=c}if(cell||row.length){row.push(cell.replace(/\r$/,""));out.push(row)}return out}
- async function importCsv(){const input=el("input");input.type="file";input.accept=".csv,text/csv";input.onchange=async()=>{const file=input.files[0];if(!file)return;try{const data=parseCsv(await file.text());const headers=data.shift().map(v=>v.trim().toLowerCase().replace(/[_-]+/g," ").replace(/\s+/g," "));const aliases={kelompok:["kelompok"],nama:["nama","nama penerima"],jenjang:["jenjang"],alamat:["alamat"],siswa_kecil:["siswa kecil"],siswa_besar:["siswa besar"],tendik:["tendik","tenaga pendidik"],ibu_hamil:["ibu hamil"],ibu_menyusui:["ibu menyusui"],balita:["balita"],putus_sekolah:["putus sekolah"],kader:["kader"],urutan:["urutan"],aktif:["aktif"],keterangan:["keterangan"],perlu_verifikasi:["perlu verifikasi"],catatan_verifikasi:["catatan verifikasi"]};const ix={};Object.entries(aliases).forEach(([k,a])=>ix[k]=headers.findIndex(h=>a.includes(h)));if(ix.kelompok<0||ix.nama<0||ix.jenjang<0)throw Error("Kolom wajib: kelompok, nama, jenjang.");const rows=data.filter(r=>r.some(x=>x.trim())).map((r,i)=>{const g=k=>ix[k]<0?"":(r[ix[k]]||"").trim();const yes=v=>["1","ya","yes","true","aktif"].includes(String(v).toLowerCase());return{kelompok:g("kelompok"),nama:g("nama"),jenjang:g("jenjang"),alamat:g("alamat"),siswa_kecil:g("siswa_kecil")||0,siswa_besar:g("siswa_besar")||0,tendik:g("tendik")||0,ibu_hamil:g("ibu_hamil")||0,ibu_menyusui:g("ibu_menyusui")||0,balita:g("balita")||0,putus_sekolah:g("putus_sekolah")||0,kader:g("kader")||0,urutan:g("urutan")||100+i,aktif:ix.aktif<0?true:yes(g("aktif")),keterangan:g("keterangan"),perlu_verifikasi:yes(g("perlu_verifikasi")),catatan_verifikasi:g("catatan_verifikasi")}});if(!rows.length||rows.length>500)throw Error("Jumlah baris harus 1–500.");if(!confirm("Impor "+rows.length+" penerima? Kelompok+nama yang sama akan diperbarui; data lain tidak dihapus."))return;const result=await api("master/import",{rows});await load();message.textContent=result.imported+" baris berhasil diimpor."}catch(e){message.textContent=e.message;message.style.color="#a43c32"}};input.click()}
+ async function importCsv(){
+  const input=el("input");input.type="file";input.accept=".csv,text/csv";
+  input.onchange=async()=>{
+   const file=input.files[0];if(!file)return;
+   try{
+    const data=parseCsv(await file.text());
+    if(!data.length)throw Error("File CSV kosong.");
+    const headers=data.shift().map(v=>v.trim().toLowerCase().replace(/[_-]+/g," ").replace(/\s+/g," "));
+    const aliases={kelompok:["kelompok"],nama:["nama","nama penerima"],jenjang:["jenjang"],alamat:["alamat"],siswa_kecil:["siswa kecil"],siswa_besar:["siswa besar"],tendik:["tendik","tenaga pendidik"],ibu_hamil:["ibu hamil"],ibu_menyusui:["ibu menyusui"],balita:["balita"],putus_sekolah:["putus sekolah"],kader:["kader"],urutan:["urutan"],aktif:["aktif","status"],keterangan:["keterangan"],perlu_verifikasi:["perlu verifikasi"],catatan_verifikasi:["catatan verifikasi"]};
+    const ix={};Object.entries(aliases).forEach(([k,a])=>ix[k]=headers.findIndex(h=>a.includes(h)));
+    if(ix.kelompok<0||ix.nama<0||ix.jenjang<0)throw Error("Kolom wajib: kelompok, nama, jenjang.");
+    const rows=data.filter(r=>r.some(x=>x.trim())).map((r,i)=>{
+     const g=k=>ix[k]<0?"":(r[ix[k]]||"").trim();
+     return{
+      kelompok:g("kelompok"),nama:g("nama"),jenjang:g("jenjang"),alamat:g("alamat"),
+      siswa_kecil:g("siswa_kecil")||0,siswa_besar:g("siswa_besar")||0,tendik:g("tendik")||0,
+      ibu_hamil:g("ibu_hamil")||0,ibu_menyusui:g("ibu_menyusui")||0,balita:g("balita")||0,
+      putus_sekolah:g("putus_sekolah")||0,kader:g("kader")||0,urutan:g("urutan")||100+i,
+      aktif:parseCsvBoolean(g("aktif"),true),keterangan:g("keterangan"),
+      perlu_verifikasi:parseCsvBoolean(g("perlu_verifikasi"),false),catatan_verifikasi:g("catatan_verifikasi")
+     };
+    });
+    if(!rows.length||rows.length>500)throw Error("Jumlah baris harus 1–500.");
+    if(rows.some(row=>!row.kelompok||!row.nama||!row.jenjang))throw Error("Setiap baris wajib memiliki kelompok, nama, dan jenjang.");
+    if(!confirm("Impor "+rows.length+" penerima? Kelompok+nama yang sama akan diperbarui; data lain tidak dihapus."))return;
+    const result=await api("master/import",{rows});await load();message.textContent=result.imported+" baris berhasil diimpor.";
+   }catch(e){message.textContent=e.message;message.style.color="#a43c32"}
+  };
+  input.click();
+ }
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
