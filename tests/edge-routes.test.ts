@@ -92,6 +92,9 @@ test("dashboard completion shortcuts open the matching Data Master section", () 
   assert.match(dashboardUi, /entity: "settings"/);
   assert.match(dashboardUi, /entity: "vehicles"/);
   assert.match(dashboardUi, /entity: "recipients"/);
+  assert.match(dashboardUi, /query: "alamat belum dilengkapi"/);
+  assert.match(dashboardUi, /query: "perlu verifikasi"/);
+  assert.match(masterUi, /alamat kosong alamat belum dilengkapi/);
 });
 
 
