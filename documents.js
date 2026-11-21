@@ -397,8 +397,10 @@ async function loadDistributions(initialOffset=0){
     const checkbox=node("input");checkbox.type="checkbox";checkbox.checked=selectedIds.has(id);
     checkbox.setAttribute("aria-label","Pilih riwayat "+row.tanggal);
     checkbox.addEventListener("change",()=>{
-     if(checkbox.checked){selectedIds.add(id);selectedDetails.set(id,row)}
-     else{selectedIds.delete(id);selectedDetails.delete(id)}
+     if(checkbox.checked){
+      if(!selectedIds.has(id)&&selectedIds.size>=60){checkbox.checked=false;status("Maksimal 60 riwayat dapat dipilih untuk satu kali penghapusan.",true);return}
+      selectedIds.add(id);selectedDetails.set(id,row);
+     }else{selectedIds.delete(id);selectedDetails.delete(id)}
      updateSelection();
     });
     pick.append(checkbox);
@@ -439,10 +441,12 @@ async function loadDistributions(initialOffset=0){
  selectAll.addEventListener("change",()=>{
   rows.forEach(row=>{
    const id=String(row.id);
-   if(selectAll.checked){selectedIds.add(id);selectedDetails.set(id,row)}
-   else{selectedIds.delete(id);selectedDetails.delete(id)}
+   if(selectAll.checked){
+    if(!selectedIds.has(id)&&selectedIds.size<60){selectedIds.add(id);selectedDetails.set(id,row)}
+   }else{selectedIds.delete(id);selectedDetails.delete(id)}
   });
   updateSelection();
+  if(selectAll.checked&&selectedIds.size>=60&&rows.some(row=>!selectedIds.has(String(row.id))))status("Batas pilihan 60 riwayat tercapai. Hapus pilihan lain untuk menambah data.",true);
  });
  previous.onclick=()=>loadPage(Math.max(0,offset-60));
  next.onclick=()=>loadPage(offset+60);
