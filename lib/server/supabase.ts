@@ -1,12 +1,13 @@
 type Filters = Record<string, string>;
 
 export class SupabaseApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-    public readonly code?: string,
-  ) {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(message: string, status: number, code?: string) {
     super(message);
+    this.status = status;
+    this.code = code;
     this.name = "SupabaseApiError";
   }
 }
@@ -20,19 +21,14 @@ function configuration(): { url: string; key: string } {
   return { url: url.replace(/\/+$/, ""), key };
 }
 
-async function request<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { url, key } = configuration();
   const headers = new Headers(init.headers);
   headers.set("apikey", key);
   headers.set("Authorization", "Bearer " + key);
   headers.set("Accept", "application/json");
   headers.set("Cache-Control", "no-store");
-  if (init.body !== undefined) {
-    headers.set("Content-Type", "application/json");
-  }
+  if (init.body !== undefined) headers.set("Content-Type", "application/json");
 
   const response = await fetch(url + "/rest/v1/" + path, {
     ...init,
@@ -52,7 +48,7 @@ async function request<T>(
   if (!response.ok) {
     const payload =
       data && typeof data === "object"
-        ? (data as { message?: string; code?: string; details?: string })
+        ? (data as { message?: string; code?: string })
         : {};
     throw new SupabaseApiError(
       payload.message ?? "Supabase request failed.",
