@@ -96,7 +96,7 @@ test("dashboard completion shortcuts open the matching Data Master section", () 
 
 
 test("inline application script remains syntactically valid", () => {
-  const scripts = [...indexHtml.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];
+  const scripts = [...indexHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   assert.ok(scripts.length > 0, "expected an inline application script");
   scripts.forEach(match => new Script(match[1]));
 });
