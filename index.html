@@ -495,7 +495,7 @@
         const headers = new Headers(options.headers || {});
         headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
         headers.set("Accept", "application/json");
-        const response = await fetch(API_URL + "/" + route.replace(/^\\/+/, ""), {
+        const response = await fetch(API_URL + "/" + route.replace(/^\/+/, ""), {
           ...options,
           headers,
           credentials: "include",
