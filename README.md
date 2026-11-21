@@ -34,7 +34,7 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 
 - Navigasi utama menggunakan Beranda, Buat Dokumen, Arsip, dan Data Master.
 - Pembuatan SJ/BAST memakai tiga langkah: informasi distribusi, pemilihan penerima secara eksplisit, dan pemeriksaan sebelum penerbitan.
-- Arsip menampilkan daftar distribusi terbaru yang dapat dicari berdasarkan tanggal, menu, petugas, pengemudi, atau kendaraan; dokumen dikelompokkan per penerima.
+- Arsip menampilkan daftar distribusi terbaru yang dapat dicari berdasarkan tanggal, menu, petugas, pengemudi, atau kendaraan; daftar dapat ditelusuri per 60 distribusi hingga halaman arsip lama, dan dokumen dikelompokkan per penerima.
 - Arsip mendukung cetak massal Surat Jalan atau BAST per tanggal, serta cetak dokumen per penerima.
 - Data Master dapat dibuka langsung ke jenis data tertentu dan menyediakan pencarian pada daftar aktif.
 - Dialog dokumen dan Data Master menjaga fokus keyboard serta dapat ditutup dengan Escape.
