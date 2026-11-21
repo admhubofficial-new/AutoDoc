@@ -741,7 +741,7 @@ async function handleDocsCreate(request: Request): Promise<Response> {
     if (error instanceof AppError && error.code === "55000") {
       throw new AppError(
         409,
-        "Tanggal ini sudah memiliki dokumen. Menu, komponen menu, waktu makan, petugas, pengemudi, kendaraan, dan jam berangkat harus sama dengan data yang telah diterbitkan.",
+        "Tanggal ini sudah memiliki dokumen. Gunakan data perjalanan yang sama agar snapshot dokumen lama tidak berubah: menu, komponen menu, waktu makan, petugas, pengemudi, kendaraan, dan jam berangkat harus sama dengan data yang telah diterbitkan.",
       );
     }
     throw error;
