@@ -8,14 +8,37 @@ export function sessionSecret(): string {
 
 export function sameOriginAllowed(request: Request): boolean {
   const origin = request.headers.get("origin");
-  const configuredOrigin = process.env.APP_ORIGIN;
-  if (!origin || !configuredOrigin) return false;
+  if (!origin) return false;
 
+  let requestOrigin: string;
   try {
-    return new URL(origin).origin === new URL(configuredOrigin).origin;
+    requestOrigin = new URL(origin).origin;
   } catch {
     return false;
   }
+
+  const allowedOrigins = new Set<string>();
+  const configuredOrigin = process.env.APP_ORIGIN;
+  if (configuredOrigin) {
+    try {
+      allowedOrigins.add(new URL(configuredOrigin).origin);
+    } catch {
+      // A malformed configured origin never broadens access.
+    }
+  }
+
+  // Permit this exact Vercel deployment host for preview builds, while
+  // keeping production/custom origins explicitly configured via APP_ORIGIN.
+  for (const host of [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]) {
+    if (!host) continue;
+    try {
+      allowedOrigins.add(new URL("https://" + host).origin);
+    } catch {
+      // Ignore malformed platform-provided host values.
+    }
+  }
+
+  return allowedOrigins.has(requestOrigin);
 }
 
 export function secureRequest(request: Request): boolean {
