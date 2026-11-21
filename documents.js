@@ -5,7 +5,7 @@ const $=(selector,root=document)=>root.querySelector(selector);
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LETTERHEAD_LOGO_URL="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png";
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[];
+let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[], pendingOrganolepticPrint=null;
 
 async function api(route,body){
  const headers={"apikey":KEY,"Accept":"application/json"};
@@ -53,6 +53,7 @@ function style(){
  const css=node("style");css.id="docsStyles";
  css.textContent=".docs-launch{display:flex;align-items:center;gap:14px;width:100%;margin-top:14px;padding:18px 20px;border:1px solid #dce8dc;border-radius:15px;background:#fff;color:#244434;text-align:left;box-shadow:0 5px 18px rgba(32,60,40,.035)}.docs-launch:hover{border-color:#9dbba2;background:#fbfdf9}.docs-launch-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#edf5ed;font-size:21px}.docs-launch strong{display:block;font-size:14px}.docs-launch small{display:block;margin-top:4px;color:#7b887f;font-size:11px}.docs-overlay[hidden]{display:none}.docs-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(12,31,22,.6)}.docs-dialog{width:min(1120px,100%);max-height:94vh;overflow:auto;border-radius:18px;background:#fbfcfa;box-shadow:0 28px 90px rgba(0,0,0,.26)}.docs-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:19px 23px;border-bottom:1px solid #e4eae3;background:#fff}.docs-head h2{margin:0;color:#1b3f2e;font-size:20px}.docs-head p{margin:5px 0 0;color:#7a887e;font-size:12px}.docs-close{width:38px;height:38px;border:1px solid #e1e8e0;border-radius:10px;background:#fff;color:#526258;font-size:21px}.docs-tabs{display:flex;gap:8px;padding:13px 20px;border-bottom:1px solid #e5ebe4;background:#fff}.docs-tab{padding:9px 14px;border:1px solid #dce6dc;border-radius:9px;background:#fff;color:#526258;font-size:12px;font-weight:750}.docs-tab[aria-selected=true]{border-color:#1e5b43;background:#eaf3ea;color:#174b39}.docs-body{padding:22px}.docs-section-title{margin:0 0 6px;color:#284234;font-size:16px}.docs-note{margin:0 0 16px;color:#77847b;font-size:11px;line-height:1.65}.docs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.docs-field{display:flex;flex-direction:column;gap:6px;min-width:0}.docs-field.wide{grid-column:span 2}.docs-field label{color:#536258;font-size:11px;font-weight:750}.docs-field input,.docs-field select,.docs-field textarea{width:100%;min-height:40px;padding:9px 10px;border:1px solid #dce5dc;border-radius:8px;background:#fff;color:#24392d;font:inherit;font-size:12px}.docs-field textarea{min-height:66px;resize:vertical}.docs-recipient-box{margin-top:18px;padding:16px;border:1px solid #e0e8df;border-radius:13px;background:#fff}.docs-recipient-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.docs-recipient-head strong{color:#294536;font-size:13px}.docs-recipient-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.docs-recipient-tools input{min-height:35px;padding:7px 9px;border:1px solid #dce5dc;border-radius:8px;font-size:11px}.docs-btn{padding:9px 12px;border:1px solid #dce6dc;border-radius:9px;background:#fff;color:#31513d;font-size:11px;font-weight:750}.docs-btn.primary{border-color:#174b39;background:#174b39;color:#fff}.docs-btn:disabled{opacity:.55;cursor:wait}.docs-recipient-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:13px;max-height:310px;overflow:auto}.docs-recipient{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #edf0ec;border-radius:9px;background:#fcfdfb}.docs-recipient input{margin-top:3px}.docs-recipient strong{display:block;color:#33483b;font-size:11px}.docs-recipient small{display:block;margin-top:3px;color:#7d897f;font-size:10px;line-height:1.5}.docs-verify{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:5px;background:#fff4dc;color:#92651e;font-size:9px;font-weight:700}.docs-pin-row{display:grid;grid-template-columns:1fr auto;align-items:end;gap:12px;margin-top:17px;padding:15px;border:1px solid #e8e3d6;border-radius:12px;background:#fffdf6}.docs-result{margin-top:15px;padding:13px;border:1px solid #dce8dc;border-radius:10px;background:#f4f9f3;color:#31513d;font-size:11px;line-height:1.6}.docs-msg{min-height:18px;margin:12px 0 0;color:#66756d;font-size:11px}.docs-msg.error{color:#a43c32}.docs-history-toolbar{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:15px}.docs-list{display:grid;grid-template-columns:1fr;gap:10px}.docs-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:15px;border:1px solid #e1e9e0;border-radius:12px;background:#fff}.docs-card h4{margin:0;color:#294536;font-size:13px}.docs-card p{margin:5px 0 0;color:#7a887e;font-size:10px;line-height:1.6}.docs-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.docs-kind{display:inline-block;margin-right:6px;padding:4px 7px;border-radius:6px;background:#edf4ed;color:#24563a;font-size:9px;font-weight:800}.docs-kind.bast{background:#f6f0e2;color:#806327}.docs-status{display:inline-block;margin-left:6px;padding:4px 7px;border-radius:6px;background:#f1f3f0;color:#647066;font-size:9px;font-weight:750}.docs-status.selesai{background:#e8f4e9;color:#2b6844}.docs-status.batal{background:#f8e9e7;color:#a43c32}.docs-realization{grid-column:1/-1;padding:14px;border:1px solid #e7e9df;border-radius:10px;background:#fbfcf8}.docs-realization h5{margin:0 0 12px;color:#31513d;font-size:12px}.docs-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}.docs-empty{padding:25px;text-align:center;color:#879289;font-size:11px;border:1px dashed #dce5dc;border-radius:10px;background:#fff}.docs-warning{color:#946b21}.docs-checkline{display:flex;align-items:center;gap:8px;min-height:40px;color:#526258;font-size:11px}.docs-print-table{width:100%;border-collapse:collapse;font-size:12px}.docs-print-table th,.docs-print-table td{padding:8px;border:1px solid #333;text-align:left}.docs-print-table th{background:#f3f4f1}.docs-signatures{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:45px;text-align:center;font-size:12px}.docs-sign-space{height:75px}.docs-print-head{text-align:center;margin-bottom:20px}.docs-print-head h1{margin:0 0 7px;font-size:18px;letter-spacing:.7px}.docs-print-head h2{margin:0;font-size:14px;text-decoration:underline}.docs-print-meta{display:flex;justify-content:space-between;gap:15px;margin:13px 0;font-size:12px}.docs-print-table{margin-top:14px}.docs-print-footer{margin-top:28px;font-size:10px;color:#555}.docs-wizard-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:0 0 20px}.docs-wizard-step{padding:9px 8px;border:1px solid #e1e8e0;border-radius:9px;background:#fff;color:#78857c;text-align:center;font-size:11px;font-weight:700}.docs-wizard-step[aria-current=step]{border-color:#1e5a43;background:#eaf3ea;color:#174b39}.docs-step-pane{padding:17px;border:1px solid #e1e8e0;border-radius:12px;background:#fff}.docs-step-actions{display:flex;justify-content:space-between;gap:9px;margin-top:16px}.docs-step-actions .docs-btn{min-height:42px}.docs-review{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}.docs-review-item{padding:12px;border:1px solid #edf0ec;border-radius:9px;background:#fafcf9}.docs-review-item small{display:block;color:#78857c;font-size:10px}.docs-review-item strong{display:block;margin-top:5px;color:#294536;font-size:13px;overflow-wrap:anywhere}.docs-days-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:13px}.docs-days-toolbar input{flex:1 1 220px;min-height:40px;padding:9px 11px;border:1px solid #dce5dc;border-radius:9px;font:inherit;font-size:12px}.docs-days-list{display:grid;gap:9px}.docs-days-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid #e8ede8}.docs-days-pagination .docs-note{margin:0;text-align:center}.docs-days-pagination .docs-btn:disabled{opacity:.45;cursor:not-allowed}.docs-day-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid #e1e9e0;border-radius:12px;background:#fff}.docs-day-card strong{display:block;color:#294536;font-size:13px}.docs-day-card small{display:block;margin-top:4px;color:#7a887e;font-size:11px;line-height:1.5}.docs-day-actions{display:flex;gap:7px;align-items:center}.docs-group-card{padding:14px;border:1px solid #e1e9e0;border-radius:12px;background:#fff}.docs-group-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.docs-group-head h4{margin:0;color:#294536;font-size:13px}.docs-group-head p{margin:4px 0 0;color:#7a887e;font-size:10px}.docs-group-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.docs-history-top{display:flex;align-items:end;gap:9px;flex-wrap:wrap;margin-bottom:14px}.docs-history-top .docs-field{flex:1 1 170px}.docs-history-top .docs-btn{min-height:40px}.docs-print-bulk{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:12px;border:1px solid #e1e9e0;border-radius:10px;background:#f8faf7}.docs-recipient-tools input{min-height:40px;font-size:12px}.docs-field input,.docs-field select,.docs-field textarea{min-height:44px;font-size:13px}.docs-btn{min-height:40px;font-size:12px}.docs-btn:focus-visible,.docs-tab:focus-visible,.docs-close:focus-visible{outline:3px solid #a9c9b7;outline-offset:2px}.docs-recipient{min-height:48px}.docs-dialog{font-family:Inter,ui-sans-serif,system-ui,sans-serif}@media(max-width:760px){.docs-overlay{padding:0;align-items:stretch}.docs-dialog{max-height:100vh;border-radius:0}.docs-head{padding:15px}.docs-body{padding:15px}.docs-grid{grid-template-columns:1fr 1fr}.docs-field.wide{grid-column:span 2}.docs-recipient-list{grid-template-columns:1fr}.docs-card{grid-template-columns:1fr}.docs-card-actions{justify-content:flex-start}.docs-pin-row{grid-template-columns:1fr}}@media(max-width:420px){.docs-review{grid-template-columns:1fr}.docs-days-pagination .docs-note{font-size:10px}.docs-grid{grid-template-columns:1fr}.docs-field.wide{grid-column:span 1}}";
  css.textContent += ".docs-kind-group{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 16px;padding:13px 15px;border:1px solid #e1e8e0;border-radius:10px;background:#fbfdfb}.docs-kind-group legend{padding:0 5px;color:#536258;font-size:11px;font-weight:800}.docs-kind-choice{display:flex;align-items:center;gap:8px;color:#294536;font-size:12px;font-weight:700}.docs-kind-choice input{width:16px;height:16px;accent-color:#174b39}.docs-menu-box{margin:4px 0 16px;padding:14px;border:1px solid #e1e8e0;border-radius:12px;background:#fbfdfb}.docs-menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.docs-menu-head strong{color:#294536;font-size:12px}.docs-menu-tools{display:flex;gap:7px;flex-wrap:wrap}.docs-menu-count{margin:5px 0 10px;color:#7a887e;font-size:10px}.docs-menu-list{display:grid;gap:8px}.docs-menu-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:8px;align-items:center}.docs-menu-order{color:#7a887e;font-size:11px;font-weight:800;text-align:center}.docs-menu-input{width:100%;min-height:40px;padding:8px 10px;border:1px solid #dce5dc;border-radius:8px;background:#fff;color:#24392d;font:inherit;font-size:12px}.docs-menu-row-actions{display:flex;gap:4px}.docs-menu-row-actions button{width:31px;height:34px;border:1px solid #dce5dc;border-radius:7px;background:#fff;color:#526258;font-size:13px;font-weight:800}.docs-menu-row-actions button:disabled{opacity:.35;cursor:not-allowed}.docs-menu-empty{padding:12px;border:1px dashed #dce5dc;border-radius:8px;color:#879289;background:#fff;font-size:11px}.docs-menu-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.docs-menu-actions .docs-btn{min-height:36px}.docs-meal-field{max-width:240px;margin:0 0 12px}.docs-kind-choice:focus-within,.docs-menu-input:focus-visible,.docs-menu-row-actions button:focus-visible{outline:3px solid #a9c9b7;outline-offset:2px}@media(max-width:420px){.docs-menu-row{grid-template-columns:21px minmax(0,1fr) auto}.docs-menu-row-actions button{width:28px}}";
+ css.textContent += ".docs-organoleptic-option{display:flex;align-items:flex-start;gap:9px;margin:0 0 14px;padding:12px 14px;border:1px solid #e1e8e0;border-radius:10px;background:#fbfdfb;color:#294536;font-size:12px}.docs-organoleptic-option input{width:16px;height:16px;margin:1px 0 0;accent-color:#174b39}.docs-organoleptic-option strong{display:block}.docs-organoleptic-option small{display:block;margin-top:4px;color:#7a887e;font-size:10px;line-height:1.5}";
  document.head.append(css);
 }
 function build(){
@@ -212,6 +213,7 @@ function renderCreate(){
  "<label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan (SJ)</label>"+
  "<label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> Berita Acara Serah Terima (BAST)</label>"+
  "</fieldset>"+
+ "<label class='docs-organoleptic-option'><input id='docsIncludeOrganoleptic' type='checkbox'><span><strong>Formulir Uji Organoleptik</strong><small>Formulir tambahan tanpa nomor dokumen. Satu penerima akan mendapat satu halaman A4 untuk diisi tulis tangan.</small></span></label>"+
  "<h4 class='docs-section-title'>Informasi distribusi</h4>"+
  "<div class='docs-grid'>"+
  "<div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div>"+
@@ -278,7 +280,8 @@ function goWizardStep(step){
    "Pengemudi":($("#docsDriver",form).value?$("#docsDriver",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
    "Kendaraan":($("#docsVehicle",form).value?$("#docsVehicle",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
    "Jumlah penerima":selected.length,
-   "Jumlah dokumen bernomor":selected.length*kinds.length
+   "Jumlah dokumen bernomor":selected.length*kinds.length,
+   "Formulir uji organoleptik":$("#docsIncludeOrganoleptic",form)?.checked?selected.length+" formulir":"Tidak dipilih"
   };
   const summary=$("#docsReviewSummary",form);summary.innerHTML="";
   Object.entries(values).forEach(([label,value])=>{
@@ -327,6 +330,7 @@ async function createDocs(event){
  if(!selected.length){status("Pilih minimal satu penerima.",true);return}
  const kinds=selectedDocumentKinds();
  if(!kinds.length){status("Pilih minimal Surat Jalan atau BAST.",true);goWizardStep(1);return}
+ const includeOrganoleptic=$("#docsIncludeOrganoleptic",modal)?.checked===true;
  const menuItems=readMenuComponents();
  if(menuItems.length>8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
  const body={
@@ -344,6 +348,7 @@ async function createDocs(event){
  const button=$("#docsCreateButton",modal);button.disabled=true;button.textContent="Menerbitkan dokumen...";
  try{
   const result=await api("docs/create",body);window.dispatchEvent(new Event("autodoc:data-changed"));
+  pendingOrganolepticPrint=includeOrganoleptic?{tanggal:body.tanggal,recipientIds:selected.slice()}:null;
   const failed=(result.errors||[]).length;
   const summary=node("div","docs-result");
   summary.textContent=result.berhasil+" dari "+result.requested+" dokumen berhasil disiapkan. "+(failed?"Masih ada "+failed+" dokumen gagal; ulangi tanggal yang sama untuk melanjutkan.":"Nomor yang sudah terbit tidak akan dibuat ulang.");
@@ -412,29 +417,45 @@ async function loadDistributions(initialOffset=0){
 async function loadHistory(date){
  const target=$(".docs-view-history",modal);if(!target)return;
  const chosen=date||($("#docsHistoryDate",modal)?.value)||today();
- target.innerHTML="<div class='docs-history-top'><button type='button' class='docs-btn' id='docsBackToDays'>← Semua distribusi</button><div class='docs-field'><label for='docsHistoryDate'>Tanggal distribusi</label><input id='docsHistoryDate' type='date' value='"+esc(chosen)+"'></div><button type='button' class='docs-btn primary' id='docsLoadHistory'>Tampilkan</button></div><div class='docs-print-bulk' id='docsPrintBulk'><span style='align-self:center;font-size:11px;color:#526258;font-weight:700'>Cetak massal:</span><button type='button' class='docs-btn' id='docsPrintSj'>Semua Surat Jalan</button><button type='button' class='docs-btn' id='docsPrintBast'>Semua BAST</button></div><div id='docsDistributionMeta' class='docs-note'></div><div class='docs-list' id='docsList'></div>";
+ target.innerHTML="<div class='docs-history-top'><button type='button' class='docs-btn' id='docsBackToDays'>← Semua distribusi</button><div class='docs-field'><label for='docsHistoryDate'>Tanggal distribusi</label><input id='docsHistoryDate' type='date' value='"+esc(chosen)+"'></div><button type='button' class='docs-btn primary' id='docsLoadHistory'>Tampilkan</button></div><div class='docs-print-bulk' id='docsPrintBulk'><span style='align-self:center;font-size:11px;color:#526258;font-weight:700'>Cetak massal:</span><button type='button' class='docs-btn' id='docsPrintSj'>Semua Surat Jalan</button><button type='button' class='docs-btn' id='docsPrintBast'>Semua BAST</button><button type='button' class='docs-btn' id='docsPrintOrganoleptic'>Semua Uji Organoleptik</button></div><div id='docsPrintSelectedSlot'></div><div id='docsDistributionMeta' class='docs-note'></div><div class='docs-list' id='docsList'></div>";
  $("#docsBackToDays",target).onclick=()=>loadDistributions().catch(e=>status(e.message,true));
  $("#docsLoadHistory",target).onclick=()=>loadHistory($("#docsHistoryDate",target).value).catch(e=>status(e.message,true));
  $("#docsPrintSj",target).onclick=()=>printDocuments(currentDocs.filter(doc=>doc.jenis==="SJ"));
  $("#docsPrintBast",target).onclick=()=>printDocuments(currentDocs.filter(doc=>doc.jenis==="BAST"));
+ $("#docsPrintOrganoleptic",target).onclick=()=>printOrganolepticForms(getArchiveRecipients());
  status("Memuat riwayat...");
  try{
   const result=await api("docs/list?tanggal="+encodeURIComponent(chosen));
   currentDistribution=result.distribution;currentDocs=result.documents||[];
   const list=$("#docsList",target);list.innerHTML="";
   const dist=currentDistribution||{};
-  $("#docsDistributionMeta",target).textContent=(dist.menu||"Menu belum diisi")+" · "+(dist.nama_petugas||"Petugas belum diisi")+" · "+(dist.nama_pengemudi||"Pengemudi belum diisi")+" · "+(dist.no_kendaraan||"Kendaraan belum diisi");
-  if(!currentDocs.length){$("#docsPrintSj",target).disabled=true;$("#docsPrintBast",target).disabled=true;list.append(node("div","docs-empty","Belum ada dokumen untuk tanggal ini."));status("");return}
+  $("#docsDistributionMeta",target).textContent=(dist.menu||"Menu belum diisi")+" · Waktu makan: "+(dist.waktu_makan||"siang")+" · "+(dist.nama_petugas||"Petugas belum diisi")+" · "+(dist.nama_pengemudi||"Pengemudi belum diisi")+" · "+(dist.no_kendaraan||"Kendaraan belum diisi");
+  const archiveRecipients=getArchiveRecipients();
+  $("#docsPrintSj",target).disabled=!currentDocs.some(doc=>doc.jenis==="SJ");
+  $("#docsPrintBast",target).disabled=!currentDocs.some(doc=>doc.jenis==="BAST");
+  $("#docsPrintOrganoleptic",target).disabled=!dist.id||!archiveRecipients.length;
+  if(pendingOrganolepticPrint&&pendingOrganolepticPrint.tanggal===chosen&&dist.id){
+   const selectedRecipients=getRecipientsByIds(pendingOrganolepticPrint.recipientIds);
+   if(selectedRecipients.length){
+    const selectedButton=node("button","docs-btn primary","Cetak Uji Organoleptik · "+selectedRecipients.length+" penerima terpilih");
+    selectedButton.type="button";selectedButton.onclick=()=>printOrganolepticForms(selectedRecipients);
+    $("#docsPrintSelectedSlot",target).append(selectedButton);
+   }
+  }
+  if(!currentDocs.length){
+   list.append(node("div","docs-empty","Belum ada dokumen bernomor untuk tanggal ini. Formulir Uji Organoleptik tetap dapat dicetak bila dipilih pada proses penerbitan."));
+   status("");
+   return;
+  }
   const grouped=new Map();
   currentDocs.forEach(doc=>{
    const snap=doc.snapshot_json||{},recipient=snap.penerima||{};
    const key=String(doc.recipient_id||recipient.id||doc.id);
    if(!grouped.has(key))grouped.set(key,{recipient,docs:[]});
+   else if(!grouped.get(key).recipient?.nama&&recipient.nama)grouped.get(key).recipient=recipient;
    grouped.get(key).docs.push(doc);
   });
   for(const group of grouped.values())list.append(renderDocumentGroup(group));
-  $("#docsPrintSj",target).disabled=!currentDocs.some(doc=>doc.jenis==="SJ");
-  $("#docsPrintBast",target).disabled=!currentDocs.some(doc=>doc.jenis==="BAST");
   status(currentDocs.length+" dokumen · "+grouped.size+" penerima.");
  }catch(e){status(e.message,true)}
 }
@@ -448,6 +469,7 @@ function renderDocumentGroup(group){
  info.append(title,node("p",null,(recipient.kelompok||"")+" · "+(recipient.jenjang||"")+" · "+Number(recipient.total_porsi||0).toLocaleString("id-ID")+" porsi"));
  head.append(info);card.append(head);
  const actions=node("div","docs-group-actions");
+ const organoleptic=node("button","docs-btn","Cetak Uji Organoleptik");organoleptic.type="button";organoleptic.onclick=()=>printOrganolepticForms([recipient]);actions.append(organoleptic);
  docs.sort((a,b)=>a.jenis.localeCompare(b.jenis)).forEach(doc=>{
   const kind=doc.jenis==="SJ"?"Surat Jalan":"BAST";
   const print=node("button","docs-btn", "Cetak "+kind);print.type="button";print.onclick=()=>printDocuments([doc]);actions.append(print);
@@ -519,6 +541,132 @@ function printDocuments(documents){
  setTimeout(invokePrint,3000);
 }
 function printDocument(doc){printDocuments([doc])}
+function organolepticElement(doc,tag,className,text){
+ const element=doc.createElement(tag);
+ if(className)element.className=className;
+ if(text!==undefined)element.textContent=String(text??"");
+ return element;
+}
+function organolepticInfoRow(doc,parent,label,valueNode){
+ parent.append(organolepticElement(doc,"span","lbl",label),organolepticElement(doc,"span","sep",":"),valueNode);
+}
+function organolepticMealNode(doc,selected){
+ const wrap=organolepticElement(doc,"span","val");
+ ["pagi","siang","sore"].forEach((meal,index)=>{
+  if(index)wrap.append(doc.createTextNode("/"));
+  if(meal===selected)wrap.append(doc.createTextNode(meal));
+  else wrap.append(organolepticElement(doc,"s","",meal));
+ });
+ return wrap;
+}
+function organolepticTable(doc,menu){
+ const table=organolepticElement(doc,"table","grid");
+ const colgroup=doc.createElement("colgroup");
+ colgroup.append(organolepticElement(doc,"col","menu"));
+ table.append(colgroup);
+ const thead=doc.createElement("thead"),first=doc.createElement("tr"),second=doc.createElement("tr");
+ const menuHead=organolepticElement(doc,"th","","Menu");
+ menuHead.rowSpan=2;menuHead.scope="col";first.append(menuHead);
+ ["Aroma","Suhu","Penampilan","Citarasa","Tekstur"].forEach(aspect=>{
+  const head=organolepticElement(doc,"th","",aspect);head.colSpan=2;head.scope="colgroup";first.append(head);
+  const yes=organolepticElement(doc,"th","","Ya");yes.scope="col";
+  const no=organolepticElement(doc,"th","","Tidak");no.scope="col";
+  second.append(yes,no);
+ });
+ thead.append(first,second);
+ const tbody=doc.createElement("tbody");
+ const rows=menu.length?menu.slice(0,8):Array(5).fill("");
+ rows.forEach(name=>{
+  const row=doc.createElement("tr"),heading=organolepticElement(doc,"th","",name);
+  heading.scope="row";row.append(heading);
+  for(let i=0;i<10;i++)row.append(doc.createElement("td"));
+  tbody.append(row);
+ });
+ table.append(thead,tbody);
+ return table;
+}
+function organolepticSheet(doc,data,recipient){
+ const sheet=organolepticElement(doc,"section","sheet");
+ sheet.append(organolepticElement(doc,"h1","title","FORMULIR UJI ORGANOLEPTIK"));
+ const info=organolepticElement(doc,"div","info");
+ organolepticInfoRow(doc,info,recipient.kelompok==="Posyandu"?"Nama Posyandu":"Nama Sekolah",organolepticElement(doc,"span","val",recipient.nama||""));
+ organolepticInfoRow(doc,info,"Hari/Tanggal",organolepticElement(doc,"span","val",data.tanggalLabel));
+ organolepticInfoRow(doc,info,"Waktu Makan",organolepticMealNode(doc,data.waktuMakan));
+ sheet.append(info);
+ sheet.append(organolepticElement(doc,"p","caption","Beri tanda check (✓) pada kolom Ya/Tidak"));
+ sheet.append(organolepticTable(doc,data.menu));
+ const note=organolepticElement(doc,"div","note");
+ note.append(organolepticElement(doc,"p","","Keterangan:"));
+ const yes=organolepticElement(doc,"div","row");
+ yes.append(organolepticElement(doc,"span","","Ya"),organolepticElement(doc,"span","",": dapat diterima/sesuai"));
+ const no=organolepticElement(doc,"div","row");
+ no.append(organolepticElement(doc,"span","","Tidak"),organolepticElement(doc,"span","",": tidak dapat diterima/tidak sesuai, lanjutkan ke kolom bawah!"));
+ note.append(yes,no);sheet.append(note);
+ sheet.append(organolepticElement(doc,"div","followup","Tindak Lanjut:"));
+ const signs=organolepticElement(doc,"div","signs");
+ const left=organolepticElement(doc,"div","sign");
+ left.append(organolepticElement(doc,"div","","Mengetahui,"),organolepticElement(doc,"div","","Ahli Gizi Dapur"),organolepticElement(doc,"div","space"),organolepticElement(doc,"div","",data.ahliGizi));
+ const right=organolepticElement(doc,"div","sign");
+ right.append(organolepticElement(doc,"div","","Petugas Uji Organoleptik"),organolepticElement(doc,"div","space"),organolepticElement(doc,"div","dots"));
+ signs.append(left,right);sheet.append(signs);
+ return sheet;
+}
+function getArchiveRecipients(){
+ const recipients=new Map();
+ currentDocs.forEach(doc=>{
+  const snapshot=doc.snapshot_json||{},recipient=snapshot.penerima||{};
+  const id=String(doc.recipient_id||recipient.id||doc.id);
+  if(!recipients.has(id))recipients.set(id,recipient);
+  else if(!recipients.get(id)?.nama&&recipient.nama)recipients.set(id,recipient);
+ });
+ return Array.from(recipients.values()).filter(recipient=>recipient&&recipient.nama);
+}
+function getRecipientsByIds(ids){
+ const requested=new Set((ids||[]).map(String)),byId=new Map();
+ currentDocs.forEach(doc=>{
+  const recipient=(doc.snapshot_json||{}).penerima||{};
+  const id=String(doc.recipient_id||recipient.id||doc.id);
+  if(requested.has(id)&&recipient.nama)byId.set(id,recipient);
+ });
+ (master.recipients||[]).forEach(recipient=>{
+  const id=String(recipient.id||"");
+  if(requested.has(id)&&recipient.nama&&!byId.has(id))byId.set(id,recipient);
+ });
+ return Array.from(requested).map(id=>byId.get(id)).filter(Boolean);
+}
+function printOrganolepticForms(recipients){
+ const selected=Array.isArray(recipients)?recipients.filter(recipient=>recipient&&recipient.nama):[];
+ if(!selected.length){status("Tidak ada penerima untuk formulir uji organoleptik.",true);return}
+ if(!currentDistribution){status("Data distribusi tidak tersedia. Muat ulang arsip tanggal tersebut.",true);return}
+ const win=window.open("","_blank");
+ if(!win){status("Popup cetak diblokir. Izinkan popup untuk situs AutoDoc.",true);return}
+ const printDoc=win.document;
+ printDoc.open();
+ printDoc.write("<!doctype html><html lang='id'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Formulir Uji Organoleptik</title></head><body></body></html>");
+ printDoc.close();
+ const style=printDoc.createElement("style");style.textContent="\n:root{--ink:#000;--paper:#fff}\n*{box-sizing:border-box}\nhtml{-webkit-print-color-adjust:exact;print-color-adjust:exact}\nbody{margin:0;background:#e8ebe9;color:var(--ink);font-family:\"Times New Roman\",\"Liberation Serif\",Times,serif;font-size:12pt;line-height:1.35}\n.toolbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 20px;background:#14201a;color:#fff;font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;font-size:14px}\n.toolbar button{height:36px;padding:0 18px;border:0;border-radius:8px;background:#fff;color:#14201a;font:inherit;font-weight:600;cursor:pointer}\n.toolbar button:focus-visible{outline:3px solid #9fd3b8;outline-offset:2px}\n.sheet{width:210mm;height:297mm;margin:18px auto;padding:15mm;background:var(--paper);box-shadow:0 1px 6px rgba(0,0,0,.18);display:flex;flex-direction:column;break-after:page;page-break-after:always}\n.sheet:last-of-type{break-after:auto;page-break-after:auto}\n.title{margin:4mm 0 8mm;text-align:center;font-size:13pt;font-weight:700}\n.info{display:grid;grid-template-columns:34mm 4mm 1fr;row-gap:1mm;margin-bottom:6mm}\n.info .val{font-weight:400}\n.caption{margin:0 0 1.5mm;text-align:center;font-weight:700;font-size:11.5pt}\ntable.grid{width:100%;border-collapse:collapse;table-layout:fixed}\ntable.grid th,table.grid td{border:1px solid var(--ink);padding:1.5mm;text-align:center}\ntable.grid thead th{font-weight:700;font-size:11.5pt}\ntable.grid col.menu{width:28%}\ntable.grid thead tr+tr th{font-size:10.5pt;padding:1.5mm .5mm}\ntable.grid tbody td{height:10mm}\ntable.grid tbody th{font-weight:700;font-size:11.5pt;padding:1.5mm 2mm}\n.note{margin:5mm 0 4mm;font-size:11.5pt}\n.note p{margin:0}\n.note .row{display:grid;grid-template-columns:14mm 1fr}\n.followup{flex:1 1 auto;min-height:50mm;border:1px solid var(--ink);padding:3mm 4mm;font-weight:700}\n.signs{display:flex;justify-content:space-between;margin-top:8mm;font-size:11.5pt}\n.sign{width:72mm}\n.sign .space{height:24mm}\n.sign .dots{border-bottom:1px dotted var(--ink);height:1.2em}\n@page{size:A4 portrait;margin:0}\n@media print{body{background:none}.toolbar{display:none}.sheet{margin:0;box-shadow:none}}\n@media(max-width:800px){.sheet{transform-origin:top left}}\n";printDoc.head.append(style);
+ const toolbar=organolepticElement(printDoc,"div","toolbar");
+ toolbar.append(organolepticElement(printDoc,"span","","Pratinjau formulir uji organoleptik · "+selected.length+" penerima · satu halaman A4 per penerima"));
+ const printButton=organolepticElement(printDoc,"button","","Cetak");
+ printButton.type="button";printButton.addEventListener("click",()=>{win.focus();win.print()});
+ toolbar.append(printButton);
+ const root=organolepticElement(printDoc,"main","");root.id="root";root.setAttribute("aria-label","Formulir uji organoleptik");
+ printDoc.body.append(toolbar,root);
+ const date=String(currentDistribution.tanggal||"");
+ let dateLabel=date;
+ if(/^\d{4}-\d{2}-\d{2}$/.test(date)){
+  const parsed=new Date(date+"T00:00:00");
+  if(!Number.isNaN(parsed.getTime()))dateLabel=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(parsed);
+ }
+ const allowedMeals=["pagi","siang","sore"];
+ const meal=allowedMeals.includes(String(currentDistribution.waktu_makan||"").toLowerCase())?String(currentDistribution.waktu_makan).toLowerCase():"siang";
+ const storedItems=Array.isArray(currentDistribution.menu_items)?currentDistribution.menu_items.slice().sort((a,b)=>Number(a.urutan||0)-Number(b.urutan||0)):[];
+ const menu=storedItems.map(item=>String(item.nama_komponen||"").trim()).filter(Boolean).slice(0,8);
+ if(!menu.length&&String(currentDistribution.menu||"").trim())menu.push(String(currentDistribution.menu).trim());
+ const data={tanggalLabel:dateLabel,waktuMakan:meal,ahliGizi:String(currentDistribution.nama_ahli_gizi||""),menu};
+ root.replaceChildren(...selected.map(recipient=>organolepticSheet(printDoc,data,recipient)));
+ setTimeout(()=>{if(!win.closed){win.focus();win.print()}},250);
+}
 function showRealization(card,doc){
  modal.querySelectorAll(".docs-realization").forEach(x=>x.remove());
  const snap=doc.snapshot_json||{},recipient=snap.penerima||{},old=doc.realisasi||{};
