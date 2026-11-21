@@ -7,16 +7,6 @@
     "node": ">=22 <25"
   },
   "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "2.119.2",
-    "bcryptjs": "3.0.3"
-  },
-  "devDependencies": {
-    "@types/node": "22.19.3",
-    "typescript": "5.9.3",
-    "vitest": "4.0.10"
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   }
 }
