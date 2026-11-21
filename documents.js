@@ -12,11 +12,23 @@ async function api(route,body){
  if(body){headers["Content-Type"]="application/json";options.method="POST";options.body=JSON.stringify(body)}
  const response=await fetch(API+"/"+route,options);
  let payload={};try{payload=await response.json()}catch(_){}
- if(!response.ok)throw new Error(payload.message||"Permintaan tidak berhasil.");
+ if(!response.ok&&response.status!==207)throw new Error(payload.message||"Permintaan tidak berhasil.");
  return payload;
 }
 function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
-function status(message,bad){const el=$(".doc-msg",modal);el.textContent=message||"";el.classList.toggle("error",!!bad)}
+function status(message,bad){
+  if(!modal)return;
+  let el=$(".doc-msg",modal);
+  if(!el){
+   el=node("p","docs-msg");
+   el.setAttribute("role","status");
+   el.setAttribute("aria-live","polite");
+   const host=$(".docs-body",modal)||$(".docs-dialog",modal)||modal;
+   host.append(el);
+  }
+  el.textContent=message||"";
+  el.classList.toggle("error",!!bad);
+ }
 function close(){
  if(!modal)return;
  modal.hidden=true;modal.style.display="none";modal.setAttribute("aria-hidden","true");
@@ -161,7 +173,7 @@ async function createDocs(event){
   nama_pengemudi:$("#docsDriver",modal).value,
   no_kendaraan:$("#docsVehicle",modal).value,
   recipient_ids:selected,
-  token
+
  };
  if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);return}
  const button=$("#docsCreateButton",modal);button.disabled=true;button.textContent="Menerbitkan dokumen...";
