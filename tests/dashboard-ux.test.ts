@@ -16,7 +16,7 @@ test("dashboard only raises follow-up alerts for actionable data issues", () => 
 test("dashboard offers direct access to create documents and the archive", () => {
   assert.match(dashboard, /AutoDocOpenDocs/);
   assert.match(dashboard, /AutoDocOpenArchive/);
-  assert.match(index, /homeCreateShortcut/);
+  assert.doesNotMatch(index, /homeCreateShortcut/);
   assert.match(index, /Ringkasan operasional/);
 });
 
@@ -27,6 +27,8 @@ test("primary navigation is a responsive workspace sidebar", () => {
   assert.match(index, /Buat Dokumen/);
   assert.match(index, /Arsip/);
   assert.match(index, /Data Master/);
+  assert.match(index, /data-home-nav="archive"/);
+  assert.match(index, /documents\.js\?v=single-navigation-20261122/);
   assert.match(index, /body \.docs-overlay \.docs-dialog/);
   assert.match(index, /body \.dm-overlay \.dm-dialog/);
 });
