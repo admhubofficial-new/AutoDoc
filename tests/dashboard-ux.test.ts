@@ -24,6 +24,11 @@ test("primary navigation is a responsive workspace sidebar", () => {
   assert.match(index, /grid-template-columns:248px minmax\(0,1fr\)/);
   assert.match(index, /@media\(max-width:720px\)/);
   assert.match(index, /homeNav/);
+  assert.match(index, /sidebar-collapsed/);
+  assert.match(index, /mobile-nav-open/);
+  assert.match(index, /homeSidebarBackdrop/);
+  assert.match(index, /Ciutkan sidebar/);
+  assert.match(index, /window\.matchMedia\("\(max-width: 720px\)"\)/);
   assert.match(index, /Buat Dokumen/);
   assert.match(index, /Arsip/);
   assert.match(index, /Data Master/);
