@@ -16,7 +16,7 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 ### Tahap 2 — Setup dan autentikasi token
 
 - Setup awal hanya dapat diselesaikan satu kali.
-- PIN/token minimal 6 dan maksimal 128 karakter; hash bcrypt cost 12 disimpan di PostgreSQL melalui pgcrypto.
+- PIN/token minimal 6 dan maksimal 128 karakter; PIN dipre-hash SHA-256 lalu di-hash bcrypt cost 12 di PostgreSQL melalui pgcrypto (aman untuk PIN hingga 128 karakter).
 - Cookie sesi ditandatangani HMAC-SHA256, HttpOnly, SameSite=Strict, dan berlaku 12 jam.
 - Lima kegagalan token mengunci akses bersama selama 15 menit.
 - Mengganti token mewajibkan PIN lama dan menaikkan `session_version`, sehingga sesi lama seluruh perangkat tidak berlaku.
