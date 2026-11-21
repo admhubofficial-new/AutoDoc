@@ -30,7 +30,17 @@ Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Peme
 
 
 
-### Tahap 3 — Dashboard operasional\n\n- Ringkasan jumlah distribusi, dokumen SJ/BAST, status dokumen, dan BAST yang menunggu realisasi.\n- Pemantauan kelengkapan Data Master dan daftar lima distribusi terbaru.\n- Ringkasan dibaca melalui Edge Function dengan sesi aktif; tidak ada akses langsung browser ke tabel Supabase.\n\n### Tahap 4 — Surat Jalan & BAST MBG
+### Tahap 3 — Dashboard operasional\n\n- Ringkasan jumlah distribusi, dokumen SJ/BAST, status dokumen, dan BAST yang menunggu realisasi.\n- Pemantauan kelengkapan Data Master dan daftar lima distribusi terbaru.\n- Ringkasan dibaca melalui Edge Function dengan sesi aktif; tidak ada akses langsung browser ke tabel Supabase.\n\n### Tahap 3A — Penyempurnaan alur UI/UX operasional
+
+- Navigasi utama menggunakan Beranda, Buat Dokumen, Arsip, dan Data Master.
+- Pembuatan SJ/BAST memakai tiga langkah: informasi distribusi, pemilihan penerima secara eksplisit, dan pemeriksaan sebelum penerbitan.
+- Arsip menampilkan daftar distribusi terbaru yang dapat dicari berdasarkan tanggal, menu, petugas, pengemudi, atau kendaraan; dokumen dikelompokkan per penerima.
+- Arsip mendukung cetak massal Surat Jalan atau BAST per tanggal, serta cetak dokumen per penerima.
+- Data Master dapat dibuka langsung ke jenis data tertentu dan menyediakan pencarian pada daftar aktif.
+- Dialog dokumen dan Data Master menjaga fokus keyboard serta dapat ditutup dengan Escape.
+- Penyempurnaan tampilan tidak mengubah kontrak penerbitan, nomor dokumen, snapshot, autentikasi, PIN, atau penguncian percobaan.
+
+### Tahap 4 — Surat Jalan & BAST MBG
 
 - Penerbitan pasangan Surat Jalan dan BAST per penerima pada tanggal distribusi.
 - Nomor SJ dan BAST menggunakan counter database terpisah dan fungsi PostgreSQL atomik yang sudah tersedia.
