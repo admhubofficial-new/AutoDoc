@@ -231,12 +231,13 @@ function showRealization(card,doc){
 }
 function init(){
  style();build();
- const launch=document.querySelector("#docsLauncher");
- if(!launch)return;
- launch.addEventListener("click",show);
- launch.addEventListener("keydown",event=>{
-  if(event.key==="Enter"||event.key===" "){event.preventDefault();show()}
- });
+ window.AutoDocDocuments=Object.freeze({open:show,close});
+ // Delegasi pada document tetap menangani klik jika elemen beranda dirender ulang.
+ // Capture phase mencegah handler lain menghentikan klik sebelum mencapai launcher.
+ document.addEventListener("click",event=>{
+  const target=event.target instanceof Element?event.target.closest("#docsLauncher"):null;
+  if(target)show();
+ },{capture:true});
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
