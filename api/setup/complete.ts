@@ -1,6 +1,6 @@
 import { sameOriginAllowed } from "../../lib/server/env.ts";
 import { json, methodNotAllowed, publicError, readJson } from "../../lib/server/http.ts";
-import { currentSessionVersion, createSessionCookie } from "../../lib/server/session.ts";
+import { createSessionCookie } from "../../lib/server/session.ts";
 import { rpc } from "../../lib/server/supabase.ts";
 import { normalizeToken } from "../../lib/server/security.ts";
 
@@ -40,17 +40,19 @@ export default {
         return json({ message: "Nomor awal SJ dan BAST harus bilangan bulat minimal 1." }, 400);
       }
 
-      await rpc("selesaikan_setup_awal_dengan_pin", {
-        p_token: token,
-        p_start_sj: startNumberSj,
-        p_start_bast: startNumberBast,
-      });
+      const result = await rpc<{ session_version: number }>(
+        "selesaikan_setup_awal_dengan_pin",
+        {
+          p_token: token,
+          p_start_sj: startNumberSj,
+          p_start_bast: startNumberBast,
+        },
+      );
 
-      const version = await currentSessionVersion();
       return json(
         { success: true, message: "Setup Awal berhasil. Selamat datang di AutoDoc." },
         200,
-        { "Set-Cookie": createSessionCookie(request, version) },
+        { "Set-Cookie": createSessionCookie(request, Number(result.session_version)) },
       );
     } catch (error) {
       const code = (error as { code?: string })?.code;
