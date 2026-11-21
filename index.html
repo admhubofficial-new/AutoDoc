@@ -360,7 +360,7 @@
       </div>
       <nav class="home-nav" id="homeNav" aria-label="Navigasi utama">
         <button type="button" data-home-nav="home" aria-current="page">Beranda</button>
-        <button type="button" data-home-nav="print">Cetak</button>
+        <button type="button" data-home-nav="print">Buat Dokumen</button>
         <button type="button" data-home-nav="archive">Arsip</button>
         <button type="button" data-home-nav="master">Data Master</button>
       </nav>
@@ -374,10 +374,6 @@
         <div><h1>Beranda</h1><p id="homeToday"></p></div>
       </div>
       <section id="opsDashboard" class="home-dashboard" aria-label="Ringkasan operasional"></section>
-      <div class="home-legacy-launchers" aria-hidden="true">
-        <div class="feature-grid"></div>
-        <button type="button" id="docsLauncher" tabindex="-1">Buka dokumen</button>
-      </div>
     </section>
   </main>
 
@@ -549,24 +545,12 @@
         }).format(new Date());
       }
       function openDocsTab(tabName) {
-        const launcher = document.getElementById("docsLauncher");
-        if (!launcher) return;
-        launcher.click();
-        const tabs = document.querySelectorAll("#docsModal .docs-tab");
-        const target = tabName === "history" ? tabs[1] : tabs[0];
-        if (target) target.click();
+        if (!window.AutoDocDocuments) return;
+        if (tabName === "history") window.AutoDocDocuments.openArchive();
+        else window.AutoDocDocuments.open();
       }
       window.AutoDocOpenDocs = (tabName) => openDocsTab(tabName || "create");
-      window.AutoDocOpenArchive = (date) => {
-        openDocsTab("history");
-        if (date) {
-          window.setTimeout(() => {
-            const input = document.querySelector("#docsModal #docsHistoryDate");
-            const load = document.querySelector("#docsModal #docsLoadHistory");
-            if (input && load) { input.value = date; load.click(); }
-          }, 0);
-        }
-      };
+      window.AutoDocOpenArchive = (date) => window.AutoDocDocuments?.openArchive(date);
       menuToggle.addEventListener("click", () => {
         const open = !homeNav.classList.contains("open");
         homeNav.classList.toggle("open", open);
@@ -582,10 +566,7 @@
         closeHomeNav();
         if (action === "print") window.AutoDocOpenDocs("create");
         if (action === "archive") window.AutoDocOpenArchive();
-        if (action === "master") {
-          const masterLauncher = document.querySelector(".home-legacy-launchers .dm-launch");
-          if (masterLauncher) masterLauncher.click();
-        }
+        if (action === "master") window.AutoDocMaster?.open("recipients");
       });
       updateHomeDate();
 
