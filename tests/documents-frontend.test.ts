@@ -83,7 +83,7 @@ test("meal time supports pagi, siang, and sore with siang selected by default", 
 });
 
 test("organoleptic printing matches the approved A4 portrait template", () => {
-  assert.match(source, /FORMULIR UJI ORGANOLEPTIK/);
+  assert.match(organolepticSource, /FORMULIR UJI ORGANOLEPTIK/);
   assert.match(source, /@page\{size:A4 portrait;margin:0\}/);
   assert.match(source, /break-after:page/);
   assert.match(organolepticSource, /function organolepticSheet/);
@@ -100,8 +100,8 @@ test("organoleptic forms use distribution snapshots and five blank menu rows", (
   assert.match(source, /currentDistribution\.waktu_makan/);
   assert.match(source, /currentDistribution\.menu_items/);
   assert.match(organolepticSource, /Array\(5\)\.fill\(""\)/);
-  assert.match(source, /Nama Posyandu/);
-  assert.match(source, /Nama Sekolah/);
+  assert.match(organolepticSource, /Nama Posyandu/);
+  assert.match(organolepticSource, /Nama Sekolah/);
 });
 
 test("organoleptic output is available in bulk, per recipient, and from wizard print selection", () => {
