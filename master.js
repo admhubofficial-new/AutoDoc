@@ -40,8 +40,8 @@ function init(){
  function form(row){
   formSlot.innerHTML="";const f=el("form","dm-form");
   defs[entity].fields.forEach(([key,label,type,required,options])=>{const wrap=el("div","dm-field"+(type==="textarea"?" wide":""));
-   if(type==="checkbox"){const lab=el("label",null,label);const input=el("input");input.type="checkbox";input.dataset.key=key;input.checked=row?.[key]===true;wrap.append(lab,input)}
-   else{const lab=el("label",null,label);let input;if(type==="textarea")input=el("textarea");else if(type==="select"){input=el("select");options.forEach(o=>{const op=el("option",null,o);op.value=o;input.append(op)})}else{input=el("input");input.type=type}input.dataset.key=key;input.required=!!required;if(row?.[key]!==undefined&&row[key]!==null)input.value=row[key];if(type==="number"){input.min="0";input.step="1"}wrap.append(lab,input)}
+   if(type==="checkbox"){const lab=el("label",null,label);const input=el("input");input.type="checkbox";input.dataset.key=key;input.checked=row ? row[key]===true : key==="aktif";wrap.append(lab,input)}
+   else{const lab=el("label",null,label);let input;if(type==="textarea")input=el("textarea");else if(type==="select"){input=el("select");options.forEach(o=>{const op=el("option",null,o);op.value=o;input.append(op)})}else{input=el("input");input.type=type}input.dataset.key=key;input.required=!!required;if(row?.[key]!==undefined&&row[key]!==null)input.value=row[key];else if(type==="number")input.value=key==="urutan"?"100":"0";if(type==="number"){input.min=key==="urutan"?"1":"0";input.step="1"}wrap.append(lab,input)}
    f.append(wrap);
   });
   if(row?.id){const id=el("input");id.type="hidden";id.dataset.key="id";id.value=row.id;f.append(id)}
