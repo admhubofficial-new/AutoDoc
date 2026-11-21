@@ -45,7 +45,7 @@ function init(){
    f.append(wrap);
   });
   if(row?.id){const id=el("input");id.type="hidden";id.dataset.key="id";id.value=row.id;f.append(id)}
-  const buttons=el("div","dm-form-actions");const cancel=el("button","dm-btn","Batal");cancel.type="button";cancel.onclick=()=>formSlot.innerHTML="";const save=el("button","dm-btn primary","Simpan");save.type="submit";buttons.append(cancel,save);f.append(buttons);f.onsubmit=async e=>{e.preventDefault();const data={};f.querySelectorAll("[data-key]").forEach(x=>data[x.dataset.key]=x.type==="checkbox"?x.checked:x.value);save.disabled=true;try{await api("master/save",{entity,data});await load();message.textContent="Data berhasil disimpan."}catch(err){message.textContent=err.message;message.style.color="#a43c32";save.disabled=false}};formSlot.append(f);f.scrollIntoView({behavior:"smooth",block:"nearest"});
+  const buttons=el("div","dm-form-actions");const cancel=el("button","dm-btn","Batal");cancel.type="button";cancel.onclick=()=>formSlot.innerHTML="";const save=el("button","dm-btn primary","Simpan");save.type="submit";buttons.append(cancel,save);f.append(buttons);f.onsubmit=async e=>{e.preventDefault();const data={};f.querySelectorAll("[data-key]").forEach(x=>data[x.dataset.key]=x.type==="checkbox"?x.checked:x.value);save.disabled=true;try{await api("master/save",{entity,data});await load();message.textContent="Data berhasil disimpan.";window.dispatchEvent(new Event("autodoc:data-changed"))}catch(err){message.textContent=err.message;message.style.color="#a43c32";save.disabled=false}};formSlot.append(f);f.scrollIntoView({behavior:"smooth",block:"nearest"});
  }
  async function load(){message.textContent="Memuat data...";try{const d=await api("master/list");cache=d.data||{};render();message.textContent=""}catch(e){message.textContent=e.message;message.style.color="#a43c32"}}
  async function importCsv(){
@@ -73,7 +73,7 @@ function init(){
     if(!rows.length||rows.length>500)throw Error("Jumlah baris harus 1–500.");
     if(rows.some(row=>!row.kelompok||!row.nama||!row.jenjang))throw Error("Setiap baris wajib memiliki kelompok, nama, dan jenjang.");
     if(!confirm("Impor "+rows.length+" penerima? Kelompok+nama yang sama akan diperbarui; data lain tidak dihapus."))return;
-    const result=await api("master/import",{rows});await load();message.textContent=result.imported+" baris berhasil diimpor.";
+    const result=await api("master/import",{rows});await load();message.textContent=result.imported+" baris berhasil diimpor."window.dispatchEvent(new Event("autodoc:data-changed"));;
    }catch(e){message.textContent=e.message;message.style.color="#a43c32"}
   };
   input.click();
