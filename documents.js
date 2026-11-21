@@ -19,7 +19,7 @@ async function api(route,body){
 function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
 function status(message,bad){
   if(!modal)return;
-  let el=$(".doc-msg",modal);
+  let el=$(".docs-msg",modal);
   if(!el){
    el=node("p","docs-msg");
    el.setAttribute("role","status");
@@ -180,10 +180,10 @@ function goWizardStep(step){
   if(!selected.length){status("Pilih minimal satu penerima sebelum melanjutkan.",true);return}
   const values={
    "Tanggal":$("#docsDate",form).value,
-   "Menu":$("#docsMenu",form).selectedOptions[0]?.textContent||"Belum diisi",
-   "Petugas":$("#docsStaff",form).selectedOptions[0]?.textContent||"Belum diisi",
-   "Pengemudi":$("#docsDriver",form).selectedOptions[0]?.textContent||"Belum diisi",
-   "Kendaraan":$("#docsVehicle",form).selectedOptions[0]?.textContent||"Belum diisi",
+   "Menu":($("#docsMenu",form).value?$("#docsMenu",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
+   "Petugas":($("#docsStaff",form).value?$("#docsStaff",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
+   "Pengemudi":($("#docsDriver",form).value?$("#docsDriver",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
+   "Kendaraan":($("#docsVehicle",form).value?$("#docsVehicle",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
    "Jumlah penerima":selected.length,
    "Jumlah dokumen":selected.length*2
   };
@@ -191,7 +191,7 @@ function goWizardStep(step){
   Object.entries(values).forEach(([label,value])=>{
    const item=node("div","docs-review-item");item.append(node("small",null,label),node("strong",null,value));summary.append(item);
   });
-  const names=selected.map(input=>input.closest(".docs-recipient")?.querySelector("strong")?.textContent||"Penerima");
+  const names=selected.map(input=>input.closest(".docs-recipient")?.dataset.name||"Penerima");
   $("#docsReviewRecipients",form).textContent=names.join(", ");
  }
  form.querySelectorAll("[data-step-pane]").forEach(pane=>pane.hidden=Number(pane.dataset.stepPane)!==step);
@@ -208,7 +208,7 @@ function renderRecipients(recipients){
  list.innerHTML="";
  if(!recipients.length){list.append(node("div","docs-empty","Server berhasil dihubungi, tetapi tidak ada penerima dengan status aktif. Periksa kolom Status di Data Master."));return}
  recipients.forEach(r=>{
-  const label=node("label","docs-recipient");label.dataset.search=(r.nama+" "+r.kelompok+" "+r.jenjang).toLowerCase();
+  const label=node("label","docs-recipient");label.dataset.search=(r.nama+" "+r.kelompok+" "+r.jenjang).toLowerCase();label.dataset.name=r.nama;
   const check=node("input");check.type="checkbox";check.name="recipient";check.value=r.id;check.checked=false;
   const content=node("span");const warning=r.perlu_verifikasi?" <span class='docs-verify'>Perlu verifikasi</span>":"";
   content.innerHTML="<strong>"+esc(r.nama)+warning+"</strong><small>"+esc(r.kelompok)+" · "+esc(r.jenjang)+" · "+Number(r.total_porsi||0).toLocaleString("id-ID")+" porsi</small>";
