@@ -401,6 +401,15 @@ function masterPayload(entity: MasterEntity, input: Record<string, unknown>): Re
   throw new AppError(400, "Jenis data master tidak didukung.");
 }
 
+async function handleMasterRecipients(request: Request): Promise<Response> {
+  if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const config = MASTER_CONFIG.recipients;
+  const query = new URLSearchParams({ select: config.columns, order: config.order, aktif: "eq.true" });
+  const recipients = await supabaseRequest<Record<string, unknown>[]>(config.table + "?" + query.toString());
+  return respond(request, { recipients, count: recipients.length });
+}
+
 async function handleMasterList(request: Request): Promise<Response> {
   if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
@@ -521,7 +530,7 @@ function distributionSnapshotRows(recipient: Record<string, unknown>): Array<Rec
 async function handleDocsCreate(request: Request): Promise<Response> {
   if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
   const body = await readJson(request);
-  await verifyMutationPin(request, body.token, "penerbitan_surat_jalan_bast");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
 
   if (!validIsoDate(body.tanggal)) throw new AppError(400, "Tanggal distribusi tidak valid.");
   const recipientIds = uuidList(body.recipient_ids);
@@ -1053,6 +1062,7 @@ Deno.serve(async (request: Request) => {
       case "auth/verify-token": return await handleVerifyToken(request);
       case "auth/change-token": return await handleChangeToken(request);
       case "master/list": return await handleMasterList(request);
+      case "master/recipients": return await handleMasterRecipients(request);
       case "master/save": return await handleMasterSave(request);
       case "master/import": return await handleMasterImport(request);
       case "docs/create": return await handleDocsCreate(request);
