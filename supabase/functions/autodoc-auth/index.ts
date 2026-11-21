@@ -1,5 +1,11 @@
 import { signSessionPayload, toBase64Url, verifySessionPayload } from "./session.ts";
-import { normalizeToken } from "./validation.ts";
+import {
+  isValidClockTime,
+  isValidIsoDate,
+  normalizeToken,
+  normalizeUuidList,
+  parseNonNegativeInteger,
+} from "./validation.ts";
 
 // AutoDoc authentication backend for the GitHub Pages frontend.
 // The PIN is read only from Supabase Edge Function secrets and is never
@@ -350,9 +356,8 @@ function cleanText(value: unknown, field: string, required = false, max = 300): 
 }
 
 function cleanInteger(value: unknown, field: string, fallback = 0): number {
-  if (value === null || value === undefined || value === "") return fallback;
-  const result = Number(value);
-  if (!Number.isSafeInteger(result) || result < 0) throw new AppError(400, field + " harus bilangan bulat minimal 0.");
+  const result = parseNonNegativeInteger(value, fallback);
+  if (result === null) throw new AppError(400, field + " harus bilangan bulat minimal 0.");
   return result;
 }
 
@@ -492,22 +497,13 @@ async function verifyMutationPin(request: Request, rawToken: unknown, purpose: s
 }
 
 function validIsoDate(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(value + "T00:00:00.000Z");
-  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return isValidIsoDate(value);
 }
 
 function uuidList(value: unknown): string[] {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 100) {
-    throw new AppError(400, "Pilih minimal satu dan maksimal 100 penerima.");
-  }
-  const values = value.map((entry) => {
-    if (typeof entry !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entry)) {
-      throw new AppError(400, "Daftar penerima tidak valid.");
-    }
-    return entry;
-  });
-  return [...new Set(values)];
+  const result = normalizeUuidList(value);
+  if (!result) throw new AppError(400, "Pilih 1 sampai 100 penerima dengan identitas yang valid.");
+  return result;
 }
 
 function distributionSnapshotRows(recipient: Record<string, unknown>): Array<Record<string, unknown>> {
@@ -539,7 +535,7 @@ async function handleDocsCreate(request: Request): Promise<Response> {
   const namaPengemudi = cleanText(body.nama_pengemudi, "Nama pengemudi", false, 180);
   const noKendaraan = cleanText(body.no_kendaraan, "Nomor kendaraan", false, 80);
   const jamBerangkat = cleanText(body.jam_berangkat, "Jam berangkat", false, 8);
-  if (jamBerangkat && !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(jamBerangkat)) {
+  if (jamBerangkat && !isValidClockTime(jamBerangkat)) {
     throw new AppError(400, "Format jam berangkat harus HH:MM.");
   }
 
@@ -758,7 +754,7 @@ async function handleDocsRealization(request: Request): Promise<Response> {
     throw new AppError(400, "Pilih kondisi makanan yang valid.");
   }
   const jamDiterima = cleanText(body.jam_diterima, "Jam diterima", true, 8);
-  if (!jamDiterima || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(jamDiterima)) {
+  if (!jamDiterima || !isValidClockTime(jamDiterima)) {
     throw new AppError(400, "Jam diterima harus berformat HH:MM.");
   }
   const snapshot = document.snapshot_json as Record<string, unknown>;

@@ -238,8 +238,18 @@ function printDocument(doc){
  "<div class='footer'>Dokumen dibuat oleh AutoDoc · SPPG Darmaraja 01. Snapshot dokumen: "+esc(doc.created_at||"")+".</div></body></html>";
  const win=window.open("","_blank");if(!win){status("Popup cetak diblokir. Izinkan popup untuk situs AutoDoc.",true);return}
  win.document.open();win.document.write(html);win.document.close();win.focus();
- setTimeout(()=>{try{win.print()}catch(_){}},500);
- api("docs/mark-printed",{document_id:doc.id}).then(()=>loadHistory($("#docsHistoryDate",modal)?.value)).catch(()=>{});
+ setTimeout(()=>{
+  if(win.closed||typeof win.print!=="function")return;
+  try{win.print()}catch(_){return}
+  // Browser APIs cannot confirm whether the user printed or cancelled the dialog.
+  // Record the print action only after the print dialog has been invoked and dismissed.
+  api("docs/mark-printed",{document_id:doc.id}).then(()=>{
+   if(!modal.hidden){
+    const dateField=$("#docsHistoryDate",modal);
+    if(dateField)loadHistory(dateField.value).catch(()=>{});
+   }
+  }).catch(()=>{});
+ },500);
 }
 function showRealization(card,doc){
  modal.querySelectorAll(".docs-realization").forEach(x=>x.remove());
