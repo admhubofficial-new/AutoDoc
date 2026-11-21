@@ -61,13 +61,25 @@ test("retries cannot overwrite an issued distribution snapshot", () => {
 
 test("distribution archive endpoint requires a valid session and supports server-side global search", () => {
   const body = functionBody("handleDocsDays", "handleDocsDeleteHistory");
-  assert.match(body, /validSession\(request\)/);
-  assert.match(body, /order: "tanggal\.desc"/);
+  assert.match(body, /validSession\\(request\\)/);
+  assert.match(body, /order: "tanggal\\.desc"/);
   assert.match(body, /limit: "61"/);
   assert.match(body, /rawOffset/);
-  assert.match(body, /offset: String\(offset\)/);
-  assert.match(body, /has_more: rows.length > 60/);
-  assert.match(source, /case "docs\/days": return await handleDocsDays\(request\)/);
+  assert.match(body, /offset: String\\(offset\\)/);
+  assert.match(body, /has_more: rows\\.length > 60/);
+  assert.match(body, /url\\.searchParams\\.get\\("q"\\)/);
+  assert.match(body, /filters\\.or =/);
+  assert.match(body, /tanggal = "eq\\."/);
+  assert.match(source, /case "docs\\/days": return await handleDocsDays\\(request\\)/);
+});
+
+test("bulk history deletion requires a session, a valid PIN, and bounded unique distribution IDs", () => {
+  const body = functionBody("handleDocsDeleteHistory", "handleDocsList");
+  assert.match(body, /verifyMutationPin\\(request, body\\.token, "hapus_riwayat_distribusi"\\)/);
+  assert.match(body, /uuidList\\(body\\.distribution_ids\\)/);
+  assert.match(body, /distributionIds\\.length > 60/);
+  assert.match(body, /hapus_riwayat_distribusi/);
+  assert.match(source, /case "docs\\/delete-history": return await handleDocsDeleteHistory\\(request\\)/);
 });
 
 test("document creation uses a guided flow and recipients are explicitly selected", () => {
