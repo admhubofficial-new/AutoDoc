@@ -44,6 +44,13 @@ test("dashboard endpoint is protected by an active session and reads aggregate c
   assert.match(body, /status: "in\.\(dibuat,dicetak,ditandatangani\)"/);
 });
 
+test("trip details remain optional for the existing distribution wizard", () => {
+  const body = functionBody("handleDocsCreate", "handleDocsDays");
+  assert.match(body, /cleanText\(body\.nama_petugas, "Nama petugas", false, 180\)/);
+  assert.match(body, /cleanText\(body\.nama_pengemudi, "Nama pengemudi", false, 180\)/);
+  assert.match(body, /cleanText\(body\.no_kendaraan, "Nomor kendaraan", false, 80\)/);
+});
+
 test("retries cannot overwrite an issued distribution snapshot", () => {
   const body = functionBody("handleDocsCreate", "handleDocsDays");
   assert.match(body, /error\.code === "55000"/);
