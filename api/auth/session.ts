@@ -1,5 +1,5 @@
-import { validSession } from "../../lib/server/session.js";
-import { json, methodNotAllowed, publicError } from "../../lib/server/http.js";
+import { validSession } from "../../lib/server/session.ts";
+import { json, methodNotAllowed, publicError } from "../../lib/server/http.ts";
 
 export default {
   async fetch(request: Request): Promise<Response> {
@@ -7,9 +7,8 @@ export default {
 
     try {
       const session = await validSession(request);
-      if (!session) {
-        return json({ authenticated: false });
-      }
+      if (!session) return json({ authenticated: false });
+
       return json({
         authenticated: true,
         expiresAt: new Date(session.exp * 1000).toISOString(),
