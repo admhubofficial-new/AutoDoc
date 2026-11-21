@@ -2,13 +2,8 @@
 .env*
 !.env.example
 
-# Node / Vercel
+# Node.js
 node_modules/
-.vercel/
-.next/
-out/
-dist/
-build/
 
 # Test outputs
 coverage/
