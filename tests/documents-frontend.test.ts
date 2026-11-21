@@ -119,3 +119,20 @@ test("organoleptic user data is inserted with textContent rather than HTML inter
   assert.ok(body.includes('element.textContent=String(text??"")'));
   assert.doesNotMatch(body, /innerHTML|insertAdjacentHTML/);
 });
+
+test("printed Surat Jalan has three role-specific signatories", () => {
+  assert.match(source, /Yang Menyerahkan/);
+  assert.match(source, /Petugas Distribusi SPPG/);
+  assert.match(source, /Pengemudi/);
+  assert.match(source, /Yang Menerima/);
+  assert.match(source, /sign-name/);
+  assert.match(source, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+});
+
+test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () => {
+  assert.match(source, /sppg\.nama_kepala_sppi/);
+  assert.match(source, /Mengetahui,/);
+  assert.match(source, /Kepala SPPI/);
+  assert.match(source, /const signatures=isBast/);
+  assert.match(source, /esc\(dist\.nama_petugas\|\|""\)/);
+});
