@@ -5,7 +5,7 @@ const $=(selector,root=document)=>root.querySelector(selector);
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LETTERHEAD_LOGO_URL="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png";
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null;
+let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false;
 
 async function api(route,body){
  const headers={"apikey":KEY,"Accept":"application/json"};
@@ -92,6 +92,7 @@ function switchTab(next){
  $(".docs-view-history",modal).hidden=tab!=="history";
  status("");
  if(tab==="history")loadDistributions().catch(e=>status(e.message,true));
+ else if(!masterLoaded)loadMaster().catch(e=>status(e.message,true));
 }
 function options(items,valueKey,labelKey,label){
  let html="<option value=''>"+esc(label)+"</option>";
@@ -112,6 +113,7 @@ async function loadMaster(){
  if(!Array.isArray(recipients)) throw new Error("Server tidak mengirim daftar penerima dalam format yang benar.");
  master=masterResult.status==="fulfilled"&&masterResult.value&&masterResult.value.data?masterResult.value.data:{};
  master.recipients=recipients;
+ masterLoaded=true;
  renderCreate();
  const activeCount=recipients.filter(isActiveRecipient).length;
  const warning=masterResult.status==="rejected"?" Data pendukung (menu/petugas/kendaraan/pengemudi) gagal dimuat; daftar penerima tetap tersedia.":"";
@@ -430,7 +432,9 @@ function init(){
  window.AutoDocDocuments=Object.freeze({
   open(){
    show();
-   switchTab("create");
+   tab="create";drawTabs();
+   $(".docs-view-create",modal).hidden=false;
+   $(".docs-view-history",modal).hidden=true;
   },
   close,
   openArchive(date){
