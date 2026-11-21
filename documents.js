@@ -390,12 +390,16 @@ function printDocuments(documents){
    }
   });
  };
- const logo=win.document.querySelector(".top-logo");
- if(logo&&!logo.complete){
-  logo.addEventListener("load",invokePrint,{once:true});
-  logo.addEventListener("error",invokePrint,{once:true});
-  setTimeout(invokePrint,3000);
- }else setTimeout(invokePrint,350);
+ const logos=Array.from(win.document.querySelectorAll(".top-logo"));
+ const imageReady=logo=>{
+  if(logo.complete)return Promise.resolve();
+  return new Promise(resolve=>{
+   logo.addEventListener("load",resolve,{once:true});
+   logo.addEventListener("error",resolve,{once:true});
+  });
+ };
+ Promise.all(logos.map(imageReady)).then(()=>setTimeout(invokePrint,100));
+ setTimeout(invokePrint,3000);
 }
 function printDocument(doc){printDocuments([doc])}
 function showRealization(card,doc){
