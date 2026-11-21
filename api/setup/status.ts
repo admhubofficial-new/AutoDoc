@@ -8,10 +8,9 @@ export default {
     try {
       const data = await selectOne<{
         setup_completed_at: string | null;
-        token_hash: string | null;
-      }>("settings", "setup_completed_at,token_hash", { id: "eq.1" });
+      }>("settings", "setup_completed_at", { id: "eq.1" });
 
-      const setupComplete = Boolean(data?.setup_completed_at && data?.token_hash);
+      const setupComplete = Boolean(data?.setup_completed_at);
       return json({
         setupRequired: !setupComplete,
         setupComplete,
