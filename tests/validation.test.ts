@@ -4,7 +4,7 @@ import {
   isValidClockTime,
   isValidIsoDate,
   normalizeUuidList,
-  parseNonNegativeInteger,
+  parseNonNegativeInteger,\n  parseContentRangeTotal,
 } from "../supabase/functions/autodoc-auth/validation.ts";
 
 test("date validation accepts real ISO calendar dates and rejects impossible dates", () => {
@@ -45,4 +45,15 @@ test("UUID recipient lists validate shape, enforce a maximum, and de-duplicate I
   assert.equal(normalizeUuidList(["not-a-uuid"]), null);
   assert.equal(normalizeUuidList([a, 1]), null);
   assert.equal(normalizeUuidList(Array(101).fill(a)), null);
+});
+
+
+test("PostgREST exact content range totals are parsed safely", () => {
+  assert.equal(parseContentRangeTotal("0-0/17"), 17);
+  assert.equal(parseContentRangeTotal("*/0"), 0);
+  assert.equal(parseContentRangeTotal("0-0/0"), 0);
+  assert.equal(parseContentRangeTotal(null), null);
+  assert.equal(parseContentRangeTotal("items 0-0/17"), null);
+  assert.equal(parseContentRangeTotal("0-0/*"), null);
+  assert.equal(parseContentRangeTotal("0-0/-1"), null);
 });
