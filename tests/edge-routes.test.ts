@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../supabase/functions/autodoc-auth/index.ts", import.meta.url), "utf8");
 const documentsUi = readFileSync(new URL("../documents.js", import.meta.url), "utf8");
+const archiveUi = readFileSync(new URL("../archive.js", import.meta.url), "utf8");
 const masterUi = readFileSync(new URL("../master.js", import.meta.url), "utf8");
 const indexHtml = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const dashboardUi = readFileSync(new URL("../dashboard.js", import.meta.url), "utf8");
@@ -90,21 +91,21 @@ test("document creation uses a guided flow and recipients are explicitly selecte
 });
 
 test("archive provides global search, page selection, and PIN-confirmed bulk deletion controls", () => {
-  assert.match(documentsUi, /api\("docs\/days"\+query\)/);
-  assert.match(documentsUi, /docsDaysSearch/);
-  assert.match(documentsUi, /docsDaysSelectAll/);
-  assert.match(documentsUi, /Pilih semua pada halaman ini/);
-  assert.match(documentsUi, /docsDaysDelete/);
-  assert.match(documentsUi, /docs-delete-panel/);
-  assert.match(documentsUi, /docsDeletePin/);
-  assert.match(documentsUi, /docs\/delete-history/);
-  assert.match(documentsUi, /distribution_ids:ids/);
+  assert.match(archiveUi, /api\("docs\/days"\+query\)/);
+  assert.match(archiveUi, /docsDaysSearch/);
+  assert.match(archiveUi, /docsDaysSelectAll/);
+  assert.match(archiveUi, /Pilih semua pada halaman ini/);
+  assert.match(archiveUi, /docsDaysDelete/);
+  assert.match(archiveUi, /docs-delete-panel/);
+  assert.match(archiveUi, /docsDeletePin/);
+  assert.match(archiveUi, /docs\/delete-history/);
+  assert.match(archiveUi, /distribution_ids:ids/);
+  assert.match(archiveUi, /docsDaysPrevious/);
+  assert.match(archiveUi, /docsDaysNext/);
   assert.match(documentsUi, /function renderDocumentGroup/);
   assert.match(documentsUi, /function printDocuments/);
   assert.match(documentsUi, /docsPrintSj/);
   assert.match(documentsUi, /docsPrintBast/);
-  assert.match(documentsUi, /docsDaysPrevious/);
-  assert.match(documentsUi, /docsDaysNext/);
 });
 
 test("navigation opens document and master modules through public module APIs, not hidden launchers", () => {

@@ -6,6 +6,7 @@ import { runInNewContext } from "node:vm";
 const source = readFileSync(new URL("../documents.js", import.meta.url), "utf8");
 const organolepticSource = readFileSync(new URL("../organoleptic-print.js", import.meta.url), "utf8");
 const printRendererSource = readFileSync(new URL("../documents-print.js", import.meta.url), "utf8");
+const archiveSource = readFileSync(new URL("../archive.js", import.meta.url), "utf8");
 const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
@@ -143,25 +144,29 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
   assert.match(printRendererSource, /escapeHtml\(dist\.nama_petugas\|\|""\)/);
 });
 
-test("archive global search and bulk deletion use explicit page selection and require a PIN", () => {
-  assert.match(source, /async function loadDistributions/);
-  assert.match(source, /api\("docs\/days"\+query\)/);
-  assert.match(source, /docsDaysSelectAll/);
-  assert.match(source, /Pilih semua pada halaman ini/);
-  assert.match(source, /selectedIds\.add/);
-  assert.match(source, /docsDaysDelete/);
-  assert.match(source, /docsDeletePin/);
-  assert.match(source, /api\("docs\/delete-history"/);
-  assert.match(source, /distribution_ids:ids/);
-  assert.match(source, /const token=pin\.value/);
+test("archive module owns global search, page selection, and PIN-protected bulk deletion", () => {
+  assert.match(archiveSource, /async function loadDistributions/);
+  assert.match(archiveSource, /api\("docs\/days"\+query\)/);
+  assert.match(archiveSource, /docsDaysSelectAll/);
+  assert.match(archiveSource, /Pilih semua pada halaman ini/);
+  assert.match(archiveSource, /selectedIds\.add/);
+  assert.match(archiveSource, /selectedIds\.size<60/);
+  assert.match(archiveSource, /docsDaysDelete/);
+  assert.match(archiveSource, /docsDeletePin/);
+  assert.match(archiveSource, /api\("docs\/delete-history"/);
+  assert.match(archiveSource, /distribution_ids:ids/);
+  assert.match(archiveSource, /const token=pin\.value/);
+  assert.match(source, /archiveController\.loadDistributions/);
 });
+
 
 
 test("organoleptic renderer module loads before documents and exposes the expected API", () => {
   const rendererTag = htmlSource.indexOf('src="./organoleptic-print.js?v=organoleptic-render-module-20261122"');
   const printTag = htmlSource.indexOf('src="./documents-print.js?v=documents-print-renderer-20261122"');
-  const documentsTag = htmlSource.indexOf('src="./documents.js?v=documents-print-renderer-20261122"');
-  assert.ok(rendererTag >= 0 && printTag > rendererTag && documentsTag > printTag);
+  const archiveTag = htmlSource.indexOf('src="./archive.js?v=archive-search-bulk-delete-module-20261122"');
+  const documentsTag = htmlSource.indexOf('src="./documents.js?v=archive-search-bulk-delete-module-20261122"');
+  assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && documentsTag > archiveTag);
   assert.match(organolepticSource, /window\.AutoDocOrganolepticPrint\s*=\s*Object\.freeze/);
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
     assert.match(organolepticSource, new RegExp(name));
