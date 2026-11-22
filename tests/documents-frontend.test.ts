@@ -285,7 +285,7 @@ test("all SJ and BAST signatory blocks render a consistent horizontal signature 
   const bast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/1",snapshot_json:snapshot,realisasi:{nama_penerima:"Penerima",items:[]}},escapeHtml,"logo.png");
   assert.equal((sj.match(/class='sign-line'/g)||[]).length,3);
   assert.equal((bast.match(/class='sign-line'/g)||[]).length,3);
-  assert.match(sj,/Petugas<\\/div>/);
-  assert.match(sj,/Pengemudi<\\/div>/);
-  assert.match(bast,/Kepala SPPI<\\/div>/);
+  assert.ok(sj.includes("Petugas</div>"));
+  assert.ok(sj.includes("Pengemudi</div>"));
+  assert.ok(bast.includes("Kepala SPPI</div>"));
 });
