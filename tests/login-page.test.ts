@@ -50,3 +50,17 @@ test("mobile drawer keeps its dedicated spacing at narrow phone widths", () => {
   assert.match(css, /\.home-topbar,\.home-page\.sidebar-collapsed \.home-topbar\{position:fixed[\s\S]*?padding:22px 16px 16px/);
   assert.doesNotMatch(css, /@media \(max-width: 480px\)[\s\S]*?\.home-topbar\s*\{\s*padding:\s*0 16px/);
 });
+
+
+test("authenticated reload never renders the login page before session verification", () => {
+  assert.match(page, /<body class="auth-pending">/);
+  assert.match(page, /id="authBoot"[\s\S]*?Memeriksa sesi AutoDoc/);
+  assert.match(page, /id="authPage" class="auth-page" hidden/);
+  assert.match(page, /body\.auth-pending #authPage,[\s\S]*?display:none!important/);
+  const initialize = page.slice(page.indexOf("async function initialize()"), page.indexOf("initialize();"));
+  assert.ok(initialize.indexOf('requestJson("auth/session")') < initialize.indexOf("showLogin();"));
+  assert.doesNotMatch(initialize, /authPage\.hidden\s*=\s*false/);
+  assert.match(page, /function finishAuthBootstrap\(\)[\s\S]*?classList\.remove\("auth-pending"\)/);
+  assert.match(page, /function showHome\(\)\s*\{\s*finishAuthBootstrap\(\)/);
+  assert.match(page, /function showLogin\(\)\s*\{\s*finishAuthBootstrap\(\)/);
+});
