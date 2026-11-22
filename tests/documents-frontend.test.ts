@@ -65,7 +65,7 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /frame\.srcdoc=html/);
   assert.match(source, /form\.addEventListener\("input",\(\)=>previewController\?\.updateLivePreview\(\)\)/);
   assert.match(source, /form\.addEventListener\("change",\(\)=>previewController\?\.updateLivePreview\(\)\)/);
-  assert.match(source, /PRATINJAU · BELUM DITERBITKAN/);
+  assert.match(previewSource, /PRATINJAU · BELUM DITERBITKAN/);
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
   assert.match(source, /value='ORGANOLEPTIC'/);
