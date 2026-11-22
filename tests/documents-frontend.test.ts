@@ -149,7 +149,9 @@ test("printed Surat Jalan has three role-specific signatories", () => {
   assert.match(printRendererSource, /Petugas Distribusi SPPG/);
   assert.match(printRendererSource, /Pengemudi/);
   assert.match(printRendererSource, /Yang Menerima/);
-  assert.match(printRendererSource, /sign-name/);
+  assert.match(printRendererSource, /sign-line/);
+  assert.match(printRendererSource, /sign-space/);
+  assert.match(printRendererSource, /signatureBlock\("Pengemudi"/);
   assert.match(printRendererSource, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 });
 
@@ -256,4 +258,34 @@ test("creation form accepts new staff, driver and vehicle values and remembers t
   assert.match(source, /api\("master\/save",\{entity,data\}\)/);
   assert.match(source, /rememberCreationInputs\(body\)/);
   assert.match(source, /masterSuggestions\(master\.menus,"teks_menu"\)/);
+});
+
+
+test("organoleptic signatures have clear writing lines and name positions", () => {
+  assert.match(organolepticSource, /className,"sign-line"/);
+  assert.match(organolepticSource, /className,"sign-person"/);
+  assert.match(source, /\.sign \.sign-line\{width:82%;height:1px/);
+  assert.doesNotMatch(source, /\.sign \.dots\{/);
+});
+
+test("all SJ and BAST signatory blocks render a consistent horizontal signature line", () => {
+  const sandbox = { window: {} };
+  runInNewContext(printRendererSource, sandbox);
+  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+  const snapshot = {
+    sppg: { nama_kepala_sppi: "Kepala SPPI" },
+    distribusi: { nama_petugas: "Petugas", nama_pengemudi: "Pengemudi" },
+    penerima: { nama: "Sekolah" },
+    rincian_porsi: [], ringkasan: { total_porsi: 0 }
+  };
+  const sj = buildPrintHtml({jenis:"SJ",nomor_lengkap:"SJ/1",snapshot_json:snapshot},escapeHtml,"logo.png");
+  const bast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/1",snapshot_json:snapshot,realisasi:{nama_penerima:"Penerima",items:[]}},escapeHtml,"logo.png");
+  assert.equal((sj.match(/class='sign-line'/g)||[]).length,3);
+  assert.equal((bast.match(/class='sign-line'/g)||[]).length,3);
+  assert.match(sj,/Petugas<\\/div>/);
+  assert.match(sj,/Pengemudi<\\/div>/);
+  assert.match(bast,/Kepala SPPI<\\/div>/);
 });
