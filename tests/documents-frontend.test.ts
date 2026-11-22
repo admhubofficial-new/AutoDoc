@@ -196,7 +196,7 @@ test("organoleptic renderer module loads before documents and exposes the expect
   const printTag = htmlSource.indexOf('src="./documents-print.js?v=documents-print-renderer-20261122"');
   const archiveTag = htmlSource.indexOf('src="./archive.js?v=archive-search-bulk-delete-module-20261122"');
   const realizationTag = htmlSource.indexOf('src="./bast-realization.js?v=bast-realization-module-20261122"');
-  const documentsTag = htmlSource.indexOf('src="./documents.js?v=single-page-live-preview-20261123"');
+  const documentsTag = htmlSource.indexOf('src="./documents.js?v=professional-operational-ui-20261123"');
   assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && realizationTag > archiveTag && documentsTag > realizationTag);
   assert.match(organolepticSource, /window\.AutoDocOrganolepticPrint\s*=\s*Object\.freeze/);
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
