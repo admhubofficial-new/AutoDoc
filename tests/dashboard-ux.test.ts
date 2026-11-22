@@ -37,7 +37,7 @@ test("primary navigation is a responsive workspace sidebar", () => {
   assert.match(index, /Arsip/);
   assert.match(index, /Data Master/);
   assert.match(index, /data-home-nav="archive"/);
-  assert.match(index, /documents\.js\?v=documents-print-renderer-20261122/);
+  assert.match(index, /documents\\.js\\?v=archive-search-bulk-delete-module-20261122/);
   assert.match(index, /body \.docs-overlay \.docs-dialog/);
   assert.match(index, /body \.dm-overlay \.dm-dialog/);
 });
