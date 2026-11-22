@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 
-const origin = "http://127.0.0.1:4173/AutoDoc/";
+const origin = "http://127.0.0.1:4173/";
 const recipientId = "11111111-1111-4111-8111-111111111111";
 const distributionId = "22222222-2222-4222-8222-222222222222";
 let server;
