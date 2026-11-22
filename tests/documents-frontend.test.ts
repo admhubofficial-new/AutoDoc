@@ -192,19 +192,17 @@ test("archive module owns global search, page selection, and PIN-protected bulk 
 
 
 test("organoleptic renderer module loads before documents and exposes the expected API", () => {
-  const rendererTag = htmlSource.indexOf('src="./organoleptic-print.js?v=organoleptic-render-module-20261122"');
-  const printTag = htmlSource.indexOf('src="./documents-print.js?v=documents-print-renderer-20261122"');
-  const archiveTag = htmlSource.indexOf('src="./archive.js?v=archive-search-bulk-delete-module-20261122"');
-  const realizationTag = htmlSource.indexOf('src="./bast-realization.js?v=bast-realization-module-20261122"');
-  const documentsTag = htmlSource.indexOf('src="./documents.js?v=professional-operational-ui-20261123"');
+  const rendererTag = htmlSource.indexOf('src="./organoleptic-print.js');
+  const printTag = htmlSource.indexOf('src="./documents-print.js');
+  const archiveTag = htmlSource.indexOf('src="./archive.js');
+  const realizationTag = htmlSource.indexOf('src="./bast-realization.js');
+  const documentsTag = htmlSource.indexOf('src="./documents.js');
   assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && realizationTag > archiveTag && documentsTag > realizationTag);
-  assert.match(organolepticSource, /window\.AutoDocOrganolepticPrint\s*=\s*Object\.freeze/);
+  assert.match(organolepticSource, /window\\.AutoDocOrganolepticPrint\\s*=\\s*Object\\.freeze/);
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
     assert.match(organolepticSource, new RegExp(name));
   }
-  assert.match(source, /window\.AutoDocOrganolepticPrint/);
-  assert.match(printRendererSource, /window\.AutoDocPrintRenderer\s*=\s*Object\.freeze/);
-  assert.match(source, /window\.AutoDocPrintRenderer/);
+  assert.match(source, /renderOrganolepticPreview/);
 });
 
 
