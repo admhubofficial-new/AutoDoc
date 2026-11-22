@@ -76,9 +76,9 @@ test("live print preview uses the production renderer and follows form changes",
 test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
   assert.match(menuSource, /items\.length>=8/);
   assert.match(source, /docsMenuSuggestions/);
-  assert.match(source, /Geser .* ke atas/);
-  assert.match(source, /Geser .* ke bawah/);
-  assert.match(source, /Hapus komponen/);
+  assert.match(menuSource, /Geser .* ke atas/);
+  assert.match(menuSource, /Geser .* ke bawah/);
+  assert.match(menuSource, /Hapus komponen/);
   assert.match(source, /function readMenuComponents\(\)/);
   assert.match(source, /docsAddMenuItem/);
 });
