@@ -198,7 +198,7 @@ test("organoleptic renderer module loads before documents and exposes the expect
   const realizationTag = htmlSource.indexOf('src="./bast-realization.js');
   const documentsTag = htmlSource.indexOf('src="./documents.js');
   assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && realizationTag > archiveTag && documentsTag > realizationTag);
-  assert.match(organolepticSource, /window\\.AutoDocOrganolepticPrint\\s*=\\s*Object\\.freeze/);
+  assert.ok(organolepticSource.includes("window.AutoDocOrganolepticPrint = Object.freeze"));
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
     assert.match(organolepticSource, new RegExp(name));
   }
