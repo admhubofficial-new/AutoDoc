@@ -112,7 +112,7 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("PRATINJAU · BELUM DITERBITKAN").waitFor();
     await page.locator("#docsStaff").fill("Petugas Browser Test");
-    await preview.getByText("Petugas Browser Test").waitFor();
+    await preview.getByText("Petugas Browser Test", { exact: true }).waitFor();
     assert.equal(app.writes.some(item => item.route === "docs/create"), false);
     assert.deepEqual(app.errors, []);
   } finally {
