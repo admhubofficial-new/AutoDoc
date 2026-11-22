@@ -230,9 +230,7 @@ function renderCreate(){
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
  const currentTime=nowInJakarta();
  const todayVal=currentTime.date;
- const menuSuggestions=(Array.isArray(master.menus)?master.menus:[])
-  .filter(item=>item&&item.aktif!==false&&String(item.teks_menu||"").trim())
-  .map(item=>"<option value='"+esc(item.teks_menu)+"'></option>").join("");
+ const menuSuggestions=masterSuggestions(master.menus,"teks_menu");
  target.innerHTML="<div class='docs-create-layout'>"+
   "<section class='docs-create-form-panel'>"+
    "<div class='docs-create-intro'><h3 class='docs-section-title'>Buat dokumen distribusi</h3><p class='docs-note'>Lengkapi rincian distribusi, pilih penerima, lalu periksa dokumen sebelum diterbitkan.</p></div>"+
