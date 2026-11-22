@@ -66,6 +66,9 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(source, /form\\.addEventListener\\("change",updateLivePreview\\)/);
   assert.match(source, /PRATINJAU · BELUM DITERBITKAN/);
   assert.match(source, /previewPortionRows/);
+  assert.match(source, /renderOrganolepticPreview/);
+  assert.match(source, /value='ORGANOLEPTIC'/);
+  assert.match(source, /docsPreviewRecipientSelect/);
 });
 
 test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
