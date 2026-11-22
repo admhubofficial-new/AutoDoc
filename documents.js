@@ -4,7 +4,12 @@ const { apiUrl: API, publishableKey: KEY } = window.AutoDocConfig;
 const $=(selector,root=document)=>root.querySelector(selector);
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LETTERHEAD_LOGO_URL="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png";
-const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+function nowInJakarta(){
+ const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Jakarta",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+ const values=Object.fromEntries(parts.filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));
+ return {date:values.year+"-"+values.month+"-"+values.day,time:values.hour+":"+values.minute};
+}
+const today=()=>nowInJakarta().date;
 let previewResizeBound=false, modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[], pendingOrganolepticPrint=null, archiveController=null, realizationController=null;
 
 async function api(route,body){
@@ -198,26 +203,26 @@ function renderCreate(){
  if(!target)return;
  menuComponents=[];
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
- const todayVal=today();
+ const currentTime=nowInJakarta();\n const todayVal=currentTime.date;
  const menuSuggestions=(Array.isArray(master.menus)?master.menus:[])
   .filter(item=>item&&item.aktif!==false&&String(item.teks_menu||"").trim())
   .map(item=>"<option value='"+esc(item.teks_menu)+"'></option>").join("");
  target.innerHTML="<div class='docs-create-layout'>"+
   "<section class='docs-create-form-panel'>"+
-   "<div class='docs-create-intro'><h3 class='docs-section-title'>Buat dokumen distribusi</h3><p class='docs-note'>Isi data sekali, pilih penerima, lalu terbitkan. Pratinjau di samping akan mengikuti perubahan data.</p></div>"+
+   "<div class='docs-create-intro'><h3 class='docs-section-title'>Buat dokumen distribusi</h3><p class='docs-note'>Lengkapi rincian distribusi, pilih penerima, lalu periksa dokumen sebelum diterbitkan.</p></div>"+
    "<form id='docsCreateForm' autocomplete='off'>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><span class='docs-section-number'>1</span><div><h4>Dokumen dan tanggal</h4><p>Pilih dokumen yang diperlukan.</p></div></div>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Dokumen</h4><p>Pilih jenis dokumen yang akan diterbitkan.</p></div></div>"+
      "<fieldset class='docs-kind-group'><legend>Terbitkan</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label></fieldset>"+
      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div><div class='docs-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
      "<label class='docs-organoleptic-option'><input id='docsIncludeOrganoleptic' type='checkbox'><span><strong>Tambahkan Formulir Uji Organoleptik</strong><small>Satu lembar A4 untuk setiap penerima.</small></span></label>"+
     "</section>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><span class='docs-section-number'>2</span><div><h4>Informasi distribusi</h4><p>Isi yang tersedia; kolom bertanda opsional boleh dikosongkan.</p></div></div>"+
-     "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat (opsional)</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas (opsional)</label><select id='docsStaff'>"+options(master.staff,"nama","nama","Pilih petugas")+"</select></div><div class='docs-field'><label for='docsDriver'>Pengemudi (opsional)</label><select id='docsDriver'>"+options(master.drivers,"nama","nama","Pilih pengemudi")+"</select></div><div class='docs-field'><label for='docsVehicle'>Kendaraan (opsional)</label><select id='docsVehicle'>"+options(master.vehicles,"no_kendaraan","no_kendaraan","Pilih kendaraan")+"</select></div></div>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Rincian distribusi</h4><p>Lengkapi informasi perjalanan. Kolom lain dapat disesuaikan.</p></div></div>"+
+     "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time' value='"+currentTime.time+"'><small class='docs-field-hint'>Terisi otomatis mengikuti waktu WIB saat formulir dibuka.</small></div><div class='docs-field'><label for='docsStaff'>Petugas (opsional)</label><select id='docsStaff'>"+options(master.staff,"nama","nama","Pilih petugas")+"</select></div><div class='docs-field'><label for='docsDriver'>Pengemudi (opsional)</label><select id='docsDriver'>"+options(master.drivers,"nama","nama","Pilih pengemudi")+"</select></div><div class='docs-field'><label for='docsVehicle'>Kendaraan (opsional)</label><select id='docsVehicle'>"+options(master.vehicles,"no_kendaraan","no_kendaraan","Pilih kendaraan")+"</select></div></div>"+
     "</section>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><span class='docs-section-number'>3</span><div><h4>Menu hari ini</h4><p>Maksimal 8 komponen. Boleh dikosongkan.</p></div></div>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Menu distribusi</h4><p>Tambahkan hingga 8 komponen menu.</p></div></div>"+
      "<div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist><div class='docs-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah menu</button></div>"+
     "</section>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><span class='docs-section-number'>4</span><div><h4>Pilih penerima</h4><p>Centang penerima yang akan menerima dokumen.</p></div></div>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Penerima</h4><p>Pilih tujuan distribusi.</p></div></div>"+
      "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-head'><strong>Penerima <span id='docsSelectedCount'>(0 dipilih)</span></strong><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari penerima...' aria-label='Cari penerima'><button type='button' class='docs-btn' id='docsSelectAll'>Pilih terlihat</button><button type='button' class='docs-btn' id='docsClearAll'>Kosongkan</button></div></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
     "</section>"+
     "<div class='docs-submit-bar'><div><strong id='docsSubmitCount'>0 penerima dipilih</strong><small>Nomor dokumen dibuat saat diterbitkan.</small></div><button class='docs-btn primary' id='docsCreateButton' type='submit'>Terbitkan dokumen</button></div>"+
