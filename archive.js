@@ -9,7 +9,7 @@ function create({ getModal, $, node, status, api, loadHistory }) {
  const previous=$("#docsDaysPrevious",target),next=$("#docsDaysNext",target),pageLabel=$("#docsDaysPage",target);
  const selectAll=$("#docsDaysSelectAll",target),selectionCount=$("#docsDaysSelectionCount",target),deleteButton=$("#docsDaysDelete",target);
  const confirmSlot=$("#docsDeleteConfirmSlot",target);
- let offset=0,hasMore=false,rows=[],searchTimer=null;
+ let offset=0,hasMore=false,rows=[],searchTimer=null,requestSequence=0;
  const selectedIds=new Set(),selectedDetails=new Map();
  function updateSelection(){
   const count=selectedIds.size;
@@ -62,17 +62,20 @@ function create({ getModal, $, node, status, api, loadHistory }) {
   updateSelection();
  }
  async function loadPage(nextOffset){
+  const requestId=++requestSequence;
   status("Memuat arsip…");
   previous.disabled=true;next.disabled=true;
   try{
    const query="?offset="+encodeURIComponent(nextOffset)+"&q="+encodeURIComponent(input.value.trim());
    const result=await api("docs/days"+query);
+   if(requestId!==requestSequence)return;
    rows=Array.isArray(result.distributions)?result.distributions:[];
    offset=Number(result.offset||0);hasMore=Boolean(result.has_more);
    rows.forEach(row=>{const id=String(row.id);if(selectedIds.has(id))selectedDetails.set(id,row)});
    renderDays();
    status(rows.length+" riwayat dimuat pada halaman ini.");
   }catch(error){
+   if(requestId!==requestSequence)return;
    status(error.message,true);
    list.replaceChildren(node("div","docs-empty","Arsip gagal dimuat. Periksa sesi dan koneksi, lalu coba lagi."));
    previous.disabled=offset===0;next.disabled=true;
