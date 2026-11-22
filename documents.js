@@ -185,7 +185,7 @@ async function copyLastMenu(){
 function renderCreate(){
  const target=$(".docs-view-create",modal);
  if(!target)return;
- menuComponents=[];
+ menuController?.reset();
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
  const currentTime=nowInJakarta();
  const todayVal=currentTime.date;
