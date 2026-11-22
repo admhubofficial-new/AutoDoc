@@ -49,11 +49,26 @@ test("creation trusts the session-protected endpoint that already filters active
   assert.ok(!source.includes("master.recipients).filter(isActiveRecipient"));
 });
 
-test("wizard offers SJ and BAST selected by default and requires a numbered document", () => {
+test("single-page creation keeps SJ and BAST selected by default without wizard steps", () => {
   assert.match(source, /id='docsKindSj' type='checkbox' checked/);
   assert.match(source, /id='docsKindBast' type='checkbox' checked/);
   assert.match(source, /function selectedDocumentKinds\(\)/);
+  assert.match(source, /docs-create-layout/);
+  assert.doesNotMatch(source, /docs-wizard-steps|data-step-pane|goWizardStep/);
   assert.match(source, /Pilih minimal Surat Jalan atau BAST/);
+});
+
+test("live print preview uses the production renderer and follows form changes", () => {
+  assert.match(source, /function updateLivePreview\(\)/);
+  assert.match(source, /window\.AutoDocPrintRenderer/);
+  assert.match(source, /frame\.srcdoc=html/);
+  assert.match(source, /form\.addEventListener\("input",updateLivePreview\)/);
+  assert.match(source, /form\.addEventListener\("change",updateLivePreview\)/);
+  assert.match(source, /PRATINJAU · BELUM DITERBITKAN/);
+  assert.match(source, /previewPortionRows/);
+  assert.match(source, /renderOrganolepticPreview/);
+  assert.match(source, /value='ORGANOLEPTIC'/);
+  assert.match(source, /docsPreviewRecipientSelect/);
 });
 
 test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
@@ -66,19 +81,20 @@ test("daily menu supports eight ordered components, suggestions, reordering, and
   assert.match(source, /docsAddMenuItem/);
 });
 
-test("wizard can copy the ordered menu from the latest distribution archive", () => {
+test("single-page form can copy the ordered menu from the latest distribution archive", () => {
   assert.match(source, /function copyLastMenu\(\)/);
   assert.match(source, /api\("docs\/days\?offset=0"\)/);
   assert.match(source, /api\("docs\/list\?tanggal="/);
   assert.match(source, /distribution\.menu_items/);
-  assert.match(source, /Salin dari distribusi terakhir/);
+  assert.match(source, /Salin menu terakhir/);
 });
 
 test("creation sends menu components, meal time, and only selected numbered document types", () => {
   assert.match(source, /menu_items:menuItems/);
   assert.match(source, /waktu_makan:\$\("#docsMealTime",modal\)\.value/);
   assert.match(source, /jenis_dokumen:kinds/);
-  assert.match(source, /const values=\{[\s\S]*?"Jumlah dokumen bernomor":selected\.length\*kinds\.length/);
+  assert.match(source, /recipient_ids:selected/);
+  assert.match(source, /const body=\{/);
   assert.doesNotMatch(source, /menu:\$\("#docsMenu",modal\)\.value/);
 });
 
@@ -180,7 +196,7 @@ test("organoleptic renderer module loads before documents and exposes the expect
   const printTag = htmlSource.indexOf('src="./documents-print.js?v=documents-print-renderer-20261122"');
   const archiveTag = htmlSource.indexOf('src="./archive.js?v=archive-search-bulk-delete-module-20261122"');
   const realizationTag = htmlSource.indexOf('src="./bast-realization.js?v=bast-realization-module-20261122"');
-  const documentsTag = htmlSource.indexOf('src="./documents.js?v=archive-search-bulk-delete-module-20261122"');
+  const documentsTag = htmlSource.indexOf('src="./documents.js?v=single-page-live-preview-20261123"');
   assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && realizationTag > archiveTag && documentsTag > realizationTag);
   assert.match(organolepticSource, /window\.AutoDocOrganolepticPrint\s*=\s*Object\.freeze/);
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {

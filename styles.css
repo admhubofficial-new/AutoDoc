@@ -353,3 +353,61 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
+
+
+/* Alur penerbitan satu halaman dengan pratinjau cetak langsung */
+.docs-create-layout{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);gap:24px;align-items:start}
+.docs-create-form-panel{min-width:0}
+.docs-create-intro{padding:0 0 5px}
+.docs-create-intro .docs-note{margin:4px 0 8px}
+.docs-form-section{padding:17px 0;border-bottom:1px solid #e5ebe4}
+.docs-form-section-head{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.docs-form-section-head>div{min-width:0}
+.docs-form-section-head h4{margin:0;color:#294536;font-size:14px}
+.docs-form-section-head p{margin:3px 0 0;color:#7a887e;font-size:10px;line-height:1.5}
+.docs-section-number{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:9px;background:#eaf3ea;color:#174b39;font-size:12px;font-weight:800}
+.docs-grid-compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.docs-form-section .docs-kind-group{margin:0 0 12px;padding:10px 12px}
+.docs-form-section .docs-organoleptic-option{margin:12px 0 0;padding:10px 12px}
+.docs-form-section .docs-recipient-box{margin-top:0;padding:12px}
+.docs-recipient-box-compact .docs-recipient-list{max-height:270px;grid-template-columns:1fr 1fr}
+.docs-recipient-box-compact .docs-recipient-tools input{min-width:150px}
+.docs-form-section .docs-menu-head{margin-bottom:8px}
+.docs-form-section .docs-menu-head strong{font-size:11px;color:#7a887e}
+.docs-form-section .docs-menu-actions{margin-top:8px}
+.docs-submit-bar{position:sticky;bottom:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:13px 0 4px;background:linear-gradient(180deg,rgba(246,247,245,0),#f6f7f5 24%)}
+.docs-submit-bar strong,.docs-submit-bar small{display:block}
+.docs-submit-bar strong{color:#294536;font-size:12px}
+.docs-submit-bar small{margin-top:3px;color:#7a887e;font-size:10px}
+.docs-submit-bar .docs-btn{min-height:44px;padding-inline:18px}
+.docs-preview-panel{position:sticky;top:94px;min-width:0;overflow:hidden;border:1px solid #dfe7df;border-radius:14px;background:#fff;box-shadow:0 8px 28px rgba(28,60,39,.06)}
+.docs-preview-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid #e7ece7}
+.docs-preview-head strong,.docs-preview-head small{display:block}
+.docs-preview-head strong{color:#294536;font-size:13px}
+.docs-preview-head small{margin-top:3px;color:#7a887e;font-size:10px}
+.docs-preview-head select{max-width:145px;min-height:36px;padding:6px 9px;border:1px solid #dce5dc;border-radius:8px;background:#fff;color:#294536;font:inherit;font-size:11px}
+.docs-preview-caption{padding:9px 14px;color:#718076;background:#f8faf7;font-size:10px;line-height:1.5}
+.docs-preview-paper{padding:12px;background:#e9eee9;overflow:hidden}
+.docs-preview-paper iframe{display:block;width:100%;height:560px;border:0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+@media(max-width:980px){
+ .docs-create-layout{grid-template-columns:minmax(0,1fr)}
+ .docs-preview-panel{position:relative;top:auto}
+ .docs-preview-paper iframe{max-height:none}
+}
+@media(max-width:600px){
+ .docs-grid-compact,.docs-recipient-box-compact .docs-recipient-list{grid-template-columns:1fr}
+ .docs-recipient-box-compact .docs-recipient-tools{width:100%}
+ .docs-recipient-box-compact .docs-recipient-tools input{flex:1;min-width:0}
+ .docs-submit-bar{align-items:stretch;flex-direction:column}
+ .docs-submit-bar .docs-btn{width:100%}
+ .docs-preview-head{align-items:flex-start}
+ .docs-preview-head select{max-width:125px}
+}
+
+.docs-preview-selects{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.docs-preview-selects select{max-width:145px;min-width:0}
+@media(max-width:600px){
+ .docs-create-form-panel .docs-grid-compact{grid-template-columns:1fr}
+ .docs-preview-selects{width:100%;justify-content:stretch}
+ .docs-preview-selects select{flex:1;max-width:none}
+}
