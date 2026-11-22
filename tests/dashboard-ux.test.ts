@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const dashboard = readFileSync(new URL("../dashboard.js", import.meta.url), "utf8");
 const index = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 
 test("dashboard only raises follow-up alerts for actionable data issues", () => {
   assert.match(dashboard, /sppg_missing_fields/);
@@ -21,16 +22,16 @@ test("dashboard offers direct access to create documents and the archive", () =>
 });
 
 test("primary navigation is a responsive workspace sidebar", () => {
-  assert.match(index, /grid-template-columns:248px minmax\(0,1fr\)/);
-  assert.match(index, /@media\(max-width:720px\)/);
+  assert.match(css, /grid-template-columns:248px minmax\(0,1fr\)/);
+  assert.match(css, /@media\(max-width:720px\)/);
   assert.match(index, /homeNav/);
-  assert.match(index, /sidebar-collapsed/);
-  assert.match(index, /mobile-nav-open/);
+  assert.match(css, /sidebar-collapsed/);
+  assert.match(css, /mobile-nav-open/);
   assert.match(index, /homeSidebarBackdrop/);
   assert.ok(index.indexOf('<aside class="home-topbar" id="homeSidebar"') < index.indexOf('id="homeMenuToggle"'));
   assert.ok(index.indexOf('id="homeMenuToggle"') < index.indexOf('<nav class="home-nav"'));
   assert.doesNotMatch(index, /<header class="home-pagebar">[\\s]*<button[^>]*home-menu-toggle/);
-  assert.ok(index.includes('translateX(calc(-100% + 52px))'));
+  assert.ok(css.includes('translateX(calc(-100% + 52px))'));
   assert.match(index, /Ciutkan sidebar/);
   assert.match(index, /window\.matchMedia\("\(max-width: 720px\)"\)/);
   assert.match(index, /Buat Dokumen/);
@@ -39,6 +40,6 @@ test("primary navigation is a responsive workspace sidebar", () => {
   assert.match(index, /data-home-nav="archive"/);
   assert.match(index, /documents\.js\?v=archive-search-bulk-delete-module-20261122/);
   assert.match(index, /archive\.js\?v=archive-search-bulk-delete-module-20261122/);
-  assert.match(index, /body \.docs-overlay \.docs-dialog/);
-  assert.match(index, /body \.dm-overlay \.dm-dialog/);
+  assert.match(css, /body \.docs-overlay \.docs-dialog/);
+  assert.match(css, /body \.dm-overlay \.dm-dialog/);
 });
