@@ -153,11 +153,6 @@ async function loadMaster(){
  const warning=masterResult.status==="rejected"?" Data pendukung (menu/petugas/kendaraan/pengemudi) gagal dimuat; daftar penerima tetap tersedia.":"";
  status(activeCount+" penerima aktif berhasil dimuat dari "+recipients.length+" data."+warning,masterResult.status==="rejected");
 }
-function isActiveRecipient(recipient){
- if(!recipient||typeof recipient!=="object")return false;
- const value=recipient.aktif;
- return value===true||value===1||value==="1"||(typeof value==="string"&&value.trim().toLowerCase()==="true");
-}
 function renderMenuComponents(){
  const list=$("#docsMenuItems",modal);
  if(!list)return;
@@ -553,7 +548,6 @@ function printDocuments(documents){
  Promise.all(logos.map(imageReady)).then(()=>setTimeout(invokePrint,100));
  setTimeout(invokePrint,3000);
 }
-function printDocument(doc){printDocuments([doc])}
 const { organolepticElement, organolepticInfoRow, organolepticMealNode, organolepticTable, organolepticSheet } = window.AutoDocOrganolepticPrint;
 
 function getArchiveRecipients(){
