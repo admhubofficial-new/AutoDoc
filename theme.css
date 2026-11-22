@@ -1,0 +1,106 @@
+/* Penyegaran visual: antarmuka administrasi yang tenang dan berorientasi tugas */
+:root{
+ --forest:#24533e;
+ --forest-2:#2d6249;
+ --forest-3:#47745a;
+ --mint:#edf2ed;
+ --mint-2:#f5f7f4;
+ --cream:#f7f8f6;
+ --gold:#b7a16d;
+ --ink:#26332b;
+ --muted:#707b73;
+ --line:#e1e6e1;
+ --shadow:0 10px 28px rgba(27,43,32,.07);
+}
+body,.home-page,.docs-overlay,.dm-overlay{background:#f5f6f4;color:#26332b}
+.home-topbar{background:#fff;border-right-color:#e2e6e2}
+.home-brand-name{color:#294b38;font-weight:700;letter-spacing:-.2px}
+.home-brand-sub,.home-date-label,.home-pagebar-label{color:#737e76}
+.home-pagebar{background:#fff;border-bottom-color:#e2e6e2}
+.home-pagebar-dot{display:none}
+.home-content{padding-top:32px}
+.home-eyebrow{display:none}
+.home-heading{margin-bottom:22px}
+.home-heading h1{font-size:24px;font-weight:650;letter-spacing:-.45px;color:#26362c}
+.home-heading p{color:#737e76;font-size:12px}
+.home-nav-caption{font-size:10px;letter-spacing:.55px;font-weight:650;color:#89928b}
+.home-nav{gap:3px}
+.home-nav button{border-radius:7px;font-weight:550}
+.home-nav button[aria-current=page]{background:#eef2ee;color:#294d39}
+.home-menu-toggle,.logout-button{border-radius:7px;box-shadow:none}
+.home-menu-toggle{color:#43564a}
+.home-sidebar-footer{border-top-color:#e7ebe7}
+.home-sidebar-mark{background:#eef2ee;color:#355a43}
+.home-create-button,.home-action.primary,.docs-btn.primary{background:#2c5941;border-color:#2c5941;box-shadow:none}
+.home-create-button:hover,.home-action.primary:hover,.docs-btn.primary:hover{background:#234a36}
+.home-summary,.home-panel{border-radius:9px;border-color:#e1e6e1;box-shadow:none}
+.home-summary-item{border-radius:7px;background:#f8f9f7}
+.home-summary-item strong{color:#304f3b}
+.home-summary-menu{border-radius:7px;background:#f5f7f5}
+.home-action,.home-inline-link{border-radius:7px;box-shadow:none}
+body .docs-overlay .docs-head,body .dm-overlay .dm-head{border-bottom-color:#e2e6e2}
+body .docs-overlay .docs-head h2,body .dm-overlay .dm-head h2{font-size:18px;font-weight:650;color:#26372d}
+body .docs-overlay .docs-head p{font-size:11px;color:#737e76}
+body .docs-overlay .docs-body,body .dm-overlay .dm-content{padding-top:24px}
+.docs-create-layout{gap:28px;grid-template-columns:minmax(0,1fr) minmax(390px,.94fr)}
+.docs-create-intro{padding-bottom:10px}
+.docs-section-title{font-size:18px;font-weight:650;letter-spacing:-.25px;color:#293a30}
+.docs-create-intro .docs-note{max-width:680px;color:#737e76;font-size:11px}
+.docs-form-section{padding:18px 0;border-bottom-color:#e3e7e3}
+.docs-form-section-head{gap:0;margin-bottom:12px}
+.docs-form-section-head h4{font-size:13px;font-weight:650;color:#2d3e33}
+.docs-form-section-head p{font-size:10px;color:#7b857e}
+.docs-section-number{display:none}
+.docs-field label{font-size:11px;font-weight:600;color:#4e5c52}
+.docs-field input,.docs-field select,.docs-field textarea,
+.docs-recipient-tools input,.docs-preview-head select{border-color:#d9dfd9;border-radius:7px;box-shadow:none}
+.docs-field input:focus,.docs-field select:focus,.docs-field textarea:focus,
+.docs-recipient-tools input:focus,.docs-preview-head select:focus{outline:2px solid #b9c9bc;outline-offset:1px;border-color:#78947e}
+.docs-field-hint{color:#808a82;font-size:10px;line-height:1.45}
+.docs-kind-choice,.docs-organoleptic-option{border-radius:7px}
+.docs-btn{border-radius:7px;font-weight:600}
+.docs-recipient-box{border-color:#e1e6e1;border-radius:8px;box-shadow:none}
+.docs-recipient{border-radius:7px;background:#fff}
+.docs-recipient:hover{border-color:#cbd6cc;background:#fafbfa}
+.docs-submit-bar{background:linear-gradient(180deg,rgba(245,246,244,0),#f5f6f4 24%)}
+.docs-submit-bar strong{font-weight:650;color:#35483b}
+.docs-preview-panel{top:82px;border-color:#dfe4df;border-radius:9px;box-shadow:0 3px 12px rgba(27,43,32,.045)}
+.docs-preview-head{padding:12px 14px}
+.docs-preview-head strong{font-size:12px;font-weight:650;color:#2d3e33}
+.docs-preview-head small,.docs-preview-caption{color:#78837b}
+.docs-preview-caption{background:#f7f8f6}
+.docs-preview-paper{background:#e9ece9}
+.docs-preview-paper iframe{box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.dm-dialog,.docs-dialog{box-shadow:none}
+@media(max-width:980px){.docs-create-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:720px){
+ .home-content{padding-top:24px}
+ .home-heading h1{font-size:22px}
+ .docs-create-layout{gap:18px}
+ .docs-preview-panel{border-radius:8px}
+}
+
+
+/* Sidebar tertutup tetap menjadi rail navigasi, tidak menutupi konten utama. */
+@media(max-width:720px){
+  .home-page .home-workspace{margin-left:52px;width:calc(100% - 52px);min-width:0}
+  .home-page.mobile-nav-open .home-workspace{margin-left:52px;width:calc(100% - 52px)}
+  .home-page .home-sidebar-backdrop{left:52px}
+  .home-page .home-menu-toggle{right:8px}
+}
+.home-page.sidebar-collapsed .home-topbar{overflow:visible}
+.home-page.sidebar-collapsed .home-brand img{width:34px;height:34px}
+.home-page.sidebar-collapsed .home-nav{margin-top:2px}
+.home-page.sidebar-collapsed .home-nav button{min-height:44px}
+.home-page.sidebar-collapsed .home-nav-icon{flex-basis:22px;width:22px;height:22px}
+.home-page.sidebar-collapsed .home-nav-icon svg{width:19px;height:19px}
+.home-page.sidebar-collapsed .home-menu-toggle{margin-bottom:16px}
+.docs-field-hint{display:block;color:#78847b;font-size:10px;line-height:1.5}
+
+
+/* Auth bootstrap: jangan tampilkan login/home sebelum status sesi tervalidasi. */
+body.auth-pending #authPage,
+body.auth-pending #homePage{display:none!important}
+.auth-boot{min-height:100vh;min-height:100svh;display:flex;align-items:center;justify-content:center;gap:12px;padding:24px;background:#f6f7f5;color:#66756d;font-size:13px;font-weight:500}
+.auth-boot[hidden]{display:none}
+.auth-boot-mark{display:grid;width:34px;height:34px;place-items:center;border:1px solid #dce6dd;border-radius:9px;background:#fff;color:#1e5a43;font-size:12px;font-weight:750;letter-spacing:.04em}
