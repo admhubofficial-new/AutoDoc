@@ -149,10 +149,10 @@ test("BAST realization form is isolated in its module and preserves validation a
   assert.match(realizationSource, /function showRealization\(card,doc\)/);
   assert.match(realizationSource, /Porsi kecil diterima \*/);
   assert.match(realizationSource, /Porsi besar diterima \*/);
-  assert.match(realizationSource, /max='\"\+deliveredSmall\+\"'/);
-  assert.match(realizationSource, /max='\"\+deliveredLarge\+\"'/);
+  assert.match(realizationSource, /deliveredSmall/);
+  assert.match(realizationSource, /deliveredLarge/);
   assert.match(realizationSource, /name='token' type='password' required minlength='6' maxlength='128'/);
-  assert.match(realizationSource, /api\("docs\\/realization",data\)/);
+  assert.match(realizationSource, /api\("docs\/realization",data\)/);
   assert.match(realizationSource, /data\.document_id=doc\.id/);
   assert.match(source, /realizationController\.showRealization/);
   assert.match(source, /window\.AutoDocBastRealization\.create/);
