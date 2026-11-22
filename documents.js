@@ -5,7 +5,7 @@ const $=(selector,root=document)=>root.querySelector(selector);
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LETTERHEAD_LOGO_URL="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png";
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[], pendingOrganolepticPrint=null, archiveController=null, realizationController=null;
+let previewResizeBound=false, modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[], pendingOrganolepticPrint=null, archiveController=null, realizationController=null;
 
 async function api(route,body){
  const headers={"apikey":KEY,"Accept":"application/json"};
@@ -237,6 +237,7 @@ function renderCreate(){
  form.addEventListener("input",updateLivePreview);
  form.addEventListener("change",updateLivePreview);
  form.addEventListener("submit",createDocs);
+ if(!previewResizeBound){window.addEventListener("resize",fitPreviewFrame);previewResizeBound=true;}
  updateLivePreview();
 }
 function previewPortionRows(recipient){
