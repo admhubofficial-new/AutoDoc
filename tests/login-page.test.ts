@@ -38,7 +38,7 @@ test("login, setup, logout and session routes remain unchanged", () => {
 });
 
 test("workspace styles load from one versioned stylesheet", () => {
-  assert.match(page, /<link rel="stylesheet" href="\.\/styles\.css\?v=professional-operational-ui-20261123">/);
+  assert.match(page, /<link rel="stylesheet" href="\.\/styles\.css\?v=manual-master-entry-sidebar-rail-20261123">/);
   assert.doesNotMatch(page, /<style>/);
   assert.match(css, /\.home-page\.sidebar-collapsed\{grid-template-columns:76px minmax\(0,1fr\)\}/);
   assert.match(css, /\.home-page\.mobile-nav-open \.home-topbar\{transform:translateX\(0\)/);

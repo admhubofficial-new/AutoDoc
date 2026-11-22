@@ -494,3 +494,20 @@ body .docs-overlay .docs-body,body .dm-overlay .dm-content{padding-top:24px}
  .docs-create-layout{gap:18px}
  .docs-preview-panel{border-radius:8px}
 }
+
+
+/* Sidebar tertutup tetap menjadi rail navigasi, tidak menutupi konten utama. */
+@media(max-width:720px){
+  .home-page .home-workspace{margin-left:52px;width:calc(100% - 52px);min-width:0}
+  .home-page.mobile-nav-open .home-workspace{margin-left:52px;width:calc(100% - 52px)}
+  .home-page .home-sidebar-backdrop{left:52px}
+  .home-page .home-menu-toggle{right:8px}
+}
+.home-page.sidebar-collapsed .home-topbar{overflow:visible}
+.home-page.sidebar-collapsed .home-brand img{width:34px;height:34px}
+.home-page.sidebar-collapsed .home-nav{margin-top:2px}
+.home-page.sidebar-collapsed .home-nav button{min-height:44px}
+.home-page.sidebar-collapsed .home-nav-icon{flex-basis:22px;width:22px;height:22px}
+.home-page.sidebar-collapsed .home-nav-icon svg{width:19px;height:19px}
+.home-page.sidebar-collapsed .home-menu-toggle{margin-bottom:16px}
+.docs-field-hint{display:block;color:#78847b;font-size:10px;line-height:1.5}

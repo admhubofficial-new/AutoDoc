@@ -246,3 +246,14 @@ test("distribution date and departure time default to the current WIB date and t
   assert.match(source, /value='"\+currentTime\.time\+"'/);
   assert.match(source, /Terisi otomatis mengikuti waktu WIB saat formulir dibuka/);
 });
+
+
+test("creation form accepts new staff, driver and vehicle values and remembers them as master data", () => {
+  assert.match(source, /id='docsStaff' type='text' list='docsStaffSuggestions'/);
+  assert.match(source, /id='docsDriver' type='text' list='docsDriverSuggestions'/);
+  assert.match(source, /id='docsVehicle' type='text' list='docsVehicleSuggestions'/);
+  assert.match(source, /async function rememberMasterValue\(entity,field,value\)/);
+  assert.match(source, /api\("master\/save",\{entity,data\}\)/);
+  assert.match(source, /rememberCreationInputs\(body\)/);
+  assert.match(source, /masterSuggestions\(master\.menus,"teks_menu"\)/);
+});

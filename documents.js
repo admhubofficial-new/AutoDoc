@@ -108,6 +108,31 @@ function options(items,valueKey,labelKey,label){
  (items||[]).filter(x=>x.aktif!==false).forEach(x=>{html+="<option value='"+esc(x[valueKey])+"'>"+esc(x[labelKey])+"</option>"});
  return html;
 }
+function masterSuggestions(items,key){
+ return (Array.isArray(items)?items:[]).filter(item=>item&&item.aktif!==false&&String(item[key]||"").trim())
+  .map(item=>"<option value='"+esc(item[key])+"'></option>").join("");
+}
+async function rememberMasterValue(entity,field,value){
+ const normalized=String(value||"").trim();
+ if(!normalized)return false;
+ const list=Array.isArray(master[entity])?master[entity]:[];
+ if(list.some(item=>String(item[field]||"").trim().toLocaleLowerCase("id-ID")===normalized.toLocaleLowerCase("id-ID")))return false;
+ const data={[field]:normalized,aktif:true,urutan:(list.length+1)*10};
+ if(entity==="staff")data.jabatan="";
+ const result=await api("master/save",{entity,data});
+ const saved=result&&result.data?result.data:data;
+ master[entity]=[...list,saved];
+ return true;
+}
+async function rememberCreationInputs(body){
+ const tasks=[
+  ["staff","nama",body.nama_petugas],
+  ["drivers","nama",body.nama_pengemudi],
+  ["vehicles","no_kendaraan",body.no_kendaraan]
+ ];
+ for(const [entity,field,value] of tasks)await rememberMasterValue(entity,field,value);
+ for(const value of body.menu_items||[])await rememberMasterValue("menus","teks_menu",value);
+}
 async function loadMaster(){
  status("Memuat daftar penerima dan data pendukung...");
  const [masterResult,recipientResult]=await Promise.allSettled([
@@ -205,9 +230,7 @@ function renderCreate(){
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
  const currentTime=nowInJakarta();
  const todayVal=currentTime.date;
- const menuSuggestions=(Array.isArray(master.menus)?master.menus:[])
-  .filter(item=>item&&item.aktif!==false&&String(item.teks_menu||"").trim())
-  .map(item=>"<option value='"+esc(item.teks_menu)+"'></option>").join("");
+ const menuSuggestions=masterSuggestions(master.menus,"teks_menu");
  target.innerHTML="<div class='docs-create-layout'>"+
   "<section class='docs-create-form-panel'>"+
    "<div class='docs-create-intro'><h3 class='docs-section-title'>Buat dokumen distribusi</h3><p class='docs-note'>Lengkapi rincian distribusi, pilih penerima, lalu periksa dokumen sebelum diterbitkan.</p></div>"+
@@ -218,7 +241,7 @@ function renderCreate(){
      "<label class='docs-organoleptic-option'><input id='docsIncludeOrganoleptic' type='checkbox'><span><strong>Tambahkan Formulir Uji Organoleptik</strong><small>Satu lembar A4 untuk setiap penerima.</small></span></label>"+
     "</section>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Rincian distribusi</h4><p>Lengkapi informasi perjalanan. Kolom lain dapat disesuaikan.</p></div></div>"+
-     "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time' value='"+currentTime.time+"'><small class='docs-field-hint'>Terisi otomatis mengikuti waktu WIB saat formulir dibuka.</small></div><div class='docs-field'><label for='docsStaff'>Petugas (opsional)</label><select id='docsStaff'>"+options(master.staff,"nama","nama","Pilih petugas")+"</select></div><div class='docs-field'><label for='docsDriver'>Pengemudi (opsional)</label><select id='docsDriver'>"+options(master.drivers,"nama","nama","Pilih pengemudi")+"</select></div><div class='docs-field'><label for='docsVehicle'>Kendaraan (opsional)</label><select id='docsVehicle'>"+options(master.vehicles,"no_kendaraan","no_kendaraan","Pilih kendaraan")+"</select></div></div>"+
+     "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time' value='"+currentTime.time+"'><small class='docs-field-hint'>Terisi otomatis mengikuti waktu WIB saat formulir dibuka.</small></div><div class='docs-field'><label for='docsStaff'>Petugas *</label><input id='docsStaff' type='text' list='docsStaffSuggestions' maxlength='180' required placeholder='Pilih atau ketik nama petugas' autocomplete='off'><datalist id='docsStaffSuggestions'>"+masterSuggestions(master.staff,"nama")+"</datalist></div><div class='docs-field'><label for='docsDriver'>Pengemudi *</label><input id='docsDriver' type='text' list='docsDriverSuggestions' maxlength='180' required placeholder='Pilih atau ketik nama pengemudi' autocomplete='off'><datalist id='docsDriverSuggestions'>"+masterSuggestions(master.drivers,"nama")+"</datalist></div><div class='docs-field'><label for='docsVehicle'>Kendaraan *</label><input id='docsVehicle' type='text' list='docsVehicleSuggestions' maxlength='80' required placeholder='Pilih atau ketik nomor kendaraan' autocomplete='off'><datalist id='docsVehicleSuggestions'>"+masterSuggestions(master.vehicles,"no_kendaraan")+"</datalist></div></div><p class='docs-field-hint'>Nama dan nomor baru akan disimpan otomatis setelah dokumen berhasil diterbitkan, lalu tersedia sebagai pilihan pada pembuatan berikutnya.</p>"+
     "</section>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Menu distribusi</h4><p>Tambahkan hingga 8 komponen menu.</p></div></div>"+
      "<div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist><div class='docs-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah menu</button></div>"+
@@ -358,21 +381,31 @@ async function createDocs(event){
   menu_items:menuItems,
   waktu_makan:$("#docsMealTime",modal).value||"siang",
   jenis_dokumen:kinds,
-  nama_petugas:$("#docsStaff",modal).value,
-  nama_pengemudi:$("#docsDriver",modal).value,
-  no_kendaraan:$("#docsVehicle",modal).value,
+  nama_petugas:$("#docsStaff",modal).value.trim(),
+  nama_pengemudi:$("#docsDriver",modal).value.trim(),
+  no_kendaraan:$("#docsVehicle",modal).value.trim(),
   recipient_ids:selected
  };
  if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);$("#docsDate",modal)?.focus();return}
+ if(!body.nama_petugas||!body.nama_pengemudi||!body.no_kendaraan){
+  status("Petugas, pengemudi, dan kendaraan wajib diisi. Pilih data yang tersedia atau ketik data baru.",true);
+  (!body.nama_petugas?$("#docsStaff",modal):!body.nama_pengemudi?$("#docsDriver",modal):$("#docsVehicle",modal))?.focus();return;
+ }
  const button=$("#docsCreateButton",modal);button.disabled=true;button.textContent="Menerbitkan dokumen...";
  try{
-  const result=await api("docs/create",body);window.dispatchEvent(new Event("autodoc:data-changed"));
+  const result=await api("docs/create",body);
+  let masterSaveWarning="";
+  if(Number(result.berhasil)>0){
+   try{await rememberCreationInputs(body)}
+   catch(saveError){masterSaveWarning=" Dokumen berhasil dibuat, tetapi sebagian data baru belum tersimpan ke Data Master: "+saveError.message}
+  }
+  window.dispatchEvent(new Event("autodoc:data-changed"));
   pendingOrganolepticPrint=includeOrganoleptic?{tanggal:body.tanggal,recipientIds:selected.slice()}:null;
   const failed=(result.errors||[]).length;
   const summary=node("div","docs-result");
   summary.textContent=result.berhasil+" dari "+result.requested+" dokumen berhasil disiapkan. "+(failed?"Masih ada "+failed+" dokumen gagal; ulangi tanggal yang sama untuk melanjutkan.":"Nomor yang sudah terbit tidak akan dibuat ulang.");
   $("#docsCreateResult",modal).innerHTML="";$("#docsCreateResult",modal).append(summary);
-  status(result.message||"Selesai.",failed>0);
+  status((result.message||"Selesai.")+masterSaveWarning,failed>0||!!masterSaveWarning);
   await loadHistory(body.tanggal);
   tab="history";drawTabs();
   $(".docs-view-create",modal).hidden=true;$(".docs-view-history",modal).hidden=false;
