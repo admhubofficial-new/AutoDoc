@@ -93,7 +93,8 @@ test("creation sends menu components, meal time, and only selected numbered docu
   assert.match(source, /menu_items:menuItems/);
   assert.match(source, /waktu_makan:\$\("#docsMealTime",modal\)\.value/);
   assert.match(source, /jenis_dokumen:kinds/);
-  assert.match(source, /recipient_ids:selected/);\n  assert.match(source, /const body=\{/);
+  assert.match(source, /recipient_ids:selected/);
+  assert.match(source, /const body=\{/);
   assert.doesNotMatch(source, /menu:\$\("#docsMenu",modal\)\.value/);
 });
 
