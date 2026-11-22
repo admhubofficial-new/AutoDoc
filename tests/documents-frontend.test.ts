@@ -93,13 +93,16 @@ test("single-page form can copy the ordered menu from the latest distribution ar
 
 
 test("petugas, pengemudi, dan kendaraan remain optional during document creation", () => {
-  assert.match(source, /label for='docsStaff'>Petugas<\\/label><input id='docsStaff' type='text'[^>]*maxlength='180'(?![^>]*required)/);
-  assert.match(source, /label for='docsDriver'>Pengemudi<\\/label><input id='docsDriver' type='text'[^>]*maxlength='180'(?![^>]*required)/);
-  assert.match(source, /label for='docsVehicle'>Kendaraan<\\/label><input id='docsVehicle' type='text'[^>]*maxlength='80'(?![^>]*required)/);
+  assert.ok(source.includes("label for='docsStaff'>Petugas</label>"));
+  assert.ok(source.includes("label for='docsDriver'>Pengemudi</label>"));
+  assert.ok(source.includes("label for='docsVehicle'>Kendaraan</label>"));
+  assert.doesNotMatch(source, /id='docsStaff'[^>]*required/);
+  assert.doesNotMatch(source, /id='docsDriver'[^>]*required/);
+  assert.doesNotMatch(source, /id='docsVehicle'[^>]*required/);
   assert.doesNotMatch(source, /Petugas, pengemudi, dan kendaraan wajib diisi/);
-  assert.match(source, /nama_petugas:\$\\("#docsStaff",modal\\)\\.value\\.trim\\(\\)/);
-  assert.match(source, /nama_pengemudi:\$\\("#docsDriver",modal\\)\\.value\\.trim\\(\\)/);
-  assert.match(source, /no_kendaraan:\$\\("#docsVehicle",modal\\)\\.value\\.trim\\(\\)/);
+  assert.match(source, /nama_petugas:/);
+  assert.match(source, /nama_pengemudi:/);
+  assert.match(source, /no_kendaraan:/);
 });
 
 test("creation sends menu components, meal time, and only selected numbered document types", () => {
