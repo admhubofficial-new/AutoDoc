@@ -56,7 +56,7 @@ test("authenticated reload never renders the login page before session verificat
   assert.match(page, /<body class="auth-pending">/);
   assert.match(page, /id="authBoot"[\s\S]*?Memeriksa sesi AutoDoc/);
   assert.match(page, /id="authPage" class="auth-page" hidden/);
-  assert.match(page, /body\.auth-pending #authPage,[\s\S]*?display:none!important/);
+  assert.match(css, /body\.auth-pending #authPage,[\s\S]*?display:none!important/);
   const initialize = page.slice(page.indexOf("async function initialize()"), page.indexOf("initialize();"));
   assert.ok(initialize.indexOf('requestJson("auth/session")') < initialize.indexOf("showLogin();"));
   assert.doesNotMatch(initialize, /authPage\.hidden\s*=\s*false/);
