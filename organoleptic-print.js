@@ -64,9 +64,9 @@ function organolepticSheet(doc,data,recipient){
  sheet.append(organolepticElement(doc,"div","followup","Tindak Lanjut:"));
  const signs=organolepticElement(doc,"div","signs");
  const left=organolepticElement(doc,"div","sign");
- left.append(organolepticElement(doc,"div","","Mengetahui,"),organolepticElement(doc,"div","","Ahli Gizi Dapur"),organolepticElement(doc,"div","space"),organolepticElement(doc,"div","",data.ahliGizi));
+ left.append(organolepticElement(doc,"div","","Mengetahui,"),organolepticElement(doc,"div","","Ahli Gizi Dapur"),organolepticElement(doc,"div","space"),organolepticElement(doc,"div","sign-line"),organolepticElement(doc,"div","sign-person",data.ahliGizi||""));
  const right=organolepticElement(doc,"div","sign");
- right.append(organolepticElement(doc,"div","","Petugas Uji Organoleptik"),organolepticElement(doc,"div","space"),organolepticElement(doc,"div","dots"));
+ right.append(organolepticElement(doc,"div","","Petugas Uji Organoleptik"),organolepticElement(doc,"div","space"),organolepticElement(doc,"div","sign-line"),organolepticElement(doc,"div","sign-person",""));
  signs.append(left,right);sheet.append(signs);
  return sheet;
 }

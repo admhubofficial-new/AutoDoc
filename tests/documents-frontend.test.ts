@@ -113,7 +113,7 @@ test("organoleptic printing matches the approved A4 portrait template", () => {
 test("organoleptic checkboxes and handwritten fields stay blank", () => {
   assert.match(organolepticSource, /for\(let i=0;i<10;i\+\+\)row\.append\(doc\.createElement\("td"\)\)/);
   assert.match(organolepticSource, /organolepticElement\(doc,"div","followup","Tindak Lanjut:"\)/);
-  assert.match(organolepticSource, /organolepticElement\(doc,"div","dots"\)/);
+  assert.match(organolepticSource, /organolepticElement\(doc,"div","sign-line"\)/);
 });
 test("organoleptic forms use distribution snapshots and five blank menu rows", () => {
   assert.match(source, /currentDistribution\.nama_ahli_gizi/);
@@ -149,7 +149,9 @@ test("printed Surat Jalan has three role-specific signatories", () => {
   assert.match(printRendererSource, /Petugas Distribusi SPPG/);
   assert.match(printRendererSource, /Pengemudi/);
   assert.match(printRendererSource, /Yang Menerima/);
-  assert.match(printRendererSource, /sign-name/);
+  assert.match(printRendererSource, /sign-line/);
+  assert.match(printRendererSource, /sign-space/);
+  assert.match(printRendererSource, /signatureBlock\("Pengemudi"/);
   assert.match(printRendererSource, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 });
 
@@ -158,7 +160,7 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
   assert.match(printRendererSource, /Mengetahui,/);
   assert.match(printRendererSource, /Kepala SPPI/);
   assert.match(printRendererSource, /const signatures=isBast/);
-  assert.match(printRendererSource, /escapeHtml\(dist\.nama_petugas\|\|""\)/);
+  assert.match(printRendererSource, /signatureBlock\("Yang Menyerahkan"/);
 });
 
 test("BAST realization form is isolated in its module and preserves validation and PIN confirmation", () => {
@@ -227,7 +229,7 @@ test("document print renderer formats SJ and BAST snapshots and escapes user con
   assert.doesNotMatch(sj, /<img src=x onerror=alert\(1\)>/);
   assert.match(sj, /Petugas Distribusi SPPG/);
   assert.match(sj, /Pengemudi/);
-  assert.match(sj, /class='sign-name'/);
+  assert.match(sj, /class='sign-line'/);
   const bast = buildPrintHtml({
     jenis: "BAST", nomor_lengkap: "BAST/001", snapshot_json: snapshot,
     realisasi: { document_id: "real-1", kondisi: "baik", jam_diterima: "09:00", suhu_c: 45, ompreng_kembali: 10, nama_penerima: "Penerima", jabatan_penerima: "Kepala Sekolah", items: [], catatan: "" }
@@ -256,4 +258,34 @@ test("creation form accepts new staff, driver and vehicle values and remembers t
   assert.match(source, /api\("master\/save",\{entity,data\}\)/);
   assert.match(source, /rememberCreationInputs\(body\)/);
   assert.match(source, /masterSuggestions\(master\.menus,"teks_menu"\)/);
+});
+
+
+test("organoleptic signatures have clear writing lines and name positions", () => {
+  assert.match(organolepticSource, /organolepticElement\(doc,"div","sign-line"/);
+  assert.match(organolepticSource, /organolepticElement\(doc,"div","sign-person"/);
+  assert.match(source, /\.sign \.sign-line\{width:82%;height:1px/);
+  assert.doesNotMatch(source, /\.sign \.dots\{/);
+});
+
+test("all SJ and BAST signatory blocks render a consistent horizontal signature line", () => {
+  const sandbox = { window: {} };
+  runInNewContext(printRendererSource, sandbox);
+  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+  const snapshot = {
+    sppg: { nama_kepala_sppi: "Kepala SPPI" },
+    distribusi: { nama_petugas: "Petugas", nama_pengemudi: "Pengemudi" },
+    penerima: { nama: "Sekolah" },
+    rincian_porsi: [], ringkasan: { total_porsi: 0 }
+  };
+  const sj = buildPrintHtml({jenis:"SJ",nomor_lengkap:"SJ/1",snapshot_json:snapshot},escapeHtml,"logo.png");
+  const bast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/1",snapshot_json:snapshot,realisasi:{nama_penerima:"Penerima",items:[]}},escapeHtml,"logo.png");
+  assert.equal((sj.match(/class='sign-line'/g)||[]).length,3);
+  assert.equal((bast.match(/class='sign-line'/g)||[]).length,3);
+  assert.ok(sj.includes("Petugas</div>"));
+  assert.ok(sj.includes("Pengemudi</div>"));
+  assert.ok(bast.includes("Kepala SPPI</div>"));
 });
