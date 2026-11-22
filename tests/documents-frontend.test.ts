@@ -7,6 +7,7 @@ const source = readFileSync(new URL("../documents.js", import.meta.url), "utf8")
 const organolepticSource = readFileSync(new URL("../organoleptic-print.js", import.meta.url), "utf8");
 const printRendererSource = readFileSync(new URL("../documents-print.js", import.meta.url), "utf8");
 const archiveSource = readFileSync(new URL("../archive.js", import.meta.url), "utf8");
+const realizationSource = readFileSync(new URL("../bast-realization.js", import.meta.url), "utf8");
 const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
@@ -144,6 +145,19 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
   assert.match(printRendererSource, /escapeHtml\(dist\.nama_petugas\|\|""\)/);
 });
 
+test("BAST realization form is isolated in its module and preserves validation and PIN confirmation", () => {
+  assert.match(realizationSource, /function showRealization\(card,doc\)/);
+  assert.match(realizationSource, /Porsi kecil diterima \*/);
+  assert.match(realizationSource, /Porsi besar diterima \*/);
+  assert.match(realizationSource, /deliveredSmall/);
+  assert.match(realizationSource, /deliveredLarge/);
+  assert.match(realizationSource, /name='token' type='password' required minlength='6' maxlength='128'/);
+  assert.match(realizationSource, /api\("docs\/realization",data\)/);
+  assert.match(realizationSource, /data\.document_id=doc\.id/);
+  assert.match(source, /realizationController\.showRealization/);
+  assert.match(source, /window\.AutoDocBastRealization\.create/);
+});
+
 test("archive module owns global search, page selection, and PIN-protected bulk deletion", () => {
   assert.match(archiveSource, /async function loadDistributions/);
   assert.match(archiveSource, /api\("docs\/days"\+query\)/);
@@ -165,8 +179,9 @@ test("organoleptic renderer module loads before documents and exposes the expect
   const rendererTag = htmlSource.indexOf('src="./organoleptic-print.js?v=organoleptic-render-module-20261122"');
   const printTag = htmlSource.indexOf('src="./documents-print.js?v=documents-print-renderer-20261122"');
   const archiveTag = htmlSource.indexOf('src="./archive.js?v=archive-search-bulk-delete-module-20261122"');
+  const realizationTag = htmlSource.indexOf('src="./bast-realization.js?v=bast-realization-module-20261122"');
   const documentsTag = htmlSource.indexOf('src="./documents.js?v=archive-search-bulk-delete-module-20261122"');
-  assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && documentsTag > archiveTag);
+  assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && realizationTag > archiveTag && documentsTag > realizationTag);
   assert.match(organolepticSource, /window\.AutoDocOrganolepticPrint\s*=\s*Object\.freeze/);
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
     assert.match(organolepticSource, new RegExp(name));
