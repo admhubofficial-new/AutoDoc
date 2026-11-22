@@ -49,11 +49,23 @@ test("creation trusts the session-protected endpoint that already filters active
   assert.ok(!source.includes("master.recipients).filter(isActiveRecipient"));
 });
 
-test("wizard offers SJ and BAST selected by default and requires a numbered document", () => {
+test("single-page creation keeps SJ and BAST selected by default without wizard steps", () => {
   assert.match(source, /id='docsKindSj' type='checkbox' checked/);
   assert.match(source, /id='docsKindBast' type='checkbox' checked/);
-  assert.match(source, /function selectedDocumentKinds\(\)/);
+  assert.match(source, /function selectedDocumentKinds\\(\\)/);
+  assert.match(source, /docs-create-layout/);
+  assert.doesNotMatch(source, /docs-wizard-steps|data-step-pane|goWizardStep/);
   assert.match(source, /Pilih minimal Surat Jalan atau BAST/);
+});
+
+test("live print preview uses the production renderer and follows form changes", () => {
+  assert.match(source, /function updateLivePreview\\(\\)/);
+  assert.match(source, /window\\.AutoDocPrintRenderer/);
+  assert.match(source, /frame\\.srcdoc=html/);
+  assert.match(source, /form\\.addEventListener\\("input",updateLivePreview\\)/);
+  assert.match(source, /form\\.addEventListener\\("change",updateLivePreview\\)/);
+  assert.match(source, /PRATINJAU · BELUM DITERBITKAN/);
+  assert.match(source, /previewPortionRows/);
 });
 
 test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
