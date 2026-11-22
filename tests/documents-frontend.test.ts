@@ -243,7 +243,7 @@ test("document print renderer formats SJ and BAST snapshots and escapes user con
 
 test("distribution date and departure time default to the current WIB date and time", () => {
   assert.match(source, /function nowInJakarta\(\)/);
-  assert.match(source, /timeZone:"Asia\\/Jakarta"/);
+  assert.ok(source.includes('timeZone:"Asia/Jakarta"'));
   assert.match(source, /const today=\(\)=>nowInJakarta\(\)\.date/);
   assert.match(source, /value='"\+currentTime\.time\+"'/);
   assert.match(source, /Terisi otomatis mengikuti waktu WIB saat formulir dibuka/);
