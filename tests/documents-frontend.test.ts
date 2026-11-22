@@ -146,14 +146,14 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
 
 test("archive module owns global search, page selection, and PIN-protected bulk deletion", () => {
   assert.match(archiveSource, /async function loadDistributions/);
-  assert.match(archiveSource, /api\("docs\\/days"\+query\)/);
+  assert.match(archiveSource, /api\("docs\/days"\+query\)/);
   assert.match(archiveSource, /docsDaysSelectAll/);
   assert.match(archiveSource, /Pilih semua pada halaman ini/);
   assert.match(archiveSource, /selectedIds\.add/);
   assert.match(archiveSource, /selectedIds\.size<60/);
   assert.match(archiveSource, /docsDaysDelete/);
   assert.match(archiveSource, /docsDeletePin/);
-  assert.match(archiveSource, /api\("docs\\/delete-history"/);
+  assert.match(archiveSource, /api\("docs\/delete-history"/);
   assert.match(archiveSource, /distribution_ids:ids/);
   assert.match(archiveSource, /const token=pin\.value/);
   assert.match(source, /archiveController\.loadDistributions/);
