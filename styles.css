@@ -511,3 +511,11 @@ body .docs-overlay .docs-body,body .dm-overlay .dm-content{padding-top:24px}
 .home-page.sidebar-collapsed .home-nav-icon svg{width:19px;height:19px}
 .home-page.sidebar-collapsed .home-menu-toggle{margin-bottom:16px}
 .docs-field-hint{display:block;color:#78847b;font-size:10px;line-height:1.5}
+
+
+/* Auth bootstrap: jangan tampilkan login/home sebelum status sesi tervalidasi. */
+body.auth-pending #authPage,
+body.auth-pending #homePage{display:none!important}
+.auth-boot{min-height:100vh;min-height:100svh;display:flex;align-items:center;justify-content:center;gap:12px;padding:24px;background:#f6f7f5;color:#66756d;font-size:13px;font-weight:500}
+.auth-boot[hidden]{display:none}
+.auth-boot-mark{display:grid;width:34px;height:34px;place-items:center;border:1px solid #dce6dd;border-radius:9px;background:#fff;color:#1e5a43;font-size:12px;font-weight:750;letter-spacing:.04em}

@@ -9,10 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=manual-master-entry-sidebar-rail-20261123">
+  <link rel="stylesheet" href="./styles.css?v=auth-bootstrap-code-audit-20261123">
 </head>
-<body>
-  <main id="authPage" class="auth-page">
+<body class="auth-pending">
+  <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
+  <main id="authPage" class="auth-page" hidden>
     <div class="auth-shell">
       <header class="auth-brand">
         <img
@@ -171,7 +172,13 @@
         authStatus.dataset.state = state || "";
       }
 
+      function finishAuthBootstrap() {
+        document.body.classList.remove("auth-pending");
+        document.getElementById("authBoot").hidden = true;
+      }
+
       function showHome() {
+        finishAuthBootstrap();
         authPage.hidden = true;
         homePage.hidden = false;
         closeHomeNav();
@@ -182,6 +189,7 @@
       }
 
       function showLogin() {
+        finishAuthBootstrap();
         homePage.hidden = true;
         authPage.hidden = false;
         loginPanel.hidden = false;
@@ -193,6 +201,7 @@
       }
 
       function showSetup() {
+        finishAuthBootstrap();
         homePage.hidden = true;
         authPage.hidden = false;
         loginPanel.hidden = true;
@@ -385,8 +394,6 @@
       });
 
       async function initialize() {
-        authPage.hidden = false;
-        homePage.hidden = true;
         try {
           const setup = await requestJson("setup/status");
           if (setup.setupRequired) {
@@ -394,9 +401,12 @@
             return;
           }
 
-          showLogin();
           const session = await requestJson("auth/session");
-          if (session.authenticated) showHome();
+          if (session.authenticated) {
+            showHome();
+            return;
+          }
+          showLogin();
         } catch (error) {
           showLogin();
           setStatus("Layanan AutoDoc belum terhubung. Periksa konfigurasi server dan Supabase.", "error");
@@ -412,7 +422,7 @@
   <script src="./documents-print.js?v=documents-print-renderer-20261122" defer></script>
   <script src="./archive.js?v=archive-search-bulk-delete-module-20261122" defer></script>
   <script src="./bast-realization.js?v=bast-realization-module-20261122" defer></script>
-  <script src="./documents.js?v=manual-master-entry-sidebar-rail-20261123" defer></script>
+  <script src="./documents.js?v=auth-bootstrap-code-audit-20261123" defer></script>
   <script src="./dashboard.js?v=operations-workspace-20261122" defer></script>
 </body>
 </html>
