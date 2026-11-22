@@ -6,7 +6,7 @@ const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 
 test("login page uses a centered single-column layout and BGN logo", () => {
-  assert.match(page, /<main id="authPage" class="auth-page">/);
+  assert.match(page, /<main id="authPage" class="auth-page" hidden>/);
   assert.match(page, /class="auth-logo"[\s\S]*?width="72"[\s\S]*?height="72"/);
   assert.match(page, /object\/public\/logo%20bgn\/logo-bgn%20\(1\)\.png/);
   assert.doesNotMatch(page, /class="brand-panel"|class="visual-card"|class="brand-benefits"|class="welcome-tag"/);
