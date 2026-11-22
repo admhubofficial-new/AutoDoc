@@ -8,6 +8,7 @@ const organolepticSource = readFileSync(new URL("../organoleptic-print.js", impo
 const printRendererSource = readFileSync(new URL("../documents-print.js", import.meta.url), "utf8");
 const archiveSource = readFileSync(new URL("../archive.js", import.meta.url), "utf8");
 const realizationSource = readFileSync(new URL("../bast-realization.js", import.meta.url), "utf8");
+const previewSource = readFileSync(new URL("../document-preview.js", import.meta.url), "utf8");
 const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
@@ -59,16 +60,16 @@ test("single-page creation keeps SJ and BAST selected by default without wizard 
 });
 
 test("live print preview uses the production renderer and follows form changes", () => {
-  assert.match(source, /function updateLivePreview\(\)/);
-  assert.match(source, /window\.AutoDocPrintRenderer/);
-  assert.match(source, /frame\.srcdoc=html/);
+  assert.match(previewSource, /function updateLivePreview\(\)/);
+  assert.match(previewSource, /window\.AutoDocPrintRenderer/);
+  assert.match(previewSource, /frame\.srcdoc=html/);
   assert.match(source, /form\.addEventListener\("input",updateLivePreview\)/);
   assert.match(source, /form\.addEventListener\("change",updateLivePreview\)/);
   assert.match(source, /PRATINJAU · BELUM DITERBITKAN/);
-  assert.match(source, /previewPortionRows/);
-  assert.match(source, /renderOrganolepticPreview/);
+  assert.match(previewSource, /previewPortionRows/);
+  assert.match(previewSource, /renderOrganolepticPreview/);
   assert.match(source, /value='ORGANOLEPTIC'/);
-  assert.match(source, /docsPreviewRecipientSelect/);
+  assert.match(previewSource, /docsPreviewRecipientSelect/);
 });
 
 test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
@@ -199,9 +200,10 @@ test("organoleptic renderer module loads before documents and exposes the expect
   const rendererTag = htmlSource.indexOf('src="./organoleptic-print.js');
   const printTag = htmlSource.indexOf('src="./documents-print.js');
   const archiveTag = htmlSource.indexOf('src="./archive.js');
+  const previewTag = htmlSource.indexOf('src="./document-preview.js');
   const realizationTag = htmlSource.indexOf('src="./bast-realization.js');
   const documentsTag = htmlSource.indexOf('src="./documents.js');
-  assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && realizationTag > archiveTag && documentsTag > realizationTag);
+  assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && previewTag > archiveTag && realizationTag > previewTag && documentsTag > realizationTag);
   assert.ok(organolepticSource.includes("window.AutoDocOrganolepticPrint = Object.freeze"));
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
     assert.match(organolepticSource, new RegExp(name));
@@ -266,7 +268,7 @@ test("creation form accepts new staff, driver and vehicle values and remembers t
 test("organoleptic signatures have clear writing lines and name positions", () => {
   assert.match(organolepticSource, /organolepticElement\(doc,"div","sign-line"/);
   assert.match(organolepticSource, /organolepticElement\(doc,"div","sign-person"/);
-  assert.match(source, /\.sign \.sign-line\{width:82%;height:1px/);
+  assert.match(previewSource, /\.sign \.sign-line\{width:82%;height:1px/);
   assert.doesNotMatch(source, /\.sign \.dots\{/);
 });
 
@@ -290,4 +292,12 @@ test("all SJ and BAST signatory blocks render a consistent horizontal signature 
   assert.ok(sj.includes("Petugas</div>"));
   assert.ok(sj.includes("Pengemudi</div>"));
   assert.ok(bast.includes("Kepala SPPI</div>"));
+});
+
+
+test("live document preview is isolated in its own module and initialized before documents", () => {
+  assert.match(previewSource, /window\.AutoDocDocumentPreview=Object\.freeze/);
+  assert.match(previewSource, /return Object\.freeze\(\{updateLivePreview,fitPreviewFrame\}\)/);
+  assert.match(source, /window\.AutoDocDocumentPreview\.create/);
+  assert.doesNotMatch(source, /function updateLivePreview|function renderOrganolepticPreview|function fitPreviewFrame/);
 });
