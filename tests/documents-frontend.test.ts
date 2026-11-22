@@ -179,6 +179,8 @@ test("BAST realization form is isolated in its module and preserves validation a
 test("archive module owns global search, page selection, and PIN-protected bulk deletion", () => {
   assert.match(archiveSource, /async function loadDistributions/);
   assert.match(archiveSource, /api\("docs\/days"\+query\)/);
+  assert.match(archiveSource, /requestSequence\+\+|\+\+requestSequence/);
+  assert.match(archiveSource, /if\(requestId!==requestSequence\)return/);
   assert.match(archiveSource, /docsDaysSelectAll/);
   assert.match(archiveSource, /Pilih semua pada halaman ini/);
   assert.match(archiveSource, /selectedIds\.add/);
