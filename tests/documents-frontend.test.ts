@@ -9,6 +9,7 @@ const printRendererSource = readFileSync(new URL("../documents-print.js", import
 const archiveSource = readFileSync(new URL("../archive.js", import.meta.url), "utf8");
 const realizationSource = readFileSync(new URL("../bast-realization.js", import.meta.url), "utf8");
 const previewSource = readFileSync(new URL("../document-preview.js", import.meta.url), "utf8");
+const menuSource = readFileSync(new URL("../document-menu.js", import.meta.url), "utf8");
 const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
@@ -73,11 +74,11 @@ test("live print preview uses the production renderer and follows form changes",
 });
 
 test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
-  assert.match(source, /menuComponents\.length>=8/);
+  assert.match(menuSource, /items\.length>=8/);
   assert.match(source, /docsMenuSuggestions/);
-  assert.match(source, /Geser .* ke atas/);
-  assert.match(source, /Geser .* ke bawah/);
-  assert.match(source, /Hapus komponen/);
+  assert.match(menuSource, /Geser .* ke atas/);
+  assert.match(menuSource, /Geser .* ke bawah/);
+  assert.match(menuSource, /Hapus komponen/);
   assert.match(source, /function readMenuComponents\(\)/);
   assert.match(source, /docsAddMenuItem/);
 });
@@ -300,4 +301,18 @@ test("live document preview is isolated in its own module and initialized before
   assert.match(previewSource, /return Object\.freeze\(\{updateLivePreview,fitPreviewFrame\}\)/);
   assert.match(source, /window\.AutoDocDocumentPreview\.create/);
   assert.doesNotMatch(source, /function updateLivePreview|function renderOrganolepticPreview|function fitPreviewFrame/);
+});
+
+test("daily menu editor is isolated, capped at eight, and delegates preview refresh", () => {
+  assert.match(menuSource, /window\.AutoDocMenuEditor=Object\.freeze/);
+  assert.match(menuSource, /items\.length>=8/);
+  assert.match(menuSource, /Geser .* ke atas/);
+  assert.match(menuSource, /Hapus komponen/);
+  assert.match(source, /window\.AutoDocMenuEditor\.create/);
+  assert.match(source, /menuController\?\.read\(\)/);
+  assert.doesNotMatch(source, /function renderMenuComponents\(\)\s*\{[\s\S]*?docs-menu-row/);
+  const menuTag = htmlSource.indexOf('src="./document-menu.js');
+  const previewTag = htmlSource.indexOf('src="./document-preview.js');
+  const documentsTag = htmlSource.indexOf('src="./documents.js');
+  assert.ok(menuTag > previewTag && documentsTag > menuTag);
 });

@@ -10,7 +10,7 @@ function nowInJakarta(){
  return {date:values.year+"-"+values.month+"-"+values.day,time:values.hour+":"+values.minute};
 }
 const today=()=>nowInJakarta().date;
-let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[], pendingOrganolepticPrint=null, archiveController=null, realizationController=null, previewController=null;
+let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
 
 async function api(route,body){
  const headers={"apikey":KEY,"Accept":"application/json"};
@@ -153,51 +153,15 @@ async function loadMaster(){
  const warning=masterResult.status==="rejected"?" Data pendukung (menu/petugas/kendaraan/pengemudi) gagal dimuat; daftar penerima tetap tersedia.":"";
  status(activeCount+" penerima aktif berhasil dimuat dari "+recipients.length+" data."+warning,masterResult.status==="rejected");
 }
-function renderMenuComponents(){
- const list=$("#docsMenuItems",modal);
- if(!list)return;
- list.innerHTML="";
- if(!menuComponents.length){
-  list.append(node("div","docs-menu-empty","Belum ada komponen menu. Menu boleh dikosongkan untuk penerbitan SJ/BAST."));
- }
- menuComponents.forEach((value,index)=>{
-  const row=node("div","docs-menu-row");
-  row.append(node("span","docs-menu-order",String(index+1)+"."));
-  const input=node("input","docs-menu-input");
-  input.type="text";input.maxLength=180;input.placeholder="Contoh: Nasi Putih";input.value=value;
-  input.setAttribute("list","docsMenuSuggestions");
-  input.setAttribute("aria-label","Komponen menu "+(index+1));
-  input.addEventListener("input",()=>{menuComponents[index]=input.value});
-  const actions=node("div","docs-menu-row-actions");
-  const up=node("button",null,"↑");up.type="button";up.disabled=index===0;up.setAttribute("aria-label","Geser "+(index+1)+" ke atas");
-  up.onclick=()=>{if(index>0){[menuComponents[index-1],menuComponents[index]]=[menuComponents[index],menuComponents[index-1]];renderMenuComponents()}};
-  const down=node("button",null,"↓");down.type="button";down.disabled=index===menuComponents.length-1;down.setAttribute("aria-label","Geser "+(index+1)+" ke bawah");
-  down.onclick=()=>{if(index<menuComponents.length-1){[menuComponents[index+1],menuComponents[index]]=[menuComponents[index],menuComponents[index+1]];renderMenuComponents()}};
-  const remove=node("button",null,"×");remove.type="button";remove.setAttribute("aria-label","Hapus komponen "+(index+1));
-  remove.onclick=()=>{menuComponents.splice(index,1);renderMenuComponents()};
-  actions.append(up,down,remove);row.append(input,actions);list.append(row);
- });
- const count=$("#docsMenuCount",modal);
- if(count)count.textContent=menuComponents.length+" dari 8 komponen";
- const add=$("#docsAddMenuItem",modal);
- if(add)add.disabled=menuComponents.length>=8;
- previewController?.updateLivePreview();
-}
-function readMenuComponents(){
- return menuComponents.map(value=>String(value||"").trim()).filter(Boolean);
-}
+function renderMenuComponents(){menuController?.render()}
+function readMenuComponents(){return menuController?.read()||[]}
 function selectedDocumentKinds(){
  const kinds=[];
  if($("#docsKindSj",modal)?.checked)kinds.push("SJ");
  if($("#docsKindBast",modal)?.checked)kinds.push("BAST");
  return kinds;
 }
-function addMenuComponent(value=""){
- if(menuComponents.length>=8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
- menuComponents.push(value);renderMenuComponents();
- const inputs=modal.querySelectorAll(".docs-menu-input");
- inputs[inputs.length-1]?.focus();
-}
+function addMenuComponent(value=""){menuController?.add(value)}
 async function copyLastMenu(){
  const button=$("#docsCopyLastMenu",modal);
  if(!button)return;
@@ -213,7 +177,7 @@ async function copyLastMenu(){
    : [];
   if(!items.length&&String(distribution.menu||"").trim())items.push(String(distribution.menu).trim());
   if(!items.length){status("Distribusi terakhir belum memiliki komponen menu.",true);return}
-  menuComponents=items.slice(0,8);renderMenuComponents();
+  menuController?.set(items.slice(0,8));renderMenuComponents();
   status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+menuComponents.length+" komponen).");previewController?.updateLivePreview();
  }catch(error){status(error.message,true)}
  finally{button.disabled=false;button.textContent=oldText}
@@ -221,7 +185,7 @@ async function copyLastMenu(){
 function renderCreate(){
  const target=$(".docs-view-create",modal);
  if(!target)return;
- menuComponents=[];
+ menuController?.reset();
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
  const currentTime=nowInJakarta();
  const todayVal=currentTime.date;
@@ -542,6 +506,7 @@ function showRealization(card,doc){
 
 function init(){
  style();build();
+ menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
  previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,readMenuComponents,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
