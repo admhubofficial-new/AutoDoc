@@ -156,6 +156,7 @@ function renderMenuComponents(){
  if(count)count.textContent=menuComponents.length+" dari 8 komponen";
  const add=$("#docsAddMenuItem",modal);
  if(add)add.disabled=menuComponents.length>=8;
+ updateLivePreview();
 }
 function readMenuComponents(){
  return menuComponents.map(value=>String(value||"").trim()).filter(Boolean);
@@ -188,7 +189,7 @@ async function copyLastMenu(){
   if(!items.length&&String(distribution.menu||"").trim())items.push(String(distribution.menu).trim());
   if(!items.length){status("Distribusi terakhir belum memiliki komponen menu.",true);return}
   menuComponents=items.slice(0,8);renderMenuComponents();
-  status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+menuComponents.length+" komponen).");
+  status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+menuComponents.length+" komponen).");updateLivePreview();
  }catch(error){status(error.message,true)}
  finally{button.disabled=false;button.textContent=oldText}
 }
@@ -201,105 +202,91 @@ function renderCreate(){
  const menuSuggestions=(Array.isArray(master.menus)?master.menus:[])
   .filter(item=>item&&item.aktif!==false&&String(item.teks_menu||"").trim())
   .map(item=>"<option value='"+esc(item.teks_menu)+"'></option>").join("");
- target.innerHTML="<h3 class='docs-section-title'>Buat Dokumen Distribusi</h3>"+
- "<p class='docs-note'>Pilih dokumen yang diterbitkan, lengkapi informasi distribusi, lalu tentukan penerimanya.</p>"+
- "<form id='docsCreateForm' autocomplete='off'>"+
- "<nav class='docs-wizard-steps' aria-label='Tahapan penerbitan'>"+
- "<span class='docs-wizard-step' data-wizard-step='1' aria-current='step'>1. Distribusi</span>"+
- "<span class='docs-wizard-step' data-wizard-step='2'>2. Penerima</span>"+
- "<span class='docs-wizard-step' data-wizard-step='3'>3. Periksa</span></nav>"+
- "<section class='docs-step-pane' data-step-pane='1'>"+
- "<h4 class='docs-section-title'>Pilih dokumen</h4>"+
- "<p class='docs-note'>Pilih minimal satu dokumen bernomor. Keduanya otomatis dipilih untuk alur penerbitan seperti biasa.</p>"+
- "<fieldset class='docs-kind-group'><legend>Dokumen yang diterbitkan</legend>"+
- "<label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan (SJ)</label>"+
- "<label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> Berita Acara Serah Terima (BAST)</label>"+
- "</fieldset>"+
- "<label class='docs-organoleptic-option'><input id='docsIncludeOrganoleptic' type='checkbox'><span><strong>Formulir Uji Organoleptik</strong><small>Formulir tambahan tanpa nomor dokumen. Satu penerima akan mendapat satu halaman A4 untuk diisi tulis tangan.</small></span></label>"+
- "<h4 class='docs-section-title'>Informasi distribusi</h4>"+
- "<div class='docs-grid'>"+
- "<div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div>"+
- "<div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div>"+
- "<div class='docs-field docs-meal-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div>"+
- "<div class='docs-field'><label for='docsStaff'>Petugas</label><select id='docsStaff'>"+options(master.staff,"nama","nama","Pilih petugas")+"</select></div>"+
- "<div class='docs-field'><label for='docsDriver'>Pengemudi</label><select id='docsDriver'>"+options(master.drivers,"nama","nama","Pilih pengemudi")+"</select></div>"+
- "<div class='docs-field'><label for='docsVehicle'>Kendaraan</label><select id='docsVehicle'>"+options(master.vehicles,"no_kendaraan","no_kendaraan","Pilih kendaraan")+"</select></div>"+
- "</div>"+
- "<div class='docs-menu-box'><div class='docs-menu-head'><strong>Menu Hari Ini</strong><div class='docs-menu-tools'><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin dari distribusi terakhir</button></div></div>"+
- "<p class='docs-menu-count' id='docsMenuCount'>0 dari 8 komponen</p>"+
- "<div class='docs-menu-list' id='docsMenuItems'></div>"+
- "<datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
- "<div class='docs-menu-actions'><button type='button' class='docs-btn primary' id='docsAddMenuItem'>+ Tambah komponen</button></div>"+
- "<p class='docs-note' style='margin:10px 0 0'>Menu dapat dikosongkan untuk SJ/BAST. Gunakan tombol panah untuk mengatur urutan komponen.</p></div>"+
- "<p class='docs-note'>Petugas, pengemudi, kendaraan, dan jam berangkat boleh dikosongkan bila belum tersedia.</p>"+
- "<div class='docs-step-actions'><span></span><button type='button' class='docs-btn primary' id='docsNextRecipients'>Lanjut: Pilih penerima</button></div></section>"+
- "<section class='docs-step-pane' data-step-pane='2' hidden>"+
- "<h4 class='docs-section-title'>Pilih penerima manfaat</h4>"+
- "<p class='docs-note'>Penerima tidak dipilih otomatis. Pilih secara sengaja agar dokumen hanya diterbitkan untuk penerima yang dimaksud.</p>"+
- "<div class='docs-recipient-box'><div class='docs-recipient-head'><strong>Penerima aktif <span id='docsSelectedCount'>(0 dipilih)</span></strong><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari nama penerima...' aria-label='Cari penerima'><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua terlihat</button><button type='button' class='docs-btn' id='docsClearAll'>Kosongkan terlihat</button></div></div>"+
- "<div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
- "<div class='docs-step-actions'><button type='button' class='docs-btn' id='docsBackDistribution'>Kembali</button><button type='button' class='docs-btn primary' id='docsNextReview'>Lanjut: Periksa</button></div></section>"+
- "<section class='docs-step-pane' data-step-pane='3' hidden>"+
- "<h4 class='docs-section-title'>Periksa sebelum menerbitkan</h4>"+
- "<p class='docs-note'>Pastikan jenis dokumen, menu, waktu makan, dan daftar penerima sudah benar. Setelah dokumen pertama diterbitkan, detail distribusi pada tanggal ini akan terkunci.</p>"+
- "<div class='docs-review' id='docsReviewSummary'></div>"+
- "<div class='docs-recipient-box'><strong>Penerima yang akan mendapatkan dokumen</strong><div id='docsReviewRecipients' class='docs-note' style='margin:8px 0 0'></div></div>"+
- "<div class='docs-step-actions'><button type='button' class='docs-btn' id='docsBackRecipients'>Kembali</button><button class='docs-btn primary' id='docsCreateButton' type='submit'>Terbitkan dokumen</button></div></section>"+
- "</form><div id='docsCreateResult'></div>";
+ target.innerHTML="<div class='docs-create-layout'>"+
+  "<section class='docs-create-form-panel'>"+
+   "<div class='docs-create-intro'><h3 class='docs-section-title'>Buat dokumen distribusi</h3><p class='docs-note'>Isi data sekali, pilih penerima, lalu terbitkan. Pratinjau di samping akan mengikuti perubahan data.</p></div>"+
+   "<form id='docsCreateForm' autocomplete='off'>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><span class='docs-section-number'>1</span><div><h4>Dokumen dan tanggal</h4><p>Pilih dokumen yang diperlukan.</p></div></div>"+
+     "<fieldset class='docs-kind-group'><legend>Terbitkan</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label></fieldset>"+
+     "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div><div class='docs-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
+     "<label class='docs-organoleptic-option'><input id='docsIncludeOrganoleptic' type='checkbox'><span><strong>Tambahkan Formulir Uji Organoleptik</strong><small>Satu lembar A4 untuk setiap penerima.</small></span></label>"+
+    "</section>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><span class='docs-section-number'>2</span><div><h4>Informasi distribusi</h4><p>Isi yang tersedia; kolom bertanda opsional boleh dikosongkan.</p></div></div>"+
+     "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat (opsional)</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas (opsional)</label><select id='docsStaff'>"+options(master.staff,"nama","nama","Pilih petugas")+"</select></div><div class='docs-field'><label for='docsDriver'>Pengemudi (opsional)</label><select id='docsDriver'>"+options(master.drivers,"nama","nama","Pilih pengemudi")+"</select></div><div class='docs-field'><label for='docsVehicle'>Kendaraan (opsional)</label><select id='docsVehicle'>"+options(master.vehicles,"no_kendaraan","no_kendaraan","Pilih kendaraan")+"</select></div></div>"+
+    "</section>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><span class='docs-section-number'>3</span><div><h4>Menu hari ini</h4><p>Maksimal 8 komponen. Boleh dikosongkan.</p></div></div>"+
+     "<div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist><div class='docs-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah menu</button></div>"+
+    "</section>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><span class='docs-section-number'>4</span><div><h4>Pilih penerima</h4><p>Centang penerima yang akan menerima dokumen.</p></div></div>"+
+     "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-head'><strong>Penerima <span id='docsSelectedCount'>(0 dipilih)</span></strong><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari penerima...' aria-label='Cari penerima'><button type='button' class='docs-btn' id='docsSelectAll'>Pilih terlihat</button><button type='button' class='docs-btn' id='docsClearAll'>Kosongkan</button></div></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
+    "</section>"+
+    "<div class='docs-submit-bar'><div><strong id='docsSubmitCount'>0 penerima dipilih</strong><small>Nomor dokumen dibuat saat diterbitkan.</small></div><button class='docs-btn primary' id='docsCreateButton' type='submit'>Terbitkan dokumen</button></div>"+
+   "</form><div id='docsCreateResult'></div>"+
+  "</section>"+
+  "<aside class='docs-preview-panel'><div class='docs-preview-head'><div><strong>Pratinjau dokumen</strong><small id='docsPreviewRecipient'>Pilih penerima untuk melihat dokumen</small></div><select id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option></select></div><div class='docs-preview-caption'>Tampilan mengikuti data yang sedang Anda isi. Nomor resmi muncul setelah diterbitkan.</div><div class='docs-preview-paper'><iframe id='docsPreviewFrame' title='Pratinjau dokumen cetak' loading='eager'></iframe></div></aside>"+
+ "</div>";
  renderMenuComponents();
  renderRecipients(recipients);
+ const form=$("#docsCreateForm",target);
  $("#docsRecipientSearch",target).addEventListener("input",filterRecipients);
  $("#docsSelectAll",target).onclick=()=>setAllRecipients(true);
  $("#docsClearAll",target).onclick=()=>setAllRecipients(false);
  $("#docsAddMenuItem",target).onclick=()=>addMenuComponent();
  $("#docsCopyLastMenu",target).onclick=copyLastMenu;
- $("#docsNextRecipients",target).onclick=()=>goWizardStep(2);
- $("#docsBackDistribution",target).onclick=()=>goWizardStep(1);
- $("#docsNextReview",target).onclick=()=>goWizardStep(3);
- $("#docsBackRecipients",target).onclick=()=>goWizardStep(2);
- $("#docsCreateForm",target).addEventListener("submit",createDocs);
+ $("#docsPreviewKind",target).addEventListener("change",updateLivePreview);
+ form.addEventListener("input",updateLivePreview);
+ form.addEventListener("change",updateLivePreview);
+ form.addEventListener("submit",createDocs);
+ updateLivePreview();
 }
-function goWizardStep(step){
+function previewPortionRows(recipient){
+ const definitions=[["siswa_kecil","Siswa kecil","Porsi Kecil"],["balita","Balita","Porsi Kecil"],["siswa_besar","Siswa besar","Porsi Besar"],["tendik","Tenaga pendidik","Porsi Besar"],["ibu_hamil","Ibu hamil","Porsi Besar"],["ibu_menyusui","Ibu menyusui","Porsi Besar"],["putus_sekolah","Anak putus sekolah","Porsi Besar"],["kader","Kader","Porsi Besar"]];
+ return definitions.flatMap(([key,label,jenis])=>{const jumlah=Number(recipient?.[key]||0);return jumlah>0?[{kelompok_sasaran:label,jenis_porsi:jenis,jumlah}]:[]});
+}
+function fitPreviewFrame(){
+ const frame=$("#docsPreviewFrame",modal),host=frame?.parentElement;
+ if(!frame||!host||!frame.contentDocument?.body)return;
+ const scale=Math.min(1,Math.max(.25,host.clientWidth/794));
+ const body=frame.contentDocument.body;
+ body.style.width="794px";body.style.minHeight="1123px";body.style.margin="0";body.style.padding="60px";body.style.boxSizing="border-box";
+ body.style.transformOrigin="top left";body.style.transform="scale("+scale+")";
+ frame.style.height=Math.ceil(1123*scale)+"px";
+}
+function updateLivePreview(){
+ if(!modal||!$("#docsPreviewFrame",modal))return;
  const form=$("#docsCreateForm",modal);
  if(!form)return;
- if(step===2){
-  const date=$("#docsDate",form);
-  if(!date.value){date.reportValidity();return}
-  if(!selectedDocumentKinds().length){status("Pilih minimal Surat Jalan atau BAST.",true);return}
- }
- if(step===3){
-  const selected=Array.from(form.querySelectorAll("input[name='recipient']:checked"));
-  const kinds=selectedDocumentKinds();
-  if(!kinds.length){status("Pilih minimal Surat Jalan atau BAST.",true);return}
-  if(!selected.length){status("Pilih minimal satu penerima sebelum melanjutkan.",true);return}
-  const meal=$("#docsMealTime",form)?.value||"siang";
-  const values={
-   "Jenis dokumen":kinds.map(kind=>kind==="SJ"?"Surat Jalan (SJ)":"Berita Acara Serah Terima (BAST)").join(" + "),
-   "Tanggal":$("#docsDate",form).value,
-   "Waktu makan":meal.charAt(0).toUpperCase()+meal.slice(1),
-   "Menu Hari Ini":readMenuComponents().join(", ")||"Belum diisi",
-   "Petugas":($("#docsStaff",form).value?$("#docsStaff",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
-   "Pengemudi":($("#docsDriver",form).value?$("#docsDriver",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
-   "Kendaraan":($("#docsVehicle",form).value?$("#docsVehicle",form).selectedOptions[0]?.textContent:"Belum diisi")||"Belum diisi",
-   "Jumlah penerima":selected.length,
-   "Jumlah dokumen bernomor":selected.length*kinds.length,
-   "Formulir uji organoleptik":$("#docsIncludeOrganoleptic",form)?.checked?selected.length+" formulir":"Tidak dipilih"
-  };
-  const summary=$("#docsReviewSummary",form);summary.innerHTML="";
-  Object.entries(values).forEach(([label,value])=>{
-   const item=node("div","docs-review-item");item.append(node("small",null,label),node("strong",null,value));summary.append(item);
-  });
-  const names=selected.map(input=>input.closest(".docs-recipient")?.dataset.name||"Penerima");
-  $("#docsReviewRecipients",form).textContent=names.join(", ");
- }
- form.querySelectorAll("[data-step-pane]").forEach(pane=>pane.hidden=Number(pane.dataset.stepPane)!==step);
- form.querySelectorAll("[data-wizard-step]").forEach(button=>{
-  if(Number(button.dataset.wizardStep)===step)button.setAttribute("aria-current","step");
-  else button.removeAttribute("aria-current");
- });
- status("");
- const heading=form.querySelector("[data-step-pane='"+step+"'] h4");
- if(heading)heading.focus?.();
+ const selected=Array.from(form.querySelectorAll("input[name='recipient']:checked"));
+ const recipients=Array.isArray(master.recipients)?master.recipients:[];
+ const recipient=selected.length?recipients.find(item=>String(item.id)===selected[0].value):null;
+ const fallback=recipient||recipients[0]||{};
+ const settings=Array.isArray(master.settings)?(master.settings[0]||{}):(master.settings||{});
+ const menu=readMenuComponents(),kinds=selectedDocumentKinds();
+ const kindSelect=$("#docsPreviewKind",modal),currentKind=kindSelect?.value==="BAST"?"BAST":"SJ";
+ const kind=kinds.includes(currentKind)?currentKind:(kinds[0]||"SJ");
+ if(kindSelect){kindSelect.value=kind;Array.from(kindSelect.options).forEach(option=>{option.disabled=kinds.length>0&&!kinds.includes(option.value)});}
+ const date=$("#docsDate",form)?.value||today();
+ const snapshot={
+  sppg:settings,
+  distribusi:{tanggal:date,jam_berangkat:$("#docsTime",form)?.value||"",menu:menu.join(", "),nama_petugas:$("#docsStaff",form)?.value||"",nama_pengemudi:$("#docsDriver",form)?.value||"",no_kendaraan:$("#docsVehicle",form)?.value||""},
+  penerima:fallback,rincian_porsi:previewPortionRows(fallback),
+  ringkasan:{porsi_kecil:Number(fallback.porsi_kecil||0),porsi_besar:Number(fallback.porsi_besar||0),total_porsi:Number(fallback.total_porsi||0)}
+ };
+ const doc={jenis:kind,nomor_lengkap:"PRATINJAU — nomor terbit setelah disimpan",snapshot_json:snapshot,created_at:"Pratinjau langsung"};
+ const renderer=window.AutoDocPrintRenderer;
+ if(!renderer?.buildPrintHtml)return;
+ let html=renderer.buildPrintHtml(doc,esc,LETTERHEAD_LOGO_URL);
+ html=html.replace("</style>","@page{margin:0}html,body{margin:0!important;background:#fff!important}.preview-ribbon{position:absolute;top:12px;right:16px;padding:4px 8px;border:1px solid #d6dfd6;border-radius:4px;color:#56705e;background:#f4f8f3;font:700 9px Arial;letter-spacing:.7px}</style>");
+ html=html.replace("<body>","<body><div class='preview-ribbon'>PRATINJAU · BELUM DITERBITKAN</div>");
+ const frame=$("#docsPreviewFrame",modal);
+ frame.onload=()=>fitPreviewFrame();
+ frame.srcdoc=html;
+ const label=$("#docsPreviewRecipient",modal);
+ if(label)label.textContent=selected.length?(recipient?.nama||"Penerima terpilih"):"Contoh tampilan · pilih penerima untuk data sebenarnya";
+ const count=$("#docsSubmitCount",modal);
+ if(count)count.textContent=selected.length+" penerima dipilih";
+ const button=$("#docsCreateButton",modal);
+ if(button)button.disabled=!selected.length||!kinds.length;
 }
 function renderRecipients(recipients){
  const list=$("#docsRecipientList",modal);if(!list)return;
@@ -325,13 +312,14 @@ function setAllRecipients(value){
 function updateSelectedCount(){
  const n=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).length;
  const el=$("#docsSelectedCount",modal);if(el)el.textContent="("+n+" dipilih)";
+ updateLivePreview();
 }
 async function createDocs(event){
  event.preventDefault();status("");
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
- if(!selected.length){status("Pilih minimal satu penerima.",true);return}
+ if(!selected.length){status("Pilih minimal satu penerima.",true);$("#docsRecipientSearch",modal)?.focus();return}
  const kinds=selectedDocumentKinds();
- if(!kinds.length){status("Pilih minimal Surat Jalan atau BAST.",true);goWizardStep(1);return}
+ if(!kinds.length){status("Pilih minimal Surat Jalan atau BAST.",true);$("#docsKindSj",modal)?.focus();return}
  const includeOrganoleptic=$("#docsIncludeOrganoleptic",modal)?.checked===true;
  const menuItems=readMenuComponents();
  if(menuItems.length>8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
@@ -346,7 +334,7 @@ async function createDocs(event){
   no_kendaraan:$("#docsVehicle",modal).value,
   recipient_ids:selected
  };
- if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);goWizardStep(1);return}
+ if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);$("#docsDate",modal)?.focus();return}
  const button=$("#docsCreateButton",modal);button.disabled=true;button.textContent="Menerbitkan dokumen...";
  try{
   const result=await api("docs/create",body);window.dispatchEvent(new Event("autodoc:data-changed"));
