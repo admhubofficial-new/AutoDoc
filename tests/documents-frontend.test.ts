@@ -63,8 +63,8 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /function updateLivePreview\(\)/);
   assert.match(previewSource, /window\.AutoDocPrintRenderer/);
   assert.match(previewSource, /frame\.srcdoc=html/);
-  assert.match(source, /form\.addEventListener\("input",updateLivePreview\)/);
-  assert.match(source, /form\.addEventListener\("change",updateLivePreview\)/);
+  assert.match(source, /form\.addEventListener\("input",\(\)=>previewController\?\.updateLivePreview\(\)\)/);
+  assert.match(source, /form\.addEventListener\("change",\(\)=>previewController\?\.updateLivePreview\(\)\)/);
   assert.match(source, /PRATINJAU · BELUM DITERBITKAN/);
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
@@ -208,7 +208,7 @@ test("organoleptic renderer module loads before documents and exposes the expect
   for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
     assert.match(organolepticSource, new RegExp(name));
   }
-  assert.match(source, /renderOrganolepticPreview/);
+  assert.match(previewSource, /renderOrganolepticPreview/);
 });
 
 
