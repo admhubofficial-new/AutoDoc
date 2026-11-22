@@ -10,7 +10,7 @@ function nowInJakarta(){
  return {date:values.year+"-"+values.month+"-"+values.day,time:values.hour+":"+values.minute};
 }
 const today=()=>nowInJakarta().date;
-let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[], pendingOrganolepticPrint=null, archiveController=null, realizationController=null;
+let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, menuComponents=[], pendingOrganolepticPrint=null, archiveController=null, realizationController=null, previewController=null;
 
 async function api(route,body){
  const headers={"apikey":KEY,"Accept":"application/json"};
