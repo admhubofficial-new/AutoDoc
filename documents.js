@@ -203,7 +203,8 @@ function renderCreate(){
  if(!target)return;
  menuComponents=[];
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
- const currentTime=nowInJakarta();\n const todayVal=currentTime.date;
+ const currentTime=nowInJakarta();
+ const todayVal=currentTime.date;
  const menuSuggestions=(Array.isArray(master.menus)?master.menus:[])
   .filter(item=>item&&item.aktif!==false&&String(item.teks_menu||"").trim())
   .map(item=>"<option value='"+esc(item.teks_menu)+"'></option>").join("");
