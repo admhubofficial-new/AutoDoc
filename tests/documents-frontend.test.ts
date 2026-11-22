@@ -91,6 +91,17 @@ test("single-page form can copy the ordered menu from the latest distribution ar
   assert.match(source, /Salin menu terakhir/);
 });
 
+
+test("petugas, pengemudi, dan kendaraan remain optional during document creation", () => {
+  assert.match(source, /label for='docsStaff'>Petugas<\\/label><input id='docsStaff' type='text'[^>]*maxlength='180'(?![^>]*required)/);
+  assert.match(source, /label for='docsDriver'>Pengemudi<\\/label><input id='docsDriver' type='text'[^>]*maxlength='180'(?![^>]*required)/);
+  assert.match(source, /label for='docsVehicle'>Kendaraan<\\/label><input id='docsVehicle' type='text'[^>]*maxlength='80'(?![^>]*required)/);
+  assert.doesNotMatch(source, /Petugas, pengemudi, dan kendaraan wajib diisi/);
+  assert.match(source, /nama_petugas:\$\\("#docsStaff",modal\\)\\.value\\.trim\\(\\)/);
+  assert.match(source, /nama_pengemudi:\$\\("#docsDriver",modal\\)\\.value\\.trim\\(\\)/);
+  assert.match(source, /no_kendaraan:\$\\("#docsVehicle",modal\\)\\.value\\.trim\\(\\)/);
+});
+
 test("creation sends menu components, meal time, and only selected numbered document types", () => {
   assert.match(source, /menu_items:menuItems/);
   assert.match(source, /waktu_makan:\$\("#docsMealTime",modal\)\.value/);
