@@ -403,3 +403,11 @@
  .docs-preview-head{align-items:flex-start}
  .docs-preview-head select{max-width:125px}
 }
+
+.docs-preview-selects{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.docs-preview-selects select{max-width:145px;min-width:0}
+@media(max-width:600px){
+ .docs-create-form-panel .docs-grid-compact{grid-template-columns:1fr}
+ .docs-preview-selects{width:100%;justify-content:stretch}
+ .docs-preview-selects select{flex:1;max-width:none}
+}
