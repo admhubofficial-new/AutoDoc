@@ -11,7 +11,7 @@ const defs={
  menus:{title:"Menu makanan",fields:[["teks_menu","Nama/menu makanan","text",1],["urutan","Urutan","number"],["aktif","Aktif","checkbox"]]}
 };
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let modal=null,entity="recipients",cache={},returnFocusEl=null;
+let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null;
 async function api(path,body){const h={"apikey":KEY,"Accept":"application/json"};const r=await fetch(API+"/"+path,{method:body?"POST":"GET",headers:body?{...h,"Content-Type":"application/json"}:h,body:body?JSON.stringify(body):undefined,credentials:"include",cache:"no-store"});let d={};try{d=await r.json()}catch(_){}if(!r.ok)throw Error(d.message||"Permintaan gagal.");return d;}
 function msg(s,bad){const e=modal.querySelector(".dm-msg");e.textContent=s||"";e.style.color=bad?"#a43c32":"#66756d";}
 function close(){if(!modal)return;modal.hidden=true;document.body.style.overflow="";if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}
@@ -26,6 +26,16 @@ function init(){
  const search=el("input","dm-search");search.type="search";search.placeholder="Cari data pada bagian ini...";search.setAttribute("aria-label","Cari data master");
  const formSlot=el("div");const table=el("div","dm-table-wrap");const message=el("p","dm-msg");
  content.append(toolbar,intro,search,formSlot,table,message);dialog.append(head,tabs,content);modal.append(dialog);document.body.append(modal);
+ aiController=window.AutoDocAiAssistant?.create({
+  api,el,getRecipients:()=>Array.isArray(cache.recipients)?cache.recipients:[],
+  onApplyMenuPlan:plan=>{
+   close();
+   if(window.AutoDocDocuments?.applyAiMenuPlan)window.AutoDocDocuments.applyAiMenuPlan(plan);
+   else{modal.hidden=false;document.body.style.overflow="hidden";entity="ai";render();msg("Modul Buat Dokumen belum siap. Muat ulang halaman dan coba kembali.",true)}
+  },
+  onRecipientsChanged:async()=>{const updated=await api("master/list");cache=updated.data||{};window.dispatchEvent(new Event("autodoc:data-changed"))},
+  setMessage:msg
+ })||null;
  modal.addEventListener("click",e=>{if(e.target===modal)close()});document.addEventListener("keydown",e=>{
   if(modal.hidden)return;
   if(e.key==="Escape"){close();return}
@@ -43,7 +53,7 @@ function init(){
  }
  search.addEventListener("input",applySearch);
  function open(nextEntity,initialSearch){
-  if(nextEntity&&Object.prototype.hasOwnProperty.call(defs,nextEntity))entity=nextEntity;
+  if(nextEntity==="ai"||nextEntity&&Object.prototype.hasOwnProperty.call(defs,nextEntity))entity=nextEntity;
   const requestedSearch=String(initialSearch||"");
   returnFocusEl=document.activeElement;
   modal.hidden=false;document.body.style.overflow="hidden";search.value="";render();
@@ -56,8 +66,17 @@ function init(){
  }
  window.AutoDocMaster=Object.freeze({open,close});
  function render(){
-  tabs.innerHTML="";Object.entries(defs).forEach(([key,d])=>{const b=el("button",null,d.title);b.type="button";b.setAttribute("aria-selected",String(key===entity));b.onclick=()=>{entity=key;render()};tabs.append(b)});
-  title.textContent=defs[entity].title;actions.innerHTML="";search.value="";
+  tabs.innerHTML="";Object.entries(defs).forEach(([key,d])=>{const b=el("button",null,d.title);b.type="button";b.setAttribute("aria-selected",String(key===entity));b.onclick=()=>{entity=key;render()};tabs.append(b)});const aiTab=el("button",null,"Asisten AI");aiTab.type="button";aiTab.setAttribute("aria-selected",String(entity==="ai"));aiTab.onclick=()=>{entity="ai";render()};tabs.append(aiTab);
+  title.textContent=entity==="ai"?"Asisten AI AutoDoc":defs[entity].title;actions.innerHTML="";search.value="";
+  if(entity==="ai"){
+   intro.textContent="Tempel teks atau unggah dokumen. AI akan menyiapkan usulan menu per sekolah dan perbandingan penerima manfaat. Tidak ada perubahan tersimpan sebelum Anda mengonfirmasi.";
+   search.hidden=true;table.hidden=true;formSlot.innerHTML="";
+   if(aiController)aiController.render(formSlot);
+   else formSlot.textContent="Modul Asisten AI belum siap.";
+   return;
+  }
+  intro.textContent="Data master dipakai untuk dokumen baru. Dokumen yang sudah diterbitkan tetap menyimpan snapshot lama.";
+  search.hidden=false;table.hidden=false;
   if(entity!=="settings"){const add=el("button","dm-btn primary","+ Tambah");add.onclick=()=>form(null);actions.append(add)}
   if(entity==="recipients"){const imp=el("button","dm-btn","Impor CSV");imp.onclick=importCsv;actions.append(imp)}
   const cols=entity==="settings"?["nama_sppg","kode_sppg","alamat","kecamatan","kabupaten","nama_kepala_sppg","nama_kepala_sppi","nama_ahli_gizi"]:entity==="recipients"?["nama","kelompok","jenjang","total_porsi","alamat","aktif","perlu_verifikasi"]:entity==="vehicles"?["no_kendaraan","aktif"]:entity==="menus"?["teks_menu","aktif"]:["nama",...(entity==="staff"?["jabatan"]:[]),"aktif"];

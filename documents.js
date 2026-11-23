@@ -10,7 +10,7 @@ function nowInJakarta(){
  return values.year+"-"+values.month+"-"+values.day;
 }
 const today=()=>nowInJakarta().date;
-let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
+let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, activeAiMenuPlan=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
 
 async function api(route,body){
  const headers={"apikey":KEY,"Accept":"application/json"};
@@ -60,6 +60,7 @@ function style(){
  css.textContent += ".docs-kind-group{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 16px;padding:13px 15px;border:1px solid #e1e8e0;border-radius:10px;background:#fbfdfb}.docs-kind-group legend{padding:0 5px;color:#536258;font-size:11px;font-weight:800}.docs-kind-choice{display:flex;align-items:center;gap:8px;color:#294536;font-size:12px;font-weight:700}.docs-kind-choice input{width:16px;height:16px;accent-color:#174b39}.docs-menu-box{margin:4px 0 16px;padding:14px;border:1px solid #e1e8e0;border-radius:12px;background:#fbfdfb}.docs-menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.docs-menu-head strong{color:#294536;font-size:12px}.docs-menu-tools{display:flex;gap:7px;flex-wrap:wrap}.docs-menu-count{margin:5px 0 10px;color:#7a887e;font-size:10px}.docs-menu-list{display:grid;gap:8px}.docs-menu-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:8px;align-items:center}.docs-menu-order{color:#7a887e;font-size:11px;font-weight:800;text-align:center}.docs-menu-input{width:100%;min-height:40px;padding:8px 10px;border:1px solid #dce5dc;border-radius:8px;background:#fff;color:#24392d;font:inherit;font-size:12px}.docs-menu-row-actions{display:flex;gap:4px}.docs-menu-row-actions button{width:31px;height:34px;border:1px solid #dce5dc;border-radius:7px;background:#fff;color:#526258;font-size:13px;font-weight:800}.docs-menu-row-actions button:disabled{opacity:.35;cursor:not-allowed}.docs-menu-empty{padding:12px;border:1px dashed #dce5dc;border-radius:8px;color:#879289;background:#fff;font-size:11px}.docs-menu-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.docs-menu-actions .docs-btn{min-height:36px}.docs-meal-field{max-width:240px;margin:0 0 12px}.docs-kind-choice:focus-within,.docs-menu-input:focus-visible,.docs-menu-row-actions button:focus-visible{outline:3px solid #a9c9b7;outline-offset:2px}@media(max-width:420px){.docs-menu-row{grid-template-columns:21px minmax(0,1fr) auto}.docs-menu-row-actions button{width:28px}}";
  css.textContent += ".docs-organoleptic-option{display:flex;align-items:flex-start;gap:9px;margin:0 0 14px;padding:12px 14px;border:1px solid #e1e8e0;border-radius:10px;background:#fbfdfb;color:#294536;font-size:12px}.docs-organoleptic-option input{width:16px;height:16px;margin:1px 0 0;accent-color:#174b39}.docs-organoleptic-option strong{display:block}.docs-organoleptic-option small{display:block;margin-top:4px;color:#7a887e;font-size:10px;line-height:1.5}";
  css.textContent += ".docs-days-selection{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 13px;padding:11px 13px;border:1px solid #e1e9e0;border-radius:10px;background:#f8faf7}.docs-days-selection label{display:flex;align-items:center;gap:8px;color:#405548;font-size:11px;font-weight:700}.docs-days-selection input{width:16px;height:16px;accent-color:#174b39}.docs-days-selection span{margin-right:auto;color:#718076;font-size:11px}.docs-btn.danger{border-color:#a43c32;background:#a43c32;color:#fff}.docs-btn.danger:disabled{opacity:.4}.docs-day-card{display:grid;grid-template-columns:26px minmax(0,1fr) auto}.docs-day-pick{display:flex;align-items:center;justify-content:center}.docs-day-pick input{width:17px;height:17px;accent-color:#174b39}.docs-day-detail{min-width:0}.docs-day-detail small{overflow-wrap:anywhere}.docs-delete-panel{margin:0 0 14px;padding:16px;border:1px solid #e9c8c4;border-radius:12px;background:#fffaf9}.docs-delete-panel h3{margin:0 0 7px;color:#87352e;font-size:14px}.docs-delete-warning{margin:0 0 11px;color:#7f3933;font-size:11px;line-height:1.65}.docs-delete-summary{max-height:120px;overflow:auto;margin:0 0 13px;padding:10px;border-radius:8px;background:#fff;color:#59675d;font-size:10px;line-height:1.7}.docs-delete-form{display:grid;gap:9px}.docs-delete-form>label:first-child{color:#435449;font-size:11px;font-weight:750}.docs-delete-form>input{width:100%;min-height:42px;padding:9px 11px;border:1px solid #dce5dc;border-radius:8px;background:#fff;font:inherit;font-size:13px}.docs-delete-ack{display:flex;align-items:center;gap:8px;color:#59675d;font-size:11px}.docs-delete-ack input{width:16px;height:16px;accent-color:#a43c32}.docs-delete-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}.docs-days-selection input:focus-visible,.docs-day-pick input:focus-visible,.docs-delete-form input:focus-visible{outline:3px solid #a9c9b7;outline-offset:2px}@media(max-width:600px){.docs-days-selection{align-items:flex-start}.docs-days-selection span{width:100%;order:3}.docs-day-card{grid-template-columns:25px minmax(0,1fr)}.docs-day-actions{grid-column:2;justify-content:flex-start}.docs-delete-actions button{flex:1}}";
+ css.textContent += ".docs-ai-menu-plan{margin:0 0 12px;padding:12px;border:1px solid #d8e7da;border-radius:10px;background:#f5faf5;color:#375442;font-size:10px;line-height:1.6}.docs-ai-menu-plan strong{display:block;font-size:11px}.docs-ai-menu-plan p{margin:4px 0}.docs-ai-menu-plan ul{margin:6px 0 10px;padding-left:18px}.docs-ai-menu-plan li{margin:3px 0}.docs-ai-menu-plan .docs-btn{min-height:32px}";
  document.head.append(css);
 }
 function build(){
@@ -131,7 +132,8 @@ async function rememberCreationInputs(body){
   ["vehicles","no_kendaraan",body.no_kendaraan]
  ];
  for(const [entity,field,value] of tasks)await rememberMasterValue(entity,field,value);
- for(const value of body.menu_items||[])await rememberMasterValue("menus","teks_menu",value);
+ const allMenus=[...(body.menu_items||[]),...Object.values(body.recipient_menu_items||{}).flat()];
+ for(const value of allMenus)await rememberMasterValue("menus","teks_menu",value);
 }
 async function loadMaster(){
  status("Memuat daftar penerima dan data pendukung...");
@@ -155,6 +157,84 @@ async function loadMaster(){
 }
 function renderMenuComponents(){menuController?.render()}
 function readMenuComponents(){return menuController?.read()||[]}
+function getAiMenuPlan(date){
+ const plan=activeAiMenuPlan;
+ if(!plan||plan.tanggal!==date||!Array.isArray(plan.groups))return null;
+ return plan;
+}
+function menuItemsForRecipient(recipientId,date){
+ const plan=getAiMenuPlan(date||$("#docsDate",modal)?.value||today());
+ if(plan){
+  const group=plan.groups.find(item=>(item.recipient_ids||[]).map(String).includes(String(recipientId)));
+  if(group){
+   const firstGroup=plan.groups[0];
+   if(group===firstGroup)return readMenuComponents();
+   return Array.isArray(group.menu_items)?group.menu_items.slice(0,8):[];
+  }
+ }
+ return readMenuComponents();
+}
+function recipientMenuMap(selected,date,defaultItems){
+ const plan=getAiMenuPlan(date);
+ const map={};
+ if(!plan)return map;
+ const selectedSet=new Set(selected.map(String));
+ for(const group of plan.groups){
+  const ids=(group.recipient_ids||[]).map(String).filter(id=>selectedSet.has(id));
+  if(!ids.length)continue;
+  const items=group===plan.groups[0]?defaultItems:group.menu_items;
+  if(Array.isArray(items)&&items.length>=1&&items.length<=8)ids.forEach(id=>{map[id]=items.slice()});
+ }
+ return map;
+}
+function renderAiMenuPlanNotice(){
+ const target=$("#docsAiMenuPlanNotice",modal);
+ if(!target)return;
+ target.replaceChildren();
+ const plan=getAiMenuPlan($("#docsDate",modal)?.value||today());
+ if(!plan){target.hidden=true;return}
+ target.hidden=false;
+ const heading=node("strong",null,"Menu AI aktif · "+plan.groups.length+" kelompok tujuan");
+ const description=node("p",null,"Menu tiap penerima akan masuk ke snapshot dokumennya sendiri. Menu utama pada formulir menjadi menu kelompok pertama.");
+ target.append(heading,description);
+ const list=node("ul");
+ plan.groups.forEach(group=>{
+  const count=(group.recipient_ids||[]).length;
+  list.append(node("li",null,(group.label||"Kelompok menu")+" · "+count+" penerima · "+(group.menu_items||[]).join(", ")));
+ });
+ target.append(list);
+ const remove=node("button","docs-btn","Lepas penerapan AI");
+ remove.type="button";
+ remove.onclick=()=>{activeAiMenuPlan=null;renderAiMenuPlanNotice();status("Penerapan menu AI dilepas. Tidak ada data tersimpan.");previewController?.updateLivePreview()};
+ target.append(remove);
+}
+function applyAiMenuPlan(plan){
+ if(!plan||!/^\d{4}-\d{2}-\d{2}$/.test(String(plan.tanggal||""))||!Array.isArray(plan.groups)||!plan.groups.length)throw new Error("Rencana menu AI tidak valid.");
+ const normalized=plan.groups.map(group=>{
+  const menuItems=Array.isArray(group.menu_items)?group.menu_items.map(item=>String(item||"").trim()).filter(Boolean):[];
+  const recipientIds=Array.isArray(group.recipient_ids)?[...new Set(group.recipient_ids.map(String))]:[];
+  if(menuItems.length<1||menuItems.length>8||menuItems.some(item=>item.length>180))throw new Error("Setiap kelompok AI harus memiliki 1 sampai 8 menu yang valid.");
+  return {label:String(group.label||"Kelompok menu"),menu_items:menuItems,recipient_ids:recipientIds};
+ });
+ const used=new Set();
+ normalized.forEach(group=>group.recipient_ids.forEach(id=>{if(used.has(id))throw new Error("Satu penerima tidak boleh berada pada dua kelompok menu.");used.add(id)}));
+ if(!used.size)throw new Error("Pilih minimal satu penerima pada kelompok menu AI.");
+ activeAiMenuPlan={tanggal:plan.tanggal,groups:normalized};
+ show(false);tab="create";drawTabs();
+ $("#docsTitle",modal).textContent="Buat Dokumen";
+ $(".docs-head p",modal).textContent="Menu sudah dikelompokkan oleh AI. Periksa penerima dan data sebelum menerbitkan.";
+ $(".docs-view-create",modal).hidden=false;$(".docs-view-history",modal).hidden=true;
+ const applyToForm=()=>{
+  if(!$("#docsCreateForm",modal)){renderCreate()}
+  const date=$("#docsDate",modal);
+  if(date)date.value=activeAiMenuPlan.tanggal;
+  const first=activeAiMenuPlan.groups[0]?.menu_items||[];
+  menuController?.set(first);renderMenuComponents();renderAiMenuPlanNotice();previewController?.updateLivePreview();
+  status("Menu AI diterapkan untuk "+used.size+" penerima. Periksa kembali setiap kelompok sebelum menerbitkan.");
+ };
+ if(masterLoaded)applyToForm();
+ else loadMaster().then(applyToForm).catch(error=>status(error.message,true));
+}
 function selectedDocumentKinds(){
  const kinds=[];
  if($("#docsKindSj",modal)?.checked)kinds.push("SJ");
@@ -202,7 +282,7 @@ function renderCreate(){
      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas</label><input id='docsStaff' type='text' list='docsStaffSuggestions' maxlength='180' placeholder='Pilih atau ketik nama petugas' autocomplete='off'><datalist id='docsStaffSuggestions'>"+masterSuggestions(master.staff,"nama")+"</datalist></div><div class='docs-field'><label for='docsDriver'>Pengemudi</label><input id='docsDriver' type='text' list='docsDriverSuggestions' maxlength='180' placeholder='Pilih atau ketik nama pengemudi' autocomplete='off'><datalist id='docsDriverSuggestions'>"+masterSuggestions(master.drivers,"nama")+"</datalist></div><div class='docs-field'><label for='docsVehicle'>Kendaraan</label><input id='docsVehicle' type='text' list='docsVehicleSuggestions' maxlength='80' placeholder='Pilih atau ketik nomor kendaraan' autocomplete='off'><datalist id='docsVehicleSuggestions'>"+masterSuggestions(master.vehicles,"no_kendaraan")+"</datalist></div></div><p class='docs-field-hint'>Nama dan nomor baru akan disimpan otomatis setelah dokumen berhasil diterbitkan, lalu tersedia sebagai pilihan pada pembuatan berikutnya.</p>"+
     "</section>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Menu distribusi</h4><p>Tambahkan hingga 8 komponen menu.</p></div></div>"+
-     "<div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist><div class='docs-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah menu</button></div>"+
+     "<div id='docsAiMenuPlanNotice' class='docs-ai-menu-plan' hidden></div><div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist><div class='docs-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah menu</button></div>"+
     "</section>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Penerima</h4><p>Pilih tujuan distribusi.</p></div></div>"+
      "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-head'><strong>Penerima <span id='docsSelectedCount'>(0 dipilih)</span></strong><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari penerima...' aria-label='Cari penerima'><button type='button' class='docs-btn' id='docsSelectAll'>Pilih terlihat</button><button type='button' class='docs-btn' id='docsClearAll'>Kosongkan</button></div></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
@@ -213,6 +293,7 @@ function renderCreate(){
   "<aside class='docs-preview-panel'><div class='docs-preview-head'><div><strong>Pratinjau dokumen</strong><small id='docsPreviewRecipient'>Pilih penerima untuk melihat dokumen</small></div><div class='docs-preview-selects'><select id='docsPreviewRecipientSelect' aria-label='Penerima pratinjau'><option value=''>Penerima</option></select><select id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><div class='docs-preview-caption'>Tampilan mengikuti data yang sedang Anda isi. Nomor resmi muncul setelah diterbitkan.</div><div class='docs-preview-paper'><iframe id='docsPreviewFrame' title='Pratinjau dokumen cetak' loading='eager'></iframe></div></aside>"+
  "</div>";
  renderMenuComponents();
+ renderAiMenuPlanNotice();
  renderRecipients(recipients);
  const form=$("#docsCreateForm",target);
  $("#docsRecipientSearch",target).addEventListener("input",filterRecipients);
@@ -220,6 +301,7 @@ function renderCreate(){
  $("#docsClearAll",target).onclick=()=>setAllRecipients(false);
  $("#docsAddMenuItem",target).onclick=()=>addMenuComponent();
  $("#docsCopyLastMenu",target).onclick=copyLastMenu;
+ $("#docsDate",target).addEventListener("change",()=>{renderAiMenuPlanNotice();previewController?.updateLivePreview()});
  $("#docsPreviewKind",target).addEventListener("change",()=>previewController?.updateLivePreview());
  $("#docsPreviewRecipientSelect",target).addEventListener("change",()=>previewController?.updateLivePreview());
  form.addEventListener("input",()=>previewController?.updateLivePreview());
@@ -262,10 +344,18 @@ async function createDocs(event){
  const includeOrganoleptic=$("#docsIncludeOrganoleptic",modal)?.checked===true;
  const menuItems=readMenuComponents();
  if(menuItems.length>8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
+ const dateValue=$("#docsDate",modal).value;
+ const aiPlan=getAiMenuPlan(dateValue);
+ if(aiPlan){
+  const assigned=new Set(aiPlan.groups.flatMap(group=>group.recipient_ids||[]).map(String));
+  const unassigned=selected.filter(id=>!assigned.has(String(id)));
+  if(unassigned.length){status(unassigned.length+" penerima belum dipetakan ke kelompok menu AI. Petakan atau hapus pilihan tersebut sebelum menerbitkan.",true);return}
+ }
  const body={
   tanggal:$("#docsDate",modal).value,
   jam_berangkat:$("#docsTime",modal).value,
   menu_items:menuItems,
+  recipient_menu_items:recipientMenuMap(selected,$("#docsDate",modal).value,menuItems),
   waktu_makan:$("#docsMealTime",modal).value||"siang",
   jenis_dokumen:kinds,
   nama_petugas:$("#docsStaff",modal).value.trim(),
@@ -283,7 +373,7 @@ async function createDocs(event){
    catch(saveError){masterSaveWarning=" Dokumen berhasil dibuat, tetapi sebagian data baru belum tersimpan ke Data Master: "+saveError.message}
   }
   window.dispatchEvent(new Event("autodoc:data-changed"));
-  pendingOrganolepticPrint=includeOrganoleptic?{tanggal:body.tanggal,recipientIds:selected.slice()}:null;
+  pendingOrganolepticPrint=includeOrganoleptic?{tanggal:body.tanggal,recipientIds:selected.slice(),menuByRecipient:body.recipient_menu_items||{}}:null;
   const failed=(result.errors||[]).length;
   const summary=node("div","docs-result");
   summary.textContent=result.berhasil+" dari "+result.requested+" dokumen berhasil disiapkan. "+(failed?"Masih ada "+failed+" dokumen gagal; ulangi tanggal yang sama untuk melanjutkan.":"Nomor yang sudah terbit tidak akan dibuat ulang.");
@@ -307,7 +397,7 @@ async function loadHistory(date){
  $("#docsLoadHistory",target).onclick=()=>loadHistory($("#docsHistoryDate",target).value).catch(e=>status(e.message,true));
  $("#docsPrintSj",target).onclick=()=>printDocuments(currentDocs.filter(doc=>doc.jenis==="SJ"));
  $("#docsPrintBast",target).onclick=()=>printDocuments(currentDocs.filter(doc=>doc.jenis==="BAST"));
- $("#docsPrintOrganoleptic",target).onclick=()=>printOrganolepticForms(getArchiveRecipients());
+ $("#docsPrintOrganoleptic",target).onclick=()=>printOrganolepticForms(getArchiveRecipients(),getArchiveRecipientMenus());
  const printSelectAll=$("#docsPrintSelectAll",target),printSelectionCount=$("#docsPrintSelectionCount",target),printSelectedButton=$("#docsPrintSelected",target);
  const selectedPrintIds=new Set();
  function updatePrintSelection(){
@@ -341,7 +431,7 @@ async function loadHistory(date){
    const selectedRecipients=getRecipientsByIds(pendingOrganolepticPrint.recipientIds);
    if(selectedRecipients.length){
     const selectedButton=node("button","docs-btn primary","Cetak Uji Organoleptik · "+selectedRecipients.length+" penerima terpilih");
-    selectedButton.type="button";selectedButton.onclick=()=>printOrganolepticForms(selectedRecipients);
+    selectedButton.type="button";selectedButton.onclick=()=>printOrganolepticForms(selectedRecipients,pendingOrganolepticPrint.menuByRecipient||{});
     $("#docsPrintSelectedSlot",target).append(selectedButton);
    }
   }
@@ -373,7 +463,7 @@ function renderDocumentGroup(group,selectedPrintIds,updatePrintSelection){
  info.append(title,node("p",null,(recipient.kelompok||"")+" · "+(recipient.jenjang||"")+" · "+Number(recipient.total_porsi||0).toLocaleString("id-ID")+" porsi"));
  head.append(info);card.append(head);
  const actions=node("div","docs-group-actions");
- const organoleptic=node("button","docs-btn","Cetak Uji Organoleptik");organoleptic.type="button";organoleptic.onclick=()=>printOrganolepticForms([recipient]);actions.append(organoleptic);
+ const organoleptic=node("button","docs-btn","Cetak Uji Organoleptik");organoleptic.type="button";organoleptic.onclick=()=>printOrganolepticForms([recipient],getArchiveRecipientMenus(docs));actions.append(organoleptic);
  docs.sort((a,b)=>a.jenis.localeCompare(b.jenis)).forEach(doc=>{
   const kind=doc.jenis==="SJ"?"Surat Jalan":"BAST";
   const pick=node("label","docs-print-doc-pick");const checkbox=node("input");checkbox.type="checkbox";checkbox.checked=selectedPrintIds.has(String(doc.id));checkbox.dataset.printDocId=String(doc.id);checkbox.setAttribute("aria-label","Pilih "+kind+" nomor "+doc.nomor_lengkap);checkbox.addEventListener("change",()=>{if(checkbox.checked)selectedPrintIds.add(String(doc.id));else selectedPrintIds.delete(String(doc.id));updatePrintSelection()});pick.append(checkbox,node("span",null,"Pilih untuk cetak"));actions.append(pick);
@@ -458,6 +548,18 @@ function printDocuments(documents){
 }
 const { organolepticElement, organolepticInfoRow, organolepticMealNode, organolepticTable, organolepticSheet } = window.AutoDocOrganolepticPrint;
 
+function getArchiveRecipientMenus(documents=currentDocs){
+ const menus={};
+ (Array.isArray(documents)?documents:[]).forEach(doc=>{
+  const snapshot=doc.snapshot_json||{},recipient=snapshot.penerima||{};
+  const id=String(doc.recipient_id||recipient.id||"");
+  const stored=snapshot.distribusi?.menu_items;
+  if(!id||!Array.isArray(stored)||!stored.length||menus[id])return;
+  const items=stored.map(item=>typeof item==="string"?item:String(item?.nama_komponen||"").trim()).filter(Boolean).slice(0,8);
+  if(items.length)menus[id]=items;
+ });
+ return menus;
+}
 function getArchiveRecipients(){
  const recipients=new Map();
  currentDocs.forEach(doc=>{
@@ -481,7 +583,7 @@ function getRecipientsByIds(ids){
  });
  return Array.from(requested).map(id=>byId.get(id)).filter(Boolean);
 }
-function printOrganolepticForms(recipients){
+function printOrganolepticForms(recipients,menuByRecipient={}){
  const selected=Array.isArray(recipients)?recipients.filter(recipient=>recipient&&recipient.nama):[];
  if(!selected.length){status("Tidak ada penerima untuk formulir uji organoleptik.",true);return}
  if(!currentDistribution){status("Data distribusi tidak tersedia. Muat ulang arsip tanggal tersebut.",true);return}
@@ -511,7 +613,11 @@ function printOrganolepticForms(recipients){
  const menu=storedItems.map(item=>String(item.nama_komponen||"").trim()).filter(Boolean).slice(0,8);
  if(!menu.length&&String(currentDistribution.menu||"").trim())menu.push(String(currentDistribution.menu).trim());
  const data={tanggalLabel:dateLabel,waktuMakan:meal,ahliGizi:String(currentDistribution.nama_ahli_gizi||""),menu};
- root.replaceChildren(...selected.map(recipient=>organolepticSheet(printDoc,data,recipient)));
+ root.replaceChildren(...selected.map(recipient=>{
+  const recipientId=String(recipient.id||"");
+  const ownMenu=Array.isArray(menuByRecipient?.[recipientId])?menuByRecipient[recipientId].map(item=>typeof item==="string"?item:String(item?.nama_komponen||"").trim()).filter(Boolean).slice(0,8):[];
+  return organolepticSheet(printDoc,{...data,menu:ownMenu.length?ownMenu:menu},recipient);
+ }));
  setTimeout(()=>{if(!win.closed){win.focus();win.print()}},250);
 }
 function showRealization(card,doc){
@@ -524,7 +630,7 @@ function init(){
  menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
- previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,readMenuComponents,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
+ previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,readMenuComponents,readMenuComponentsForRecipient:menuItemsForRecipient,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
  window.AutoDocDocuments=Object.freeze({
   open(){
    show();
@@ -535,6 +641,7 @@ function init(){
    $(".docs-view-history",modal).hidden=true;
   },
   close,
+  applyAiMenuPlan,
   openArchive(date){
    show(false);
    tab="history";drawTabs();

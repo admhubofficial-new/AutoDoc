@@ -1,7 +1,7 @@
 (() => {
 "use strict";
 function create(dependencies){
- const { $, esc, getModal, getMaster, readMenuComponents, selectedDocumentKinds, today, logoUrl } = dependencies;
+ const { $, esc, getModal, getMaster, readMenuComponents, readMenuComponentsForRecipient, selectedDocumentKinds, today, logoUrl } = dependencies;
  window.addEventListener("resize",fitPreviewFrame);
  function previewPortionRows(recipient){
  const definitions=[["siswa_kecil","Siswa kecil","Porsi Kecil"],["balita","Balita","Porsi Kecil"],["siswa_besar","Siswa besar","Porsi Besar"],["tendik","Tenaga pendidik","Porsi Besar"],["ibu_hamil","Ibu hamil","Porsi Besar"],["ibu_menyusui","Ibu menyusui","Porsi Besar"],["putus_sekolah","Anak putus sekolah","Porsi Besar"],["kader","Kader","Porsi Besar"]];
@@ -45,13 +45,14 @@ function updateLivePreview(){
  const recipient=selected.length?recipients.find(item=>String(item.id)===(recipientSelect?.value||selected[0].value)):null;
  const fallback=recipient||recipients[0]||{};
  const settings=Array.isArray(getMaster().settings)?(getMaster().settings[0]||{}):(getMaster().settings||{});
- const menu=readMenuComponents(),kinds=selectedDocumentKinds();
+ const dateValue=$("#docsDate",form)?.value||today();
+ const menu=typeof readMenuComponentsForRecipient==="function"?readMenuComponentsForRecipient(fallback.id,dateValue):readMenuComponents(),kinds=selectedDocumentKinds();
  const includeOrganoleptic=$("#docsIncludeOrganoleptic",form)?.checked===true;
  const available=[...kinds,...(includeOrganoleptic?["ORGANOLEPTIC"]:[])];
  const kindSelect=$("#docsPreviewKind",getModal()),currentKind=kindSelect?.value||"SJ";
  const kind=available.includes(currentKind)?currentKind:(available[0]||"SJ");
  if(kindSelect){kindSelect.value=kind;Array.from(kindSelect.options).forEach(option=>{option.disabled=!available.includes(option.value)});}
- const date=$("#docsDate",form)?.value||today(),frame=$("#docsPreviewFrame",getModal());
+ const date=dateValue,frame=$("#docsPreviewFrame",getModal());
  const label=$("#docsPreviewRecipient",getModal());
  if(label)label.textContent=selected.length?(recipient?.nama||"Penerima terpilih"):"Contoh tampilan · pilih penerima untuk data sebenarnya";
  const count=$("#docsSubmitCount",getModal());if(count)count.textContent=selected.length+" penerima dipilih";

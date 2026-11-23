@@ -49,7 +49,35 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     else if (routeName === "dashboard/summary") {
       payload = { counts: { distributions: 1, bast_pending: 0 }, recent_distributions: [] };
     } else if (routeName === "master/list") {
-      payload = { data: { settings: [{ nama_kepala_sppg: "Kepala SPPG", nama_kepala_sppi: "Kepala SPPI", nama_ahli_gizi: "Ahli Gizi" }], staff: [], drivers: [], vehicles: [], menus: [] } };
+      payload = { data: { settings: [{ nama_kepala_sppg: "Kepala SPPG", nama_kepala_sppi: "Kepala SPPI", nama_ahli_gizi: "Ahli Gizi" }], recipients: [{
+        id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga", jenjang: "SD", alamat: "Alamat Uji",
+        aktif: true, urutan: 10, total_porsi: 16, siswa_kecil: 16, siswa_besar: 0, tendik: 0,
+        ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0
+      }], staff: [], drivers: [], vehicles: [], menus: [] } };
+    } else if (routeName === "ai/analyze") {
+      writes.push({ route: routeName, body: request.postDataJSON() });
+      const aiBody = request.postDataJSON();
+      payload = {
+        success: true, requires_confirmation: true,
+        analysis: {
+          summary: aiBody.mode === "recipients" ? "Ditemukan perubahan jumlah siswa kecil pada penerima." : "Ditemukan satu kelompok menu untuk sekolah uji.",
+          questions: [], warnings: [],
+          menu_groups: aiBody.mode === "recipients" ? [] : [{
+            id: "ai-menu-1", label: "Menu SDN Uji Browser", target_names: ["SDN UJI BROWSER"],
+            target_ids: [recipientId], menu_items: ["Nasi Putih", "Ayam Kecap"], confidence: "tinggi",
+            reason: "Nama sekolah disebut eksplisit dalam teks.", source_reference: "Paragraf 1"
+          }],
+          recipient_updates: aiBody.mode === "recipients" ? [{
+            id: "ai-recipient-1", action: "update", matched_recipient_id: recipientId,
+            current: { id: recipientId, kelompok: "Sekolah/Lembaga", nama: "SDN UJI BROWSER", jenjang: "SD", alamat: "Alamat Uji", siswa_kecil: 16, siswa_besar: 0, tendik: 0, ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0, urutan: 10, aktif: true },
+            proposed: { kelompok: "Sekolah/Lembaga", nama: "SDN UJI BROWSER", jenjang: "SD", alamat: "Alamat Uji", siswa_kecil: 18, siswa_besar: 0, tendik: 0, ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0, urutan: 10, aktif: true },
+            changed_fields: ["siswa_kecil"], fields_present: ["siswa_kecil"], confidence: "tinggi",
+            reason: "Jumlah pada file berbeda dari data master.", source_quote: "Siswa kecil: 18", source_reference: "Sheet 1, baris 2"
+          }] : [],
+          current_recipient_count: 1
+        },
+        message: "Analisis selesai. Periksa hasil dan konfirmasi."
+      };
     } else if (routeName === "master/recipients") {
       payload = { recipients: [{
         id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga", jenjang: "SD",
@@ -143,6 +171,59 @@ test("archive selection opens PIN confirmation without performing a delete", asy
     await page.locator("#docsDeletePin").waitFor();
     assert.equal(await page.getByRole("button", { name: "Hapus permanen" }).isVisible(), true);
     assert.equal(app.writes.some(item => item.route === "docs/delete-history"), false);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+
+test("AI assistant analyzes pasted menu text and applies a per-school plan without issuing documents", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.getByRole("button", { name: "Asisten AI" }).click();
+    await page.locator("#aiSourceText").fill("SDN UJI BROWSER: Nasi Putih, Ayam Kecap");
+    await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
+    await page.getByText("Menu SDN Uji Browser", { exact: true }).waitFor();
+    assert.equal(app.writes.some(item => item.route === "ai/analyze"), true);
+    await page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: "Terapkan menu ke Buat Dokumen" }).click();
+    await page.locator("#docsCreateForm").waitFor();
+    await page.locator("input[name='recipient']").check();
+    const preview = page.frameLocator("#docsPreviewFrame").locator("body");
+    await preview.getByText("Nasi Putih", { exact: false }).waitFor();
+    assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
+    assert.equal(app.writes.some(item => item.route === "docs/create"), false);
+    assert.equal(app.writes.some(item => item.route === "master/import"), false);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+
+test("AI beneficiary update is only imported after the user selects the row and confirms", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.getByRole("button", { name: "Asisten AI" }).click();
+    await page.locator("#aiMode").selectOption("recipients");
+    await page.locator("#aiSourceText").fill("SDN UJI BROWSER\nSiswa kecil: 18");
+    await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
+    await page.getByText("Sebelumnya: 16", { exact: false }).waitFor();
+    assert.equal(app.writes.some(item => item.route === "master/import"), false);
+    const row = page.locator("[data-recipient-row='0']");
+    await row.locator("[data-include-recipient]").check();
+    await page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: "Konfirmasi & simpan penerima" }).click();
+    await page.locator(".ai-status").getByText(/baris penerima berhasil disimpan/).waitFor();
+    const importRequest = app.writes.find(item => item.route === "master/import");
+    assert.ok(importRequest);
+    assert.equal(importRequest.body.rows[0].siswa_kecil, 18);
+    assert.equal(app.writes.some(item => item.route === "docs/create"), false);
     assert.deepEqual(app.errors, []);
   } finally {
     await app.context.close();

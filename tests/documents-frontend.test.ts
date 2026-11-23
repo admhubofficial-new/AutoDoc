@@ -11,6 +11,8 @@ const realizationSource = readFileSync(new URL("../bast-realization.js", import.
 const previewSource = readFileSync(new URL("../document-preview.js", import.meta.url), "utf8");
 const menuSource = readFileSync(new URL("../document-menu.js", import.meta.url), "utf8");
 const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const aiSource = readFileSync(new URL("../ai-assistant.js", import.meta.url), "utf8");
+const masterSource = readFileSync(new URL("../master.js", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
   assert.doesNotMatch(source, /^\s*token\s*$/m);
@@ -440,4 +442,41 @@ test("organoleptic meal options remain normal text for manual marking", () => {
   assert.ok(organolepticSource.includes('["Pagi","Siang","Sore"]'));
   assert.ok(organolepticSource.includes('wrap.append(doc.createTextNode(meal))'));
   assert.ok(!organolepticSource.includes('organolepticElement(doc,"s"'));
+});
+
+
+test("Data Master exposes the AI assistant as an internal tab without adding a new primary navigation item", () => {
+  assert.match(masterSource, /const aiTab=el\("button",null,"Asisten AI"\)/);
+  assert.match(masterSource, /entity==="ai"/);
+  assert.match(masterSource, /window\.AutoDocAiAssistant\?\.create/);
+  assert.match(htmlSource, /ai-assistant\.js\?v=ai-assisted-import-20261123/);
+  assert.doesNotMatch(htmlSource, /data-home-nav="ai"/);
+});
+
+test("AI assistant always previews proposed changes and requires explicit confirmation before importing recipients", () => {
+  assert.match(aiSource, /api\("ai\/analyze"/);
+  assert.match(aiSource, /PENTING: AI hanya memberi usulan/);
+  assert.match(aiSource, /Perlu konfirmasi:/);
+  assert.match(aiSource, /Konfirmasi & simpan penerima/);
+  assert.match(aiSource, /if\(!confirm\("Konfirmasi penyimpanan/);
+  assert.match(aiSource, /api\("master\/import",\{rows:payload\}\)/);
+  assert.match(aiSource, /action==="review"/);
+});
+
+test("AI menu plans map one recipient to one unique menu and block unmapped recipients before issuance", () => {
+  assert.match(aiSource, /Terapkan menu ke Buat Dokumen/);
+  assert.match(source, /Satu penerima tidak boleh berada pada dua kelompok menu/);
+  assert.match(source, /recipient_menu_items:recipientMenuMap/);
+  assert.match(source, /belum dipetakan ke kelompok menu AI/);
+  assert.match(source, /function menuItemsForRecipient/);
+  assert.match(previewSource, /readMenuComponentsForRecipient/);
+  assert.match(previewSource, /readMenuComponentsForRecipient\(fallback\.id,dateValue\)/);
+});
+
+test("organoleptic archive and creation printing use recipient-specific snapshot menu items", () => {
+  assert.match(source, /function getArchiveRecipientMenus/);
+  assert.match(source, /function printOrganolepticForms\(recipients,menuByRecipient=\{\}\)/);
+  assert.match(source, /menuByRecipient\?\.\[recipientId\]/);
+  assert.match(source, /pendingOrganolepticPrint\.menuByRecipient/);
+  assert.match(source, /printOrganolepticForms\(getArchiveRecipients\(\),getArchiveRecipientMenus\(\)\)/);
 });
