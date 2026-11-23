@@ -473,7 +473,7 @@ test("AI menu plans map one recipient to one unique menu and block unmapped reci
   assert.match(source, /belum dipetakan ke kelompok menu AI/);
   assert.match(source, /function menuItemsForRecipient/);
   assert.match(previewSource, /readMenuComponentsForRecipient/);
-  assert.match(previewSource, /readMenuComponentsForRecipient\(fallback\.id,dateValue\)/);
+  assert.ok(previewSource.includes("readMenuComponentsForRecipient(recipient.id,date)"));
 });
 
 test("organoleptic archive and creation printing use recipient-specific snapshot menu items", () => {
@@ -498,11 +498,11 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
   assert.ok(source.includes("function syncPreflightSummary()"));
   assert.match(source, /docsPreflightSummary/);
   assert.match(source, /docsSubmitCount/);
-  assert.match(source, /menuController\\?\\.count/);
+  assert.ok(source.includes("menuController?.count"));
   assert.match(source, /Siap diterbitkan/);
   assert.match(source, /Pilih minimal satu penerima untuk melanjutkan/);
   assert.ok(source.includes("button.disabled=!ready"));
-  assert.match(source, /status\\(\"Memuat daftar penerima dan data pendukung...\",false,\"loading\"\\)/);
+  assert.ok(source.includes('status("Memuat daftar penerima dan data pendukung...",false,"loading")'));
 });
 
 test("mobile recipient selection stays in the page flow and offers clear grouped filters", () => {
@@ -522,7 +522,7 @@ test("preview disclosure is collapsed until the operator asks to inspect the doc
   assert.ok(source.includes("aria-controls='docsPreviewDisclosure'"));
   assert.ok(previewSource.includes('disclosure.addEventListener("toggle",fitPreviewFrame)'));
   assert.doesNotMatch(previewSource, /disclosure\.open=!mobilePreview\.matches/);
-  assert.doesNotMatch(previewSource, /mobilePreview\\.addEventListener/);
+  assert.ok(!previewSource.includes("mobilePreview"));
   assert.match(previewSource, /Pratinjau belum tersedia/);
   assert.match(previewSource, /Pilih penerima pada formulir/);
 });
