@@ -44,10 +44,17 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    reader.readAsDataURL(file);
   });
  }
- function setMessageSafe(message,bad=false){
-  const node=host?.querySelector(".ai-status");
-  if(node){node.textContent=message||"";node.classList.toggle("error",!!bad)}
-  if(typeof setMessage==="function")setMessage(message,bad);
+ function setMessageSafe(message,bad=false,state){
+  const output=host?.querySelector(".ai-status");
+  if(output){
+   output.textContent=message||"";
+   output.dataset.state=state||(bad?"error":message?"success":"");
+   output.setAttribute("role",bad?"alert":"status");
+   output.setAttribute("aria-live",bad?"assertive":"polite");
+   output.setAttribute("aria-busy",String(state==="loading"));
+   output.classList.toggle("error",!!bad);
+  }
+  if(typeof setMessage==="function")setMessage(message,bad,state);
  }
  function render(container){
   host=container;
@@ -71,7 +78,9 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
   const actions=text(inputPanel,"div","ai-action-row");
   const analyze=button(actions,"Baca dan klasifikasikan","primary",analyzeInput);
   const status=text(shell,"p","ai-status","Tempel teks atau pilih file, kemudian mulai analisis.");
-  const results=text(shell,"section","ai-panel");results.hidden=true;
+  status.setAttribute("role","status");status.setAttribute("aria-live","polite");status.dataset.state="empty";
+  const results=text(shell,"section","ai-panel ai-review-panel");results.hidden=true;
+  results.setAttribute("aria-label","Hasil analisis dan usulan AI");
   const resultContent=text(results,"div","ai-result-content");
   const defaultFileHint=fileHint.textContent;
   function clearAnalysis(){
@@ -101,15 +110,16 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    }
    selectedFiles=files;
    fileHint.textContent=files.length+" file dipilih ("+(totalBytes/1024/1024).toFixed(2)+" MB): "+files.map(file=>file.name).join(", ");
-   setMessageSafe(files.length+" file siap dianalisis bersama.");
+   setMessageSafe(files.length+" file siap dianalisis bersama.",false,"success");
   });
   async function analyzeInput(){
    const sourceText=source.value.trim(),files=selectedFiles.slice();
    if(!sourceText&&!files.length){setMessageSafe("Tempel teks atau pilih setidaknya satu file terlebih dahulu.",true);return}
    clearAnalysis();
    if(!date.value&&(modeSelect.value==="both"||modeSelect.value==="menus")){setMessageSafe("Tanggal distribusi perlu dipilih untuk mengelompokkan menu.",true);date.focus();return}
-   analyze.disabled=true;analyze.textContent="AI sedang membaca...";
-   setMessageSafe("Menganalisis isi dan mencocokkan data penerima. Ini belum mengubah Data Master.");
+   analyze.disabled=true;analyze.setAttribute("aria-busy","true");analyze.textContent="AI sedang membaca...";
+   results.dataset.state="loading";
+   setMessageSafe("Menganalisis isi dan mencocokkan data penerima. Ini belum mengubah Data Master.",false,"loading");
    try{
     const filePayloads=[];
     for(const file of files){
@@ -117,19 +127,36 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
      filePayloads.push({name:file.name,mime,data:await readFile(file)});
     }
     const result=await api("ai/analyze",{mode:modeSelect.value,tanggal:date.value,text:sourceText,files:filePayloads});
+    if(!result?.analysis||typeof result.analysis!=="object")throw new Error("Respons analisis tidak lengkap. Periksa sumber dan coba kembali.");
     mode=modeSelect.value;dateValue=date.value;
     renderAnalysis(resultContent,result.analysis);
+    results.dataset.state=(result.analysis.menu_groups?.length||result.analysis.recipient_updates?.length||result.analysis.master_updates?.length)?"success":"empty";
     results.hidden=false;
-    setMessageSafe(result.message||"Analisis selesai. Periksa seluruh usulan sebelum menyimpan.");
-    results.scrollIntoView({behavior:"smooth",block:"start"});
-   }catch(error){setMessageSafe(error.message||"Analisis AI gagal.",true)}
-   finally{analyze.disabled=false;analyze.textContent="Baca dan klasifikasikan"}
+    setMessageSafe(result.message||"Analisis selesai. Periksa seluruh usulan sebelum menyimpan.",false,results.dataset.state);
+    results.scrollIntoView({behavior:"auto",block:"start"});
+   }catch(error){results.dataset.state="error";setMessageSafe(error.message||"Analisis AI gagal.",true,"error")}
+   finally{analyze.disabled=false;analyze.removeAttribute("aria-busy");analyze.textContent="Baca dan klasifikasikan"}
   }
   function renderAnalysis(target,data){
    target.innerHTML="";
+   const menuCount=Array.isArray(data.menu_groups)?data.menu_groups.length:0;
+   const recipientCount=Array.isArray(data.recipient_updates)?data.recipient_updates.length:0;
+   const masterCount=Array.isArray(data.master_updates)?data.master_updates.length:0;
+   const total=menuCount+recipientCount+masterCount;
    const summary=text(target,"div","ai-result-summary");
    text(summary,"strong","","Hasil pembacaan AI");
    text(summary,"p","",data.summary||"AI tidak memberikan ringkasan.");
+   const counts=text(summary,"div","ai-review-counts");
+   counts.append(
+    text(counts,"span","",menuCount+" kelompok menu"),
+    text(counts,"span","",recipientCount+" usulan penerima"),
+    text(counts,"span","",masterCount+" usulan Data Master")
+   );
+   if(total===0){
+    const empty=text(target,"div","ui-empty-state ai-empty-state");
+    text(empty,"h4","ui-empty-state__title","Belum ada usulan yang dapat ditinjau");
+    text(empty,"p","ui-empty-state__description","Sumber sudah dibaca, tetapi tidak ditemukan perubahan yang cukup jelas. Periksa teks atau file dan coba analisis ulang.");
+   }
    text(target,"div","ai-notice","PENTING: AI hanya memberi usulan. Periksa penerima, menu distribusi, identitas, petugas, pengemudi, kendaraan, dan jumlah. Tidak ada perubahan data sebelum Anda menekan tombol konfirmasi.");
    if(data.questions?.length){
     const q=text(target,"div","ai-flag-list");

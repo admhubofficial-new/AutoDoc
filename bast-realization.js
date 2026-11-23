@@ -1,37 +1,182 @@
 (() => {
-"use strict";
-function create({ getModal, $, node, esc, api, status, loadHistory }) {
- function showRealization(card,doc){
- const modal=getModal();
- modal.querySelectorAll(".docs-realization").forEach(x=>x.remove());
- const snap=doc.snapshot_json||{},recipient=snap.penerima||{},old=doc.realisasi||{};
- const deliveredSmall=Number(recipient.porsi_kecil||0),deliveredLarge=Number(recipient.porsi_besar||0);
- const panel=node("section","docs-realization");
- panel.innerHTML="<h5>Realisasi BAST · "+esc(doc.nomor_lengkap)+"</h5>"+
- "<p class='docs-note'>Jumlah diserahkan: porsi kecil "+deliveredSmall+" dan porsi besar "+deliveredLarge+". Jumlah diterima tidak boleh melebihi jumlah diserahkan.</p>"+
- "<form class='docs-grid' id='docsRealizationForm'>"+
- "<div class='docs-field'><label>Kondisi makanan *</label><select name='kondisi' required><option value=''>Pilih kondisi</option><option value='baik'>Baik</option><option value='kurang baik'>Kurang baik</option><option value='tidak layak'>Tidak layak</option></select></div>"+
- "<div class='docs-field'><label>Jam diterima *</label><input name='jam_diterima' type='time' required value='"+esc(old.jam_diterima||"")+"'></div>"+
- "<div class='docs-field'><label>Suhu makanan (°C)</label><input name='suhu_c' type='number' step='0.01' min='-50' max='100' value='"+esc(old.suhu_c??"")+"'></div>"+
- "<div class='docs-field'><label>Ompreng kembali</label><input name='ompreng_kembali' type='number' min='0' step='1' value='"+esc(old.ompreng_kembali??"")+"'></div>"+
- "<div class='docs-field'><label>Porsi kecil diterima *</label><input name='diterima_kecil' type='number' min='0' max='"+deliveredSmall+"' required value='"+esc(old.items?.find(x=>x.jenis_porsi==="Porsi Kecil")?.jumlah_diterima??deliveredSmall)+"'></div>"+
- "<div class='docs-field'><label>Porsi besar diterima *</label><input name='diterima_besar' type='number' min='0' max='"+deliveredLarge+"' required value='"+esc(old.items?.find(x=>x.jenis_porsi==="Porsi Besar")?.jumlah_diterima??deliveredLarge)+"'></div>"+
- "<div class='docs-field'><label>Nama penerima *</label><input name='nama_penerima' required maxlength='180' value='"+esc(old.nama_penerima||"")+"'></div>"+
- "<div class='docs-field'><label>Jabatan penerima</label><input name='jabatan_penerima' maxlength='120' value='"+esc(old.jabatan_penerima||"")+"'></div>"+
- "<div class='docs-field wide'><label>Catatan</label><textarea name='catatan' maxlength='1000'>"+esc(old.catatan||"")+"</textarea></div>"+
- "<div class='docs-field wide'><label>PIN akses untuk konfirmasi *</label><input name='token' type='password' required minlength='6' maxlength='128' autocomplete='current-password'></div>"+
- "<div class='docs-form-actions'><button type='button' class='docs-btn cancel-realization'>Tutup</button><button type='submit' class='docs-btn primary save-realization'>Simpan realisasi</button></div></form>";
- card.append(panel);
- $(".cancel-realization",panel).onclick=()=>panel.remove();
- $("#docsRealizationForm",panel).onsubmit=async e=>{
-  e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget).entries());data.document_id=doc.id;
-  const button=$(".save-realization",panel);button.disabled=true;button.textContent="Menyimpan…";
-  try{await api("docs/realization",data);window.dispatchEvent(new Event("autodoc:data-changed"));status("Realisasi BAST berhasil disimpan.");await loadHistory($("#docsHistoryDate",modal).value)}
-  catch(err){status(err.message,true);button.disabled=false;button.textContent="Simpan realisasi"}
- };
- panel.scrollIntoView({behavior:"smooth",block:"nearest"});
-}
- return Object.freeze({ showRealization });
-}
-window.AutoDocBastRealization = Object.freeze({ create });
+  "use strict";
+
+  function create({ getModal, $, node, esc, api, status, loadHistory }) {
+    function showRealization(card, doc) {
+      const modal = getModal();
+      modal.querySelectorAll(".docs-realization").forEach(item => item.remove());
+
+      const snapshot = doc.snapshot_json || {};
+      const recipient = snapshot.penerima || {};
+      const previous = doc.realisasi || {};
+      const deliveredSmall = Number(recipient.porsi_kecil || 0);
+      const deliveredLarge = Number(recipient.porsi_besar || 0);
+      const oldSmall = previous.items?.find(item => item.jenis_porsi === "Porsi Kecil")?.jumlah_diterima ?? deliveredSmall;
+      const oldLarge = previous.items?.find(item => item.jenis_porsi === "Porsi Besar")?.jumlah_diterima ?? deliveredLarge;
+
+      const panel = node("section", "docs-realization");
+      panel.dataset.state = "editing";
+      panel.setAttribute("aria-labelledby", "docsRealizationTitle");
+      const heading = node("h5", null, "Realisasi BAST · " + String(doc.nomor_lengkap || ""));
+      heading.id = "docsRealizationTitle";
+      panel.append(heading);
+      panel.append(node("p", "docs-note", "Jumlah diterima tidak boleh melebihi jumlah yang diserahkan. Periksa suhu, kondisi makanan, dan jumlah kemasan sebelum menyimpan."));
+
+      const live = node("p", "docs-realization-status");
+      live.setAttribute("role", "status");
+      live.setAttribute("aria-live", "polite");
+      panel.append(live);
+
+      const form = node("form", "docs-grid docs-realization-form");
+      form.id = "docsRealizationForm";
+
+      function addField(labelText, name, type, options = {}) {
+        const wrap = node("div", "docs-field" + (options.wide ? " wide" : ""));
+        const inputId = "docsRealization_" + name;
+        const label = node("label", null, labelText);
+        label.htmlFor = inputId;
+        let input;
+
+        if (type === "select") {
+          input = node("select");
+          const placeholder = node("option", null, "Pilih kondisi");
+          placeholder.value = "";
+          input.append(placeholder);
+          (options.values || []).forEach(value => {
+            const option = node("option", null, value);
+            option.value = value;
+            input.append(option);
+          });
+        } else if (type === "textarea") {
+          input = node("textarea");
+          input.maxLength = options.maxLength || 1000;
+        } else {
+          input = node("input");
+          input.type = type;
+        }
+
+        input.id = inputId;
+        input.name = name;
+        if (options.required) input.required = true;
+        if (options.minLength !== undefined) input.minLength = options.minLength;
+        if (options.maxLength !== undefined && type !== "textarea") input.maxLength = options.maxLength;
+        if (options.min !== undefined) input.min = String(options.min);
+        if (options.max !== undefined) input.max = String(options.max);
+        if (options.step !== undefined) input.step = String(options.step);
+        if (options.value !== undefined && options.value !== null) input.value = String(options.value);
+        if (options.autocomplete) input.autocomplete = options.autocomplete;
+        wrap.append(label, input);
+        if (options.hint) wrap.append(node("small", "docs-field-hint", options.hint));
+        form.append(wrap);
+        return input;
+      }
+
+      addField("Kondisi makanan *", "kondisi", "select", {
+        required: true,
+        values: ["baik", "kurang baik", "tidak layak"],
+        value: previous.kondisi || ""
+      });
+      addField("Jam diterima *", "jam_diterima", "time", {
+        required: true,
+        value: previous.jam_diterima || ""
+      });
+      addField("Suhu makanan (°C)", "suhu_c", "number", {
+        min: -50, max: 100, step: 0.01,
+        value: previous.suhu_c ?? "",
+        hint: "Rentang yang diterima: −50 hingga 100 °C"
+      });
+      addField("Ompreng kembali", "ompreng_kembali", "number", {
+        min: 0, step: 1,
+        value: previous.ompreng_kembali ?? "",
+        hint: "Masukkan jumlah utuh, tanpa tanda pemisah"
+      });
+      addField("Porsi kecil diterima *", "diterima_kecil", "number", {
+        min: 0, max: deliveredSmall, step: 1, required: true, value: oldSmall,
+        hint: "Diserahkan: " + deliveredSmall.toLocaleString("id-ID") + " porsi"
+      });
+      addField("Porsi besar diterima *", "diterima_besar", "number", {
+        min: 0, max: deliveredLarge, step: 1, required: true, value: oldLarge,
+        hint: "Diserahkan: " + deliveredLarge.toLocaleString("id-ID") + " porsi"
+      });
+      addField("Nama penerima *", "nama_penerima", "text", {
+        required: true, maxLength: 180, value: previous.nama_penerima || "", autocomplete: "name"
+      });
+      addField("Jabatan penerima", "jabatan_penerima", "text", {
+        maxLength: 120, value: previous.jabatan_penerima || ""
+      });
+      addField("Catatan", "catatan", "textarea", {
+        maxLength: 1000, value: previous.catatan || "", wide: true,
+        hint: "Catatan tambahan bila ada perbedaan jumlah atau kondisi makanan"
+      });
+      addField("PIN akses untuk konfirmasi *", "token", "password", {
+        required: true, minLength: 6, maxLength: 128, autocomplete: "current-password",
+        hint: "Diperlukan untuk mengonfirmasi penyimpanan realisasi"
+      });
+
+      const actions = node("div", "docs-form-actions docs-realization-actions");
+      const cancel = node("button", "docs-btn cancel-realization", "Tutup");
+      cancel.type = "button";
+      cancel.addEventListener("click", () => panel.remove());
+      const save = node("button", "docs-btn primary save-realization", "Simpan realisasi");
+      save.type = "submit";
+      actions.append(cancel, save);
+      form.append(actions);
+
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        const data = Object.fromEntries(new FormData(form).entries());
+        data.document_id = doc.id;
+
+        save.disabled = true;
+        cancel.disabled = true;
+        save.textContent = "Menyimpan…";
+        panel.dataset.state = "loading";
+        live.dataset.state = "loading";
+        live.textContent = "Menyimpan realisasi dan menunggu konfirmasi server…";
+
+        try {
+          await api("docs/realization", data);
+          panel.dataset.state = "success";
+          live.dataset.state = "success";
+          live.textContent = "Realisasi berhasil disimpan.";
+          status("Realisasi BAST berhasil disimpan.", false, "success");
+          window.dispatchEvent(new Event("autodoc:data-changed"));
+          save.textContent = "Tersimpan";
+
+          try {
+            await loadHistory($("#docsHistoryDate", modal).value);
+          } catch (refreshError) {
+            live.dataset.state = "warning";
+            live.textContent = "Realisasi berhasil disimpan, tetapi daftar dokumen belum dapat diperbarui. Muat ulang riwayat untuk melihat status terbaru.";
+            status("Realisasi tersimpan. Riwayat gagal diperbarui: " + (refreshError.message || "coba muat ulang."), true, "error");
+            cancel.disabled = false;
+          }
+        } catch (error) {
+          panel.dataset.state = "error";
+          live.dataset.state = "error";
+          live.setAttribute("role", "alert");
+          live.setAttribute("aria-live", "assertive");
+          live.textContent = error.message || "Realisasi gagal disimpan. Periksa data dan coba lagi.";
+          status(live.textContent, true, "error");
+          save.disabled = false;
+          cancel.disabled = false;
+          save.textContent = "Simpan realisasi";
+          const pin = form.elements.namedItem("token");
+          if (pin) {
+            pin.value = "";
+            pin.focus();
+          }
+        }
+      });
+
+      panel.append(form);
+      card.append(panel);
+      panel.scrollIntoView({ behavior: "auto", block: "nearest" });
+    }
+
+    return Object.freeze({ showRealization });
+  }
+
+  window.AutoDocBastRealization = Object.freeze({ create });
 })();

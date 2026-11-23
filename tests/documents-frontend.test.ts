@@ -182,32 +182,32 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
 });
 
 test("BAST realization form is isolated in its module and preserves validation and PIN confirmation", () => {
-  assert.match(realizationSource, /function showRealization\(card,doc\)/);
+  assert.match(realizationSource, /function showRealization\(card,\s*doc\)/);
   assert.match(realizationSource, /Porsi kecil diterima \*/);
   assert.match(realizationSource, /Porsi besar diterima \*/);
   assert.match(realizationSource, /deliveredSmall/);
   assert.match(realizationSource, /deliveredLarge/);
-  assert.match(realizationSource, /name='token' type='password' required minlength='6' maxlength='128'/);
-  assert.match(realizationSource, /api\("docs\/realization",data\)/);
-  assert.match(realizationSource, /data\.document_id=doc\.id/);
+  assert.match(realizationSource, /addField\("PIN akses untuk konfirmasi \*", "token", "password"/);
+  assert.match(realizationSource, /api\("docs\/realization",\s*data\)/);
+  assert.match(realizationSource, /data\.document_id\s*=\s*doc\.id/);
   assert.match(source, /realizationController\.showRealization/);
   assert.match(source, /window\.AutoDocBastRealization\.create/);
 });
 
 test("archive module owns global search, page selection, and PIN-protected bulk deletion", () => {
   assert.match(archiveSource, /async function loadDistributions/);
-  assert.match(archiveSource, /api\("docs\/days"\+query\)/);
+  assert.match(archiveSource, /api\("docs\/days"\s*\+\s*query\)/);
   assert.match(archiveSource, /requestSequence\+\+|\+\+requestSequence/);
-  assert.match(archiveSource, /if\(requestId!==requestSequence\)return/);
+  assert.match(archiveSource, /if\s*\(requestId\s*!==\s*requestSequence\)\s*return/);
   assert.match(archiveSource, /docsDaysSelectAll/);
   assert.match(archiveSource, /Pilih semua pada halaman ini/);
   assert.match(archiveSource, /selectedIds\.add/);
-  assert.match(archiveSource, /selectedIds\.size<60/);
+  assert.match(archiveSource, /selectedIds\.size\s*<\s*60/);
   assert.match(archiveSource, /docsDaysDelete/);
   assert.match(archiveSource, /docsDeletePin/);
   assert.match(archiveSource, /api\("docs\/delete-history"/);
-  assert.match(archiveSource, /distribution_ids:ids/);
-  assert.match(archiveSource, /const token=pin\.value/);
+  assert.match(archiveSource, /distribution_ids:\s*ids/);
+  assert.match(archiveSource, /const token\s*=\s*pin\.value/);
   assert.match(source, /archiveController\.loadDistributions/);
 });
 
@@ -449,7 +449,7 @@ test("Data Master exposes the AI assistant as an internal tab without adding a n
   assert.match(masterSource, /const aiTab=el\("button",null,"Asisten AI"\)/);
   assert.match(masterSource, /entity==="ai"/);
   assert.match(masterSource, /window\.AutoDocAiAssistant\?\.create/);
-  assert.match(htmlSource, /ai-assistant\.js\?v=p0-css-consolidation-20261124/);
+  assert.match(htmlSource, /ai-assistant\.js\?v=p2-operational-modules-20261124/);
   assert.doesNotMatch(htmlSource, /data-home-nav="ai"/);
 });
 
@@ -514,4 +514,46 @@ test("preview disclosure stays open on desktop and can collapse on mobile", () =
   assert.ok(previewSource.includes('window.matchMedia("(max-width:720px)")'));
   assert.ok(previewSource.includes("disclosure.open=!mobilePreview.matches"));
   assert.ok(previewSource.includes('disclosure.addEventListener("toggle",fitPreviewFrame)'));
+});
+
+
+test("P2 archive exposes clear, loading, empty, error, success, and PIN-confirmed delete states", () => {
+  assert.match(archiveSource, /function renderLoading\(\)/);
+  assert.match(archiveSource, /function renderEmpty\(\)/);
+  assert.match(archiveSource, /function renderError\(error\)/);
+  assert.match(archiveSource, /docsDaysClearSearch/);
+  assert.match(archiveSource, /selectedIds\.size\s*>=\s*60/);
+  assert.match(archiveSource, /api\("docs\/delete-history",\s*\{\s*token,\s*distribution_ids:\s*ids\s*\}\)/);
+  assert.doesNotMatch(archiveSource, /style=['"]/);
+});
+
+test("P2 BAST realization connects labels, communicates local states, and preserves the transactional endpoint", () => {
+  assert.match(realizationSource, /label\.htmlFor = inputId/);
+  assert.match(realizationSource, /docs-realization-status/);
+  assert.match(realizationSource, /panel\.dataset\.state = "loading"/);
+  assert.match(realizationSource, /panel\.dataset\.state = "success"/);
+  assert.match(realizationSource, /panel\.dataset\.state = "error"/);
+  assert.match(realizationSource, /api\("docs\/realization", data\)/);
+  assert.match(realizationSource, /min: -50, max: 100/);
+  assert.match(realizationSource, /max: deliveredSmall/);
+  assert.match(realizationSource, /max: deliveredLarge/);
+});
+
+test("P2 Data Master search, loading/error recovery, and form controls are accessible without inline colors", () => {
+  assert.match(masterSource, /data-filter-empty/);
+  assert.match(masterSource, /dm-load-error/);
+  assert.match(masterSource, /addEventListener\("click",load\)/);
+  assert.match(masterSource, /output\.setAttribute\("aria-live",bad\?"assertive":"polite"\)/);
+  assert.match(masterSource, /lab\.htmlFor=inputId/);
+  assert.doesNotMatch(masterSource, /message\.style\.color/);
+});
+
+test("P2 AI review labels analysis states and keeps the user-confirmed apply boundary", () => {
+  assert.match(aiSource, /output\.setAttribute\("aria-busy",String\(state==="loading"\)\)/);
+  assert.match(aiSource, /results\.dataset\.state="loading"/);
+  assert.match(aiSource, /ai-review-counts/);
+  assert.match(aiSource, /ai-empty-state/);
+  assert.match(aiSource, /api\("ai\/recipient-apply"/);
+  assert.match(aiSource, /api\("ai\/master-apply"/);
+  assert.match(aiSource, /confirm:true/);
 });
