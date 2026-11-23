@@ -144,7 +144,7 @@ test("home dashboard avoids duplicate latest distribution and emphasizes global 
   assert.match(dashboardUi, /"Distribusi sebelumnya"/);
   assert.match(dashboardUi, /action\("＋ Buat dokumen", true/);
   assert.match(dashboardUi, /action\("Lihat arsip", false/);
-  assert.match(indexHtml, /dashboard\\.js\\?v=p0-css-consolidation-20261124/);
+  assert.match(indexHtml, /dashboard\.js\\?v=p0-css-consolidation-20261124/);
 });
 
 test("SPPG identity exposes separate Kepala SPPG, Kepala SPPI, and Ahli Gizi Dapur fields", () => {
