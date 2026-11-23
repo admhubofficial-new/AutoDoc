@@ -262,6 +262,78 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    }
    function checkboxesAfterSave(cards){cards.forEach(card=>{const input=card.querySelector("[data-include-recipient]");if(input){input.checked=false;input.disabled=true}})}
   }
+  function renderMasterUpdates(target,rows){
+   const section=text(target,"section","ai-list");
+   text(section,"h4","","Usulan Data Master lainnya");
+   text(section,"p","ai-helper","AI memetakan data ke Identitas SPPG, Pengemudi, Kendaraan, Petugas, atau Daftar Menu Master. Baris baru/ubah hanya disimpan setelah Anda memilih dan mengonfirmasi.");
+   rows.forEach((row,index)=>{
+    const fields=MASTER_FIELDS[row.entity]||[];
+    const card=text(section,"article","ai-card");card.dataset.masterRow=String(index);
+    const head=text(card,"div","ai-card-head");
+    const selectable=(row.action==="new"||row.action==="update")&&(row.changed_fields||[]).length>0&&fields.length>0;
+    const check=el("input");check.type="checkbox";check.dataset.includeMaster="";check.checked=false;check.disabled=!selectable;head.append(check);
+    const label=(row.proposed?.nama_sppg||row.proposed?.nama||row.proposed?.no_kendaraan||row.proposed?.teks_menu||MASTER_TITLES[row.entity]||"Data Master");
+    text(head,"div","",MASTER_TITLES[row.entity]+ " · "+label);
+    text(head,"span","ai-confidence "+(row.confidence==="tinggi"?"high":row.confidence==="rendah"?"low":""),row.confidence||"rendah");
+    const body=text(card,"div","ai-card-body");
+    text(body,"small","ai-helper",row.reason||"Tidak ada alasan klasifikasi.");
+    if(row.source_quote)text(body,"small","ai-helper","Sumber: “"+row.source_quote+"” · "+(row.source_reference||"lokasi sumber tidak disebut"));
+    if(row.action==="review")text(body,"div","ai-flag","Perlu pemeriksaan manual. Baris ini tidak dapat disimpan otomatis.");
+    if(row.action==="new")text(body,"small","ai-helper","Data baru akan ditambahkan ke "+MASTER_TITLES[row.entity]+".");
+    (row.changed_fields||[]).forEach(key=>{
+     const def=fields.find(item=>item[0]===key);if(!def)return;
+     const wrap=text(body,"div","ai-change");
+     const lab=text(wrap,"label",""," "+def[1]);
+     const input=el("input");input.type=def[2]==="number"?"number":def[2]==="boolean"?"checkbox":"text";input.dataset.masterField=key;
+     if(def[2]==="boolean")input.checked=row.proposed?.[key]===true;else input.value=row.proposed?.[key]??"";
+     if(def[2]==="number"){input.min=key==="urutan"?"1":"0";input.step="1";input.inputMode="numeric";}
+     lab.append(text(lab,"small","","Sebelumnya: "+(row.current?.[key]===null||row.current?.[key]===undefined?"(baru/kosong)":String(row.current[key]))));
+     wrap.append(lab,input);
+    });
+   });
+   const controls=text(target,"div","ai-action-row");
+   const save=button(controls,"Konfirmasi & simpan Data Master","primary",saveMasterRows);
+   async function saveMasterRows(){
+    const selected=Array.from(section.querySelectorAll("[data-master-row]")).filter(card=>card.querySelector("[data-include-master]")?.checked);
+    if(!selected.length){setMessageSafe("Pilih minimal satu baris Data Master yang sudah diperiksa.",true);return}
+    const payload=[];
+    try{
+     for(const card of selected){
+      const row=rows[Number(card.dataset.masterRow)],fields=MASTER_FIELDS[row.entity]||[];
+      const data={...(row.current||{}),...(row.proposed||{})};
+      card.querySelectorAll("[data-master-field]").forEach(input=>{
+       const key=input.dataset.masterField,def=fields.find(item=>item[0]===key);
+       if(def?.[2]==="boolean")data[key]=input.checked;
+       else if(def?.[2]==="number"){
+        if(input.value.trim()===""||!Number.isSafeInteger(Number(input.value))||Number(input.value)<1)throw new Error("Nilai urutan harus bilangan bulat minimal 1.");
+        data[key]=Number(input.value);
+       }else data[key]=input.value.trim();
+      });
+      const identity=row.entity==="settings"?"nama_sppg":row.entity==="vehicles"?"no_kendaraan":row.entity==="menus"?"teks_menu":"nama";
+      if(!String(data[identity]||"").trim())throw new Error("Kolom identitas wajib pada "+MASTER_TITLES[row.entity]+" belum diisi.");
+      payload.push({entity:row.entity,data,card});
+     }
+    }catch(error){setMessageSafe(error.message||"Periksa kembali data master.",true);return}
+    const preview=payload.map(item=>MASTER_TITLES[item.entity]+" · "+String(item.data.nama_sppg||item.data.nama||item.data.no_kendaraan||item.data.teks_menu)).join("\n");
+    if(!confirm("Konfirmasi penyimpanan "+payload.length+" data master berikut?\n\n"+preview+"\n\nHanya baris terpilih yang akan disimpan."))return;
+    save.disabled=true;save.textContent="Menyimpan...";
+    let saved=0;
+    try{
+     for(const item of payload){
+      await api("master/save",{entity:item.entity,data:item.data});
+      saved++;
+      const check=item.card.querySelector("[data-include-master]");
+      if(check){check.checked=false;check.disabled=true}
+     }
+     await onMasterChanged();
+     setMessageSafe(saved+" data master berhasil disimpan.");
+    }catch(error){
+     if(saved>0)await onMasterChanged();
+     setMessageSafe((saved?saved+" data sudah tersimpan. ":"")+(error.message||"Data master gagal disimpan."),true);
+    }finally{save.disabled=false;save.textContent="Konfirmasi & simpan Data Master"}
+   }
+  }
+
   return { setMessage: setMessageSafe };
  }
  return Object.freeze({render});
