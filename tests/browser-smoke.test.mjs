@@ -59,7 +59,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     } else if (routeName === "sheets/preview") {
       writes.push({ route: routeName, body: request.postDataJSON() });
       payload = {
-        success: true, sheet_name: "Sheet2", source_kind: "original",
+        success: true, sheet_name: "Sheet2", source_kind: "original", preview_token: "a".repeat(64),
         summary: { source_rows: 1, updated: 1, new: 0, same: 0, review: 0, ready: 1 },
         warnings: [],
         changes: [{
@@ -279,6 +279,7 @@ test("Google Sheets shows a read-only preview and requires explicit confirmation
     await page.getByText(/1 baris berhasil diterapkan/).waitFor();
     const apply = app.writes.find(item => item.route === "sheets/apply");
     assert.deepEqual(apply.body.row_numbers, [2]);
+    assert.equal(apply.body.preview_token, "a".repeat(64));
 
     await page.once("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: "Kirim AutoDoc ke Sheets" }).click();
