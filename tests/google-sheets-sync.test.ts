@@ -26,7 +26,7 @@ test("Google Sheets export writes only to the guarded AutoDoc-managed tab", () =
   assert.match(script, /const MANAGED_SHEET_NAME = "AutoDoc_Penerima"/);
   assert.match(script, /if \(marker !== MANAGED_MARKER\)/);
   assert.match(script, /sheet\.clearContents\(\)/);
-  assert.match(script, /getSheetById\(SOURCE_SHEET_GID\)/);
+  assert.match(script, /getSheetId\(\) === SOURCE_SHEET_GID/);
   assert.match(script, /MAX_ROWS = 5000/);
 });
 
