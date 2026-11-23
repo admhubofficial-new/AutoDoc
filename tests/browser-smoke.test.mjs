@@ -178,6 +178,7 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     for (const id of ["docsStaff", "docsDriver", "docsVehicle"]) {
       assert.equal(await page.locator("#" + id).getAttribute("required"), null);
     }
+    await page.locator("#docsShippingDisclosure > summary").click();
     await page.locator("input[name='recipient']").check();
     await page.locator("#docsPreviewToggle").click();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
