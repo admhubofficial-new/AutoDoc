@@ -267,7 +267,8 @@ test("AI maps supported master entities without writing during analysis", () => 
   assert.match(source, /action === "new"\) \{/);
   assert.match(source, /potensi(al)? duplikat|berpotensi duplikat/);
   assert.match(aiUi, /renderMasterUpdates/);
-  assert.match(aiUi, /api\("master\/save",\{entity:item\.entity,data:item\.data\}\)/);
+  assert.match(aiUi, /api\("ai\/master-apply",\{confirm:true,entity:item\.entity,data:item\.data,expected:item\.expected\}\)/);
+  assert.match(aiUi, /api\("ai\/recipient-apply"/);
 });
 
 test("new AI recipient rows with incomplete counts can only be saved after manual completion", () => {
@@ -277,4 +278,30 @@ test("new AI recipient rows with incomplete counts can only be saved after manua
   assert.match(aiUi, /row\.can_complete_manually/);
   assert.match(aiUi, /recipientFieldsToRender/);
   assert.match(aiUi, /COUNT_FIELDS\.has\(key\)/);
+});
+
+test("AI save endpoints require explicit confirmation and reject stale master snapshots", () => {
+  const masterStart = source.indexOf("async function handleAiMasterApply(");
+  const recipientStart = source.indexOf("async function handleAiRecipientApply(");
+  const nextHandler = source.indexOf("async function verifyMutationPin(", recipientStart);
+  assert.ok(masterStart >= 0 && recipientStart > masterStart && nextHandler > recipientStart);
+  const masterBody = source.slice(masterStart, recipientStart);
+  const recipientBody = source.slice(recipientStart, nextHandler);
+  for (const body of [masterBody, recipientBody]) {
+    assert.match(body, /validSession\(request\)/);
+    assert.match(body, /body\.confirm !== true/);
+    assert.match(body, /matchesMasterSnapshot\(current, snapshot, config\.columns\)/);
+    assert.match(body, /status for stale|berubah sejak dianalisis/);
+  }
+  assert.match(source, /case "ai\/recipient-apply": return await handleAiRecipientApply\(request\)/);
+  assert.match(source, /case "ai\/master-apply": return await handleAiMasterApply\(request\)/);
+  assert.match(aiUi, /expected:row\.current\|\|null/);
+  assert.match(aiUi, /expected:item\.expected/);
+});
+
+test("AI master save rejects duplicate new identities and never changes an identity key silently", () => {
+  assert.match(source, /normalizedMasterIdentity\(input\[identityField \?\? ""\]\)/);
+  assert.match(source, /currentRows\.some\(\(row\) => normalizedMasterIdentity/);
+  assert.match(source, /if \(current && identityField && proposed\[identityField\] !== current\[identityField\]\)/);
+  assert.match(source, /Perubahan identitas utama/);
 });
