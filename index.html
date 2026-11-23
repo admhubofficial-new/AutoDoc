@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#123d31">
+  <meta name="theme-color" content="#1D5B43">
   <meta name="description" content="AutoDoc — website otomatisasi dokumen penunjang pekerjaan Satuan Pelayanan Pemenuhan Gizi Gratis Darmaraja 01.">
   <title>AutoDoc — Darmaraja 01</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=auth-bootstrap-code-audit-20261123">
-  <link rel="stylesheet" href="./theme.css?v=theme-layer-20261123">
+  <link rel="stylesheet" href="./styles.css?v=p0-shell-design-system-20261124">
+  <link rel="stylesheet" href="./theme.css?v=p0-design-tokens-components-20261124">
 </head>
 <body class="auth-pending">
   <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
@@ -102,19 +102,19 @@
       <button type="button" class="home-menu-toggle" id="homeMenuToggle" aria-label="Ciutkan sidebar" aria-expanded="true" aria-controls="homeSidebar" title="Ciutkan sidebar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Ciutkan sidebar</span></button>
       <div class="home-nav-caption">MENU UTAMA</div>
       <nav class="home-nav" id="homeNav" aria-label="Navigasi utama">
-        <button type="button" data-home-nav="home" aria-current="page">
+        <button type="button" data-home-nav="home" aria-label="Beranda" aria-current="page">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5M9 21v-7h6v7"/></svg></span>
           <span>Beranda</span>
         </button>
-        <button type="button" data-home-nav="print">
+        <button type="button" data-home-nav="print" aria-label="Buat Dokumen">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
           <span>Buat Dokumen</span>
         </button>
-        <button type="button" data-home-nav="archive">
+        <button type="button" data-home-nav="archive" aria-label="Arsip">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
           <span>Arsip</span>
         </button>
-        <button type="button" data-home-nav="master">
+        <button type="button" data-home-nav="master" aria-label="Data Master">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span>
           <span>Data Master</span>
         </button>
@@ -130,7 +130,7 @@
     <button type="button" class="home-sidebar-backdrop" id="homeSidebarBackdrop" aria-label="Tutup navigasi" tabindex="-1"></button>
     <div class="home-workspace">
       <header class="home-pagebar">
-        <div class="home-pagebar-label"><span class="home-pagebar-dot" aria-hidden="true"></span>Administrasi distribusi</div>
+        <div class="home-pagebar-label"><span class="home-pagebar-dot" aria-hidden="true"></span><span class="home-pagebar-text">Beranda</span></div>
         <time class="home-date-label" id="homeToday"></time>
       </header>
       <section class="home-content">
@@ -183,6 +183,7 @@
         authPage.hidden = true;
         homePage.hidden = false;
         closeHomeNav();
+        setHomeNav("home");
         setStatus("", "");
         document.title = "Beranda — AutoDoc";
         updateHomeDate();
@@ -341,10 +342,15 @@
         }).format(new Date());
       }
       function setHomeNav(active) {
+        const labels = { home: "Beranda", print: "Buat Dokumen", archive: "Arsip", master: "Data Master" };
+        const label = labels[active] || labels.home;
         homeNav.querySelectorAll("button").forEach(item => {
           if (item.dataset.homeNav === active) item.setAttribute("aria-current", "page");
           else item.removeAttribute("aria-current");
         });
+        const context = document.querySelector(".home-pagebar-text");
+        if (context) context.textContent = label;
+        document.title = label + " — AutoDoc";
       }
       function openDocsTab(tabName) {
         if (!window.AutoDocDocuments) return;
@@ -371,12 +377,24 @@
         const button = event.target.closest("[data-home-nav]");
         if (!button) return;
         const action = button.dataset.homeNav;
-        homeNav.querySelectorAll("button").forEach(item => item.removeAttribute("aria-current"));
-        button.setAttribute("aria-current", "page");
+        setHomeNav(action);
         closeHomeNav();
-        if (action === "print") window.AutoDocOpenDocs("create");
-        if (action === "archive") window.AutoDocOpenArchive();
-        if (action === "master") window.AutoDocMaster?.open("recipients");
+        if (action === "home") {
+          window.AutoDocDocuments?.close();
+          window.AutoDocMaster?.close();
+        }
+        if (action === "print") {
+          window.AutoDocMaster?.close();
+          window.AutoDocOpenDocs("create");
+        }
+        if (action === "archive") {
+          window.AutoDocMaster?.close();
+          window.AutoDocOpenArchive();
+        }
+        if (action === "master") {
+          window.AutoDocDocuments?.close();
+          window.AutoDocMaster?.open("recipients");
+        }
       });
       updateHomeDate();
 
@@ -418,15 +436,15 @@
     })();
   </script>
   <script src="./master-utils.js?v=master-csv-hardening-20261121" defer></script>
-  <script src="./ai-assistant.js?v=ai-master-data-mapping-20261124" defer></script>
-  <script src="./master.js?v=ai-master-data-mapping-20261124" defer></script>
+  <script src="./ai-assistant.js?v=p0-css-consolidation-20261124" defer></script>
+  <script src="./master.js?v=p0-css-consolidation-20261124" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123" defer></script>
   <script src="./archive.js?v=archive-search-bulk-delete-module-20261122" defer></script>
   <script src="./document-preview.js?v=recipient-menu-preview-20261123" defer></script>
   <script src="./document-menu.js?v=menu-editor-module-20261123" defer></script>
   <script src="./bast-realization.js?v=bast-realization-module-20261122" defer></script>
-  <script src="./documents.js?v=jakarta-date-default-fix-20261124" defer></script>
-  <script src="./dashboard.js?v=operations-workspace-20261122" defer></script>
+  <script src="./documents.js?v=p0-css-consolidation-20261124" defer></script>
+  <script src="./dashboard.js?v=p0-css-consolidation-20261124" defer></script>
 </body>
 </html>

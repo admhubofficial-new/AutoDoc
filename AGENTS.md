@@ -19,7 +19,8 @@ Arsitektur aktif:
 
 - index.html: bootstrap autentikasi, shell halaman, navigasi utama, serta urutan pemuatan modul.
 - config.js: URL Supabase dan publishable key publik; bukan tempat secret.
-- styles.css, theme.css: gaya dasar dan lapisan tema.
+- theme.css: satu-satunya sumber design tokens, komponen visual bersama, status, dan standar interaksi.
+- styles.css: reset/layout aplikasi, shell, sidebar, breakpoint, serta struktur layar; jangan mendefinisikan ulang design tokens di sini.
 - dashboard.js: ringkasan operasional dan shortcut navigasi.
 - documents.js: alur pembuatan dokumen, pemilihan penerima, arsip per tanggal, dan orkestrasi cetak.
 - document-menu.js: editor komponen menu harian, maksimal delapan komponen.
@@ -132,16 +133,49 @@ Aturan tipe/nilai:
 - Analisis AI tidak boleh menulis database. Endpoint apply wajib memerlukan confirm:true, validasi server, snapshot current, dan deteksi duplikasi.
 - AI bukan sumber kebenaran. Identitas ambigu atau angka hilang harus ditahan untuk review; jangan menebak nol.
 
-## 9. UI/UX, aksesibilitas, dan error handling
+## 9. UI/UX, design system, aksesibilitas, dan error handling
 
-- Pertahankan tampilan sederhana, profesional, responsif, dan fokus pada pekerjaan administrasi.
-- Setiap aksi async memiliki loading/disabled state, hasil sukses/gagal, dan pemulihan state saat error.
-- Jangan mengunci tombol permanen ketika fetch gagal; pulihkan dalam finally.
-- Tampilkan validasi dekat konteksnya dan pertahankan input pengguna saat kegagalan yang bisa diperbaiki.
-- Dialog menjaga fokus keyboard, mendukung Escape bila sesuai, memiliki label aksesibel, dan status dinamis menggunakan aria-live.
-- Jangan menyimpan PIN, token, atau informasi sensitif di localStorage/sessionStorage.
-- Untuk cetak, buka jendela cetak sebagai respons langsung aksi pengguna; tunggu aset/template siap dan jangan menandai dokumen dicetak sebelum alur konfirmasi yang ditetapkan.
-- Perubahan layout cetak wajib menguji A4, page break, margin, tanda tangan, teks panjang, dan Save as PDF.
+### 9.1 Prinsip produk dan anti-template
+- AutoDoc adalah ruang kerja administrasi distribusi MBG untuk operator SPPG, bukan dashboard SaaS generik. Optimalkan kecepatan input, keterbacaan identitas/jumlah, kepastian status, dan pencegahan salah klik.
+- Pertahankan navigasi utama Beranda, Buat Dokumen, Arsip, dan Data Master. Buat Dokumen adalah aksi utama; pengaturan/CRUD sekunder tetap di Data Master.
+- Jangan menambah grafik, metrik, badge, ilustrasi, gradient, dekorasi, atau animasi bila tidak membantu tindakan operasional.
+- Jangan menggunakan data fiktif untuk mengisi ruang kosong. Empty state harus menjelaskan kondisi nyata dan aksi yang relevan.
+- Hindari animasi lambat. Hormati prefers-reduced-motion; transisi singkat dan tidak boleh menunda pekerjaan.
+
+### 9.2 Design tokens dan kepemilikan CSS
+- theme.css adalah single source of truth untuk design tokens dan komponen UI bersama. styles.css memiliki reset/layout/shell/responsive behavior. Jangan membuat token yang berkompetisi di file lain.
+- Palet: canvas #F5F7F5; surface #FFFFFF; primary #1D5B43; teks utama #1F2A23; teks sekunder #647269; border #E1E7E2.
+- Warna semantik: success #20734A/#EAF5EE; warning #875C12/#FFF5DF; danger #B42318/#FDEDEC; info #295E92/#EAF2FA; neutral #647269/#F0F2EF.
+- Status selalu menyertakan label teks. Ikon boleh memperkuat makna, tetapi warna atau ikon saja tidak cukup.
+- Spacing memakai skala 4, 8, 12, 16, 20, 24, 32, dan 40 px. Radius kontrol sekitar 8 px, card 10–12 px; hindari shadow berat.
+- Tipografi Inter: judul halaman 24–28 px, judul bagian 17–18 px, teks utama 14–16 px, label 13 px, metadata minimal 12 px.
+- Angka jumlah, porsi, total, dan kode yang dibandingkan memakai font-variant-numeric: tabular-nums. Nomor dokumen tidak boleh diproses sebagai float.
+- Input utama minimum 44 px dan umumnya 44–48 px; target sentuh tombol/navigasi minimal sekitar 44×44 px. Icon-only control wajib memiliki accessible name.
+- Komponen tombol, input, card, badge, skeleton, empty/error state, dan toast memakai primitive di theme.css atau class modul yang konsisten.
+
+### 9.3 Struktur dan navigasi responsif
+- Desktop: sidebar dapat diciutkan menjadi rail ikon; tombol tetap punya accessible name meskipun label visual tersembunyi.
+- Mobile: drawer memiliki tombol buka/tutup di dalam sidebar, backdrop, penutupan Escape, dan judul konteks aktif Beranda/Buat Dokumen/Arsip/Data Master.
+- Jangan mengganti ID atau nama class hook JavaScript tanpa memetakan seluruh pemanggil dan menambah test regresi.
+- Jangan menambah framework, bundler, atau library UI hanya untuk styling.
+
+### 9.4 Standar empat UI states
+1. Loading: skeleton sesuai bentuk konten atau indikator halus dengan label proses. Tombol async dinonaktifkan; jangan membuat persentase progres palsu.
+2. Empty: jelaskan kenapa data belum ada atau pencarian tidak menemukan hasil, lalu sediakan aksi relevan (buat dokumen, tambah data, impor, hapus filter).
+3. Error: jelaskan apa yang gagal dan aksi pemulihan. Letakkan validasi dekat field; pertahankan input/filter/pilihan yang masih valid.
+4. Success: tampilkan konfirmasi singkat, jumlah/objek berhasil, dan langkah lanjut. Kegagalan parsial harus menyebut jumlah berhasil dan gagal.
+
+### 9.5 Komunikasi status dan aksesibilitas
+- Gunakan role=status/aria-live=polite untuk hasil normal dan role=alert untuk error penting.
+- Label input harus terhubung dengan kontrol; pertahankan urutan tab logis dan indikator focus-visible.
+- Dialog menjaga fokus keyboard, mendukung Escape bila sesuai, mengembalikan fokus ke pemicu, dan tidak membuka dialog bertumpuk yang tidak disengaja.
+- Jangan menyampaikan kesuksesan sebelum server mengonfirmasi. Jangan menyimpan PIN/token di localStorage/sessionStorage.
+- Untuk cetak, buka jendela cetak sebagai respons langsung aksi pengguna dan jangan menandai dokumen dicetak sebelum alur konfirmasi.
+
+### 9.6 Larangan pemindahan style lintas konteks cetak
+- Jangan menyuntikkan stylesheet aplikasi ke document.head dari modul runtime. Pindahkan style shell/komponen ke theme.css/styles.css; pertahankan nama selector visual yang menjadi hook.
+- Pengecualian: style pada dokumen terisolasi seperti iframe srcdoc untuk preview A4 dan renderer cetak boleh tetap di konteks itu.
+- Jangan mengubah documents-print.js dan organoleptic-print.js dalam pekerjaan UI shell/design system. Perubahan layout cetak memerlukan uji A4, margin, page break, tanda tangan, teks panjang, dan Save as PDF.
 
 ## 10. Standar pengujian
 

@@ -178,6 +178,45 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
   }
 });
 
+test("P0 shared design system and active navigation context work without runtime stylesheet injection", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    const context = page.locator(".home-pagebar-text");
+    assert.equal((await context.textContent()).trim(), "Beranda");
+    for (const [key,label] of [["home","Beranda"],["print","Buat Dokumen"],["archive","Arsip"],["master","Data Master"]]) {
+      assert.equal(await page.locator('[data-home-nav="' + key + '"]').getAttribute("aria-label"), label);
+    }
+    const tokens = await page.locator("body").evaluate(node => {
+      const style = getComputedStyle(node);
+      return { canvas: style.getPropertyValue("--color-canvas").trim(), primary: style.getPropertyValue("--color-primary").trim() };
+    });
+    assert.equal(tokens.canvas, "#F5F7F5");
+    assert.equal(tokens.primary, "#1D5B43");
+    await page.locator('[data-home-nav="print"]').click();
+    await page.locator("#docsCreateForm").waitFor();
+    assert.equal((await context.textContent()).trim(), "Buat Dokumen");
+    assert.equal(await page.locator("style").count(), 0);
+    await page.locator('[data-home-nav="master"]').click();
+    await page.locator(".dm-overlay:not([hidden])").waitFor();
+    await page.locator(".docs-overlay[hidden]").waitFor();
+    assert.equal((await context.textContent()).trim(), "Data Master");
+    await page.getByRole("button", { name: "Asisten AI" }).click();
+    assert.equal(await page.locator("style").count(), 0);
+    await page.locator('[data-home-nav="archive"]').click();
+    await page.locator("#docsDaysList").waitFor();
+    await page.locator(".dm-overlay[hidden]").waitFor();
+    assert.equal((await context.textContent()).trim(), "Arsip");
+    await page.locator('[data-home-nav="home"]').click();
+    await page.locator("#opsDashboard").waitFor();
+    await page.locator(".docs-overlay[hidden]").waitFor();
+    assert.equal((await context.textContent()).trim(), "Beranda");
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
 test("archive selection opens PIN confirmation without performing a delete", async () => {
   const app = await openApp();
   try {
