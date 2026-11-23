@@ -1,8 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  createThrottleIdentityToken,
   signSessionPayload,
   verifySessionPayload,
+  verifyThrottleIdentityToken,
   type SessionPayload,
 } from "../supabase/functions/autodoc-auth/session.ts";
 import { normalizeToken } from "../supabase/functions/autodoc-auth/validation.ts";
@@ -55,7 +57,7 @@ test("active Edge Function session helper rejects expired and future-issued payl
 });
 
 const historyDeletionMigration = readFileSync(
-  new URL("../supabase/migrations/20261122150000_delete_distribution_history.sql", import.meta.url),
+  new URL("../supabase/migrations/20261121185410_delete_distribution_history.sql", import.meta.url),
   "utf8",
 );
 
@@ -81,4 +83,26 @@ test("PIN normalization enforces 6 to 128 characters in the active backend", () 
   assert.equal(normalizeToken("  ABCDEF  "), "ABCDEF");
   assert.equal(normalizeToken("x".repeat(129)), null);
   assert.equal(normalizeToken(123456), null);
+});
+
+
+test("browser throttle identity cookies are signed, distinct, and expire after their configured lifetime", async () => {
+  const now = 1_800_000_000;
+  const key = await keyPromise;
+  const first = await createThrottleIdentityToken(key, now);
+  const second = await createThrottleIdentityToken(key, now);
+  assert.notEqual(first.identity, second.identity);
+  assert.equal(await verifyThrottleIdentityToken(first.token, key, now + 60), first.identity);
+  assert.equal(await verifyThrottleIdentityToken(second.token, key, now + 60), second.identity);
+
+  const separator = first.token.indexOf(".");
+  const signatureChar = first.token[separator + 1];
+  const altered = first.token.slice(0, separator + 1) +
+    (signatureChar === "A" ? "B" : "A") + first.token.slice(separator + 2);
+  assert.equal(await verifyThrottleIdentityToken(altered, key, now + 60), null);
+  assert.equal(await verifyThrottleIdentityToken(
+    first.token,
+    key,
+    now + 30 * 24 * 60 * 60,
+  ), null);
 });

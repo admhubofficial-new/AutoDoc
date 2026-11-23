@@ -74,3 +74,34 @@ export async function verifySessionPayload(
     return null;
   }
 }
+
+
+export const THROTTLE_ID_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+export async function createThrottleIdentityToken(
+  key: CryptoKey,
+  nowSeconds: number,
+): Promise<{ token: string; identity: string }> {
+  const identity = toBase64Url(crypto.getRandomValues(new Uint8Array(24)));
+  const payload: SessionPayload = {
+    v: 1,
+    iat: nowSeconds,
+    exp: nowSeconds + THROTTLE_ID_TTL_SECONDS,
+    nonce: identity,
+  };
+  return { token: await signSessionPayload(payload, key), identity };
+}
+
+export async function verifyThrottleIdentityToken(
+  token: string,
+  key: CryptoKey,
+  nowSeconds: number,
+): Promise<string | null> {
+  const payload = await verifySessionPayload(
+    token,
+    key,
+    nowSeconds,
+    THROTTLE_ID_TTL_SECONDS,
+  );
+  return payload?.nonce ?? null;
+}

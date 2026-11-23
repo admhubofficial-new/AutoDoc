@@ -90,8 +90,6 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.prevent_distribution_menu_item_change_after_documents() FROM PUBLIC, anon, authenticated;
-
 CREATE OR REPLACE FUNCTION public.hapus_riwayat_distribusi(p_distribution_ids uuid[])
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -184,3 +182,4 @@ $$;
 REVOKE ALL ON FUNCTION public.hapus_riwayat_distribusi(uuid[]) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.hapus_riwayat_distribusi(uuid[]) TO service_role;
 REVOKE ALL ON FUNCTION public.protect_document_record() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.prevent_distribution_menu_item_change_after_documents() FROM PUBLIC, anon, authenticated;
