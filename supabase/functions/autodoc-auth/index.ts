@@ -1508,17 +1508,20 @@ async function handleVerifyToken(request: Request): Promise<Response> {
   const token = normalizeToken(body.token);
   if (!token) throw new AppError(400, "Masukkan kembali PIN MASUK.");
 
-  const keyHash = await throttleKey();
-  const locked = await requireUnlocked(request, keyHash);
-  if (locked) return locked;
+  const throttle = await throttleKey(request);
+  const locked = await requireUnlocked(request, throttle.keyHash);
+  if (locked) return appendCookie(locked, throttle.cookie);
 
   const valid = await rpc<boolean>("verify_access_token", { p_token: token });
   if (!valid) {
-    const state = await recordFailure(keyHash);
-    if (state.locked) return lockResponse(request, state.retryAfterSeconds);
-    throw new AppError(401, "PIN MASUK tidak sesuai.");
+    const state = await recordFailure(throttle.keyHash);
+    if (state.locked) return appendCookie(lockResponse(request, state.retryAfterSeconds), throttle.cookie);
+    return appendCookie(
+      respond(request, { message: "PIN MASUK tidak sesuai." }, 401),
+      throttle.cookie,
+    );
   }
-  await clearFailures(keyHash);
+  await clearFailures(throttle.keyHash);
   const purpose = typeof body.purpose === "string" &&
       ["nomor_urut", "pembatalan", "ubah_token", "lainnya"].includes(body.purpose)
     ? body.purpose
@@ -1548,9 +1551,9 @@ async function handleChangeToken(request: Request): Promise<Response> {
   if (newToken !== confirmNewToken) throw new AppError(400, "Konfirmasi PIN baru tidak sama.");
   if (currentToken === newToken) throw new AppError(400, "PIN baru harus berbeda dari PIN lama.");
 
-  const keyHash = await throttleKey();
-  const locked = await requireUnlocked(request, keyHash);
-  if (locked) return locked;
+  const throttle = await throttleKey(request);
+  const locked = await requireUnlocked(request, throttle.keyHash);
+  if (locked) return appendCookie(locked, throttle.cookie);
 
   try {
     await rpc("change_access_token", {
@@ -1560,14 +1563,17 @@ async function handleChangeToken(request: Request): Promise<Response> {
   } catch (error) {
     const code = (error as AppError).code;
     if (code === "28000") {
-      const state = await recordFailure(keyHash);
-      if (state.locked) return lockResponse(request, state.retryAfterSeconds);
-      throw new AppError(401, "PIN lama tidak sesuai.");
+      const state = await recordFailure(throttle.keyHash);
+      if (state.locked) return appendCookie(lockResponse(request, state.retryAfterSeconds), throttle.cookie);
+      return appendCookie(
+        respond(request, { message: "PIN lama tidak sesuai." }, 401),
+        throttle.cookie,
+      );
     }
     if (code === "22023") throw new AppError(400, "PIN baru tidak valid atau sama dengan PIN lama.");
     throw error;
   }
-  await clearFailures(keyHash);
+  await clearFailures(throttle.keyHash);
   return respond(
     request,
     { success: true, message: "PIN berhasil diubah. Silakan masuk kembali." },
