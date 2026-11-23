@@ -692,6 +692,26 @@ async function handleDocsCreate(request: Request): Promise<Response> {
 
   if (!validIsoDate(body.tanggal)) throw new AppError(400, "Tanggal distribusi tidak valid.");
   const recipientIds = uuidList(body.recipient_ids, 100, "penerima");
+  const recipientMenuItems: Record<string, string[]> = {};
+  if (body.recipient_menu_items !== undefined) {
+    if (!body.recipient_menu_items || typeof body.recipient_menu_items !== "object" || Array.isArray(body.recipient_menu_items)) {
+      throw new AppError(400, "Pemetaan menu per penerima tidak valid.");
+    }
+    const menuMap = body.recipient_menu_items as Record<string, unknown>;
+    const ids = Object.keys(menuMap);
+    if (ids.length > recipientIds.length || ids.some(id => !recipientIds.includes(id))) {
+      throw new AppError(400, "Pemetaan menu berisi penerima yang tidak dipilih.");
+    }
+    for (const id of ids) {
+      try {
+        recipientMenuItems[id] = normalizeMenuComponents(menuMap[id]);
+      } catch (error) {
+        if (error instanceof WorkflowValidationError) throw new AppError(400, "Menu khusus penerima tidak valid: " + error.message);
+        throw error;
+      }
+      if (!recipientMenuItems[id].length) throw new AppError(400, "Menu khusus penerima tidak boleh kosong.");
+    }
+  }
 
   let menuItems: string[];
   let documentKinds: Array<"SJ" | "BAST">;
@@ -770,11 +790,18 @@ async function handleDocsCreate(request: Request): Promise<Response> {
 
   const tasks = recipients.flatMap((recipient) => {
     const detail = distributionSnapshotRows(recipient);
+    const recipientId = String(recipient.id);
+    const effectiveMenuItems = recipientMenuItems[recipientId] ?? menuItems;
+    const recipientDistributionPayload = {
+      ...distributionPayload,
+      menu: joinMenuComponents(effectiveMenuItems),
+      menu_items: effectiveMenuItems.map((nama_komponen, index) => ({ urutan: index + 1, nama_komponen })),
+    };
     const snapshot = {
       versi: 2,
       dibuat_pada: new Date().toISOString(),
       sppg: sppgSnapshot,
-      distribusi: { ...distributionPayload, id: distribution.id },
+      distribusi: { ...recipientDistributionPayload, id: distribution.id },
       penerima: recipient,
       rincian_porsi: detail,
       ringkasan: {
