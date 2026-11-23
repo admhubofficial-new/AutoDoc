@@ -2,14 +2,28 @@
 "use strict";
 function create(dependencies){
  const { $, esc, getModal, getMaster, readMenuComponents, readMenuComponentsForRecipient, selectedDocumentKinds, today, logoUrl } = dependencies;
+ let boundDisclosure=null;
+ const mobilePreview=window.matchMedia("(max-width:720px)");
  window.addEventListener("resize",fitPreviewFrame);
+ mobilePreview.addEventListener("change",event=>{
+  const disclosure=$("#docsPreviewDisclosure",getModal());
+  if(disclosure)disclosure.open=!event.matches;
+  fitPreviewFrame();
+ });
+ function bindPreviewDisclosure(){
+  const disclosure=$("#docsPreviewDisclosure",getModal());
+  if(!disclosure||disclosure===boundDisclosure)return;
+  boundDisclosure=disclosure;
+  disclosure.open=!mobilePreview.matches;
+  disclosure.addEventListener("toggle",fitPreviewFrame);
+ }
  function previewPortionRows(recipient){
  const definitions=[["siswa_kecil","Siswa kecil","Porsi Kecil"],["balita","Balita","Porsi Kecil"],["siswa_besar","Siswa besar","Porsi Besar"],["tendik","Tenaga pendidik","Porsi Besar"],["ibu_hamil","Ibu hamil","Porsi Besar"],["ibu_menyusui","Ibu menyusui","Porsi Besar"],["putus_sekolah","Anak putus sekolah","Porsi Besar"],["kader","Kader","Porsi Besar"]];
  return definitions.flatMap(([key,label,jenis])=>{const jumlah=Number(recipient?.[key]||0);return jumlah>0?[{kelompok_sasaran:label,jenis_porsi:jenis,jumlah}]:[]});
 }
 function fitPreviewFrame(){
  const frame=$("#docsPreviewFrame",getModal()),host=frame?.parentElement;
- if(!frame||!host||!frame.contentDocument?.body)return;
+ if(!frame||!host||!frame.contentDocument?.body||!frame.getClientRects().length||!host.clientWidth)return;
  const scale=Math.min(1,Math.max(.25,host.clientWidth/794));
  const body=frame.contentDocument.body;
  body.style.width="794px";body.style.minHeight="1123px";body.style.margin="0";body.style.padding=body.dataset.previewType==="organoleptic"?"0":"60px";body.style.boxSizing="border-box";
@@ -33,6 +47,7 @@ function renderOrganolepticPreview(frame,recipient,date,menu,settings){
 }
 function updateLivePreview(){
  if(!getModal()||!$("#docsPreviewFrame",getModal()))return;
+ bindPreviewDisclosure();
  const form=$("#docsCreateForm",getModal());if(!form)return;
  const selected=Array.from(form.querySelectorAll("input[name='recipient']:checked"));
  const recipients=Array.isArray(getMaster().recipients)?getMaster().recipients:[];

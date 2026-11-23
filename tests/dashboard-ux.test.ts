@@ -18,7 +18,7 @@ test("dashboard offers direct access to create documents and the archive", () =>
   assert.match(dashboard, /AutoDocOpenDocs/);
   assert.match(dashboard, /AutoDocOpenArchive/);
   assert.doesNotMatch(index, /homeCreateShortcut/);
-  assert.match(index, /Ringkasan operasional/);
+  assert.match(index, /Pusat pekerjaan operator/);
 });
 
 test("primary navigation is a responsive workspace sidebar", () => {
@@ -38,8 +38,20 @@ test("primary navigation is a responsive workspace sidebar", () => {
   assert.match(index, /Arsip/);
   assert.match(index, /Data Master/);
   assert.match(index, /data-home-nav="archive"/);
-  assert.match(index, /documents\.js\?v=p0-css-consolidation-20261124/);
+  assert.match(index, /documents\.js\?v=p1-operator-workspace-20261124/);
   assert.match(index, /archive\.js\?v=archive-search-bulk-delete-module-20261122/);
   assert.match(css, /body \.docs-overlay \.docs-dialog/);
   assert.match(css, /body \.dm-overlay \.dm-dialog/);
+});
+test("dashboard is an operator action center with an operational date, BAST queue, separate master checks, and recent archive", () => {
+  for (const selector of ["home-operator-hero", "home-operational-date", "home-bast-queue", "home-master-check", "home-archive-card"]) {
+    assert.ok(dashboard.includes(selector), "dashboard should render " + selector);
+  }
+  assert.match(dashboard, /counts\.bast_pending/);
+  assert.match(dashboard, /recent_distributions/);
+  assert.match(dashboard, /data-dashboard-action/);
+  assert.match(dashboard, /setState\("loading"\)/);
+  assert.match(dashboard, /setState\("error"\)/);
+  assert.match(dashboard, /setState\("success"\)/);
+  assert.doesNotMatch(dashboard, /drivers_active|vehicles_active|staff_active|menus_active/);
 });
