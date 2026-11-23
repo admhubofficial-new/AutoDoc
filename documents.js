@@ -60,6 +60,7 @@ function style(){
  css.textContent += ".docs-kind-group{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 16px;padding:13px 15px;border:1px solid #e1e8e0;border-radius:10px;background:#fbfdfb}.docs-kind-group legend{padding:0 5px;color:#536258;font-size:11px;font-weight:800}.docs-kind-choice{display:flex;align-items:center;gap:8px;color:#294536;font-size:12px;font-weight:700}.docs-kind-choice input{width:16px;height:16px;accent-color:#174b39}.docs-menu-box{margin:4px 0 16px;padding:14px;border:1px solid #e1e8e0;border-radius:12px;background:#fbfdfb}.docs-menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.docs-menu-head strong{color:#294536;font-size:12px}.docs-menu-tools{display:flex;gap:7px;flex-wrap:wrap}.docs-menu-count{margin:5px 0 10px;color:#7a887e;font-size:10px}.docs-menu-list{display:grid;gap:8px}.docs-menu-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:8px;align-items:center}.docs-menu-order{color:#7a887e;font-size:11px;font-weight:800;text-align:center}.docs-menu-input{width:100%;min-height:40px;padding:8px 10px;border:1px solid #dce5dc;border-radius:8px;background:#fff;color:#24392d;font:inherit;font-size:12px}.docs-menu-row-actions{display:flex;gap:4px}.docs-menu-row-actions button{width:31px;height:34px;border:1px solid #dce5dc;border-radius:7px;background:#fff;color:#526258;font-size:13px;font-weight:800}.docs-menu-row-actions button:disabled{opacity:.35;cursor:not-allowed}.docs-menu-empty{padding:12px;border:1px dashed #dce5dc;border-radius:8px;color:#879289;background:#fff;font-size:11px}.docs-menu-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.docs-menu-actions .docs-btn{min-height:36px}.docs-meal-field{max-width:240px;margin:0 0 12px}.docs-kind-choice:focus-within,.docs-menu-input:focus-visible,.docs-menu-row-actions button:focus-visible{outline:3px solid #a9c9b7;outline-offset:2px}@media(max-width:420px){.docs-menu-row{grid-template-columns:21px minmax(0,1fr) auto}.docs-menu-row-actions button{width:28px}}";
  css.textContent += ".docs-organoleptic-option{display:flex;align-items:flex-start;gap:9px;margin:0 0 14px;padding:12px 14px;border:1px solid #e1e8e0;border-radius:10px;background:#fbfdfb;color:#294536;font-size:12px}.docs-organoleptic-option input{width:16px;height:16px;margin:1px 0 0;accent-color:#174b39}.docs-organoleptic-option strong{display:block}.docs-organoleptic-option small{display:block;margin-top:4px;color:#7a887e;font-size:10px;line-height:1.5}";
  css.textContent += ".docs-days-selection{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 13px;padding:11px 13px;border:1px solid #e1e9e0;border-radius:10px;background:#f8faf7}.docs-days-selection label{display:flex;align-items:center;gap:8px;color:#405548;font-size:11px;font-weight:700}.docs-days-selection input{width:16px;height:16px;accent-color:#174b39}.docs-days-selection span{margin-right:auto;color:#718076;font-size:11px}.docs-btn.danger{border-color:#a43c32;background:#a43c32;color:#fff}.docs-btn.danger:disabled{opacity:.4}.docs-day-card{display:grid;grid-template-columns:26px minmax(0,1fr) auto}.docs-day-pick{display:flex;align-items:center;justify-content:center}.docs-day-pick input{width:17px;height:17px;accent-color:#174b39}.docs-day-detail{min-width:0}.docs-day-detail small{overflow-wrap:anywhere}.docs-delete-panel{margin:0 0 14px;padding:16px;border:1px solid #e9c8c4;border-radius:12px;background:#fffaf9}.docs-delete-panel h3{margin:0 0 7px;color:#87352e;font-size:14px}.docs-delete-warning{margin:0 0 11px;color:#7f3933;font-size:11px;line-height:1.65}.docs-delete-summary{max-height:120px;overflow:auto;margin:0 0 13px;padding:10px;border-radius:8px;background:#fff;color:#59675d;font-size:10px;line-height:1.7}.docs-delete-form{display:grid;gap:9px}.docs-delete-form>label:first-child{color:#435449;font-size:11px;font-weight:750}.docs-delete-form>input{width:100%;min-height:42px;padding:9px 11px;border:1px solid #dce5dc;border-radius:8px;background:#fff;font:inherit;font-size:13px}.docs-delete-ack{display:flex;align-items:center;gap:8px;color:#59675d;font-size:11px}.docs-delete-ack input{width:16px;height:16px;accent-color:#a43c32}.docs-delete-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}.docs-days-selection input:focus-visible,.docs-day-pick input:focus-visible,.docs-delete-form input:focus-visible{outline:3px solid #a9c9b7;outline-offset:2px}@media(max-width:600px){.docs-days-selection{align-items:flex-start}.docs-days-selection span{width:100%;order:3}.docs-day-card{grid-template-columns:25px minmax(0,1fr)}.docs-day-actions{grid-column:2;justify-content:flex-start}.docs-delete-actions button{flex:1}}";
+ css.textContent += ".docs-ai-menu-plan{margin:0 0 12px;padding:12px;border:1px solid #d8e7da;border-radius:10px;background:#f5faf5;color:#375442;font-size:10px;line-height:1.6}.docs-ai-menu-plan strong{display:block;font-size:11px}.docs-ai-menu-plan p{margin:4px 0}.docs-ai-menu-plan ul{margin:6px 0 10px;padding-left:18px}.docs-ai-menu-plan li{margin:3px 0}.docs-ai-menu-plan .docs-btn{min-height:32px}";
  document.head.append(css);
 }
 function build(){
@@ -388,7 +389,7 @@ async function loadHistory(date){
  $("#docsLoadHistory",target).onclick=()=>loadHistory($("#docsHistoryDate",target).value).catch(e=>status(e.message,true));
  $("#docsPrintSj",target).onclick=()=>printDocuments(currentDocs.filter(doc=>doc.jenis==="SJ"));
  $("#docsPrintBast",target).onclick=()=>printDocuments(currentDocs.filter(doc=>doc.jenis==="BAST"));
- $("#docsPrintOrganoleptic",target).onclick=()=>printOrganolepticForms(getArchiveRecipients());
+ $("#docsPrintOrganoleptic",target).onclick=()=>printOrganolepticForms(getArchiveRecipients(),getArchiveRecipientMenus());
  const printSelectAll=$("#docsPrintSelectAll",target),printSelectionCount=$("#docsPrintSelectionCount",target),printSelectedButton=$("#docsPrintSelected",target);
  const selectedPrintIds=new Set();
  function updatePrintSelection(){
@@ -422,7 +423,7 @@ async function loadHistory(date){
    const selectedRecipients=getRecipientsByIds(pendingOrganolepticPrint.recipientIds);
    if(selectedRecipients.length){
     const selectedButton=node("button","docs-btn primary","Cetak Uji Organoleptik · "+selectedRecipients.length+" penerima terpilih");
-    selectedButton.type="button";selectedButton.onclick=()=>printOrganolepticForms(selectedRecipients);
+    selectedButton.type="button";selectedButton.onclick=()=>printOrganolepticForms(selectedRecipients,pendingOrganolepticPrint.menuByRecipient||{});
     $("#docsPrintSelectedSlot",target).append(selectedButton);
    }
   }
@@ -454,7 +455,7 @@ function renderDocumentGroup(group,selectedPrintIds,updatePrintSelection){
  info.append(title,node("p",null,(recipient.kelompok||"")+" · "+(recipient.jenjang||"")+" · "+Number(recipient.total_porsi||0).toLocaleString("id-ID")+" porsi"));
  head.append(info);card.append(head);
  const actions=node("div","docs-group-actions");
- const organoleptic=node("button","docs-btn","Cetak Uji Organoleptik");organoleptic.type="button";organoleptic.onclick=()=>printOrganolepticForms([recipient]);actions.append(organoleptic);
+ const organoleptic=node("button","docs-btn","Cetak Uji Organoleptik");organoleptic.type="button";organoleptic.onclick=()=>printOrganolepticForms([recipient],getArchiveRecipientMenus(docs));actions.append(organoleptic);
  docs.sort((a,b)=>a.jenis.localeCompare(b.jenis)).forEach(doc=>{
   const kind=doc.jenis==="SJ"?"Surat Jalan":"BAST";
   const pick=node("label","docs-print-doc-pick");const checkbox=node("input");checkbox.type="checkbox";checkbox.checked=selectedPrintIds.has(String(doc.id));checkbox.dataset.printDocId=String(doc.id);checkbox.setAttribute("aria-label","Pilih "+kind+" nomor "+doc.nomor_lengkap);checkbox.addEventListener("change",()=>{if(checkbox.checked)selectedPrintIds.add(String(doc.id));else selectedPrintIds.delete(String(doc.id));updatePrintSelection()});pick.append(checkbox,node("span",null,"Pilih untuk cetak"));actions.append(pick);
@@ -539,6 +540,18 @@ function printDocuments(documents){
 }
 const { organolepticElement, organolepticInfoRow, organolepticMealNode, organolepticTable, organolepticSheet } = window.AutoDocOrganolepticPrint;
 
+function getArchiveRecipientMenus(documents=currentDocs){
+ const menus={};
+ (Array.isArray(documents)?documents:[]).forEach(doc=>{
+  const snapshot=doc.snapshot_json||{},recipient=snapshot.penerima||{};
+  const id=String(doc.recipient_id||recipient.id||"");
+  const stored=snapshot.distribusi?.menu_items;
+  if(!id||!Array.isArray(stored)||!stored.length||menus[id])return;
+  const items=stored.map(item=>typeof item==="string"?item:String(item?.nama_komponen||"").trim()).filter(Boolean).slice(0,8);
+  if(items.length)menus[id]=items;
+ });
+ return menus;
+}
 function getArchiveRecipients(){
  const recipients=new Map();
  currentDocs.forEach(doc=>{
@@ -562,7 +575,7 @@ function getRecipientsByIds(ids){
  });
  return Array.from(requested).map(id=>byId.get(id)).filter(Boolean);
 }
-function printOrganolepticForms(recipients){
+function printOrganolepticForms(recipients,menuByRecipient={}){
  const selected=Array.isArray(recipients)?recipients.filter(recipient=>recipient&&recipient.nama):[];
  if(!selected.length){status("Tidak ada penerima untuk formulir uji organoleptik.",true);return}
  if(!currentDistribution){status("Data distribusi tidak tersedia. Muat ulang arsip tanggal tersebut.",true);return}
@@ -592,7 +605,11 @@ function printOrganolepticForms(recipients){
  const menu=storedItems.map(item=>String(item.nama_komponen||"").trim()).filter(Boolean).slice(0,8);
  if(!menu.length&&String(currentDistribution.menu||"").trim())menu.push(String(currentDistribution.menu).trim());
  const data={tanggalLabel:dateLabel,waktuMakan:meal,ahliGizi:String(currentDistribution.nama_ahli_gizi||""),menu};
- root.replaceChildren(...selected.map(recipient=>organolepticSheet(printDoc,data,recipient)));
+ root.replaceChildren(...selected.map(recipient=>{
+  const recipientId=String(recipient.id||"");
+  const ownMenu=Array.isArray(menuByRecipient?.[recipientId])?menuByRecipient[recipientId].map(item=>typeof item==="string"?item:String(item?.nama_komponen||"").trim()).filter(Boolean).slice(0,8):[];
+  return organolepticSheet(printDoc,{...data,menu:ownMenu.length?ownMenu:menu},recipient);
+ }));
  setTimeout(()=>{if(!win.closed){win.focus();win.print()}},250);
 }
 function showRealization(card,doc){
