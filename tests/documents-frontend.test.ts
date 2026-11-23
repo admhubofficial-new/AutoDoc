@@ -522,8 +522,8 @@ test("P2 archive exposes clear, loading, empty, error, success, and PIN-confirme
   assert.match(archiveSource, /function renderEmpty\(\)/);
   assert.match(archiveSource, /function renderError\(error\)/);
   assert.match(archiveSource, /docsDaysClearSearch/);
-  assert.match(archiveSource, /selectedIds\.size>=60/);
-  assert.match(archiveSource, /api\("docs\/delete-history",\{token,distribution_ids:ids\}\)/);
+  assert.match(archiveSource, /selectedIds\.size\s*>=\s*60/);
+  assert.match(archiveSource, /api\("docs\/delete-history",\s*\{\s*token,\s*distribution_ids:\s*ids\s*\}\)/);
   assert.doesNotMatch(archiveSource, /style=['"]/);
 });
 

@@ -133,10 +133,14 @@ function init(){
   table.append(skeleton);
   try{
    const d=await api("master/list");cache=d.data||{};
+   table.setAttribute("aria-busy","false");
    if(entity!=="ai"){
-    render();table.setAttribute("aria-busy","false");
+    render();
     msg((cache[entity]||[]).length+" data "+defs[entity].title.toLocaleLowerCase("id-ID")+" dimuat.",false,(cache[entity]||[]).length?"success":"empty");
-   }else msg("Data Master siap untuk pencocokan AI.",false,"success");
+   }else{
+    table.dataset.state="success";
+    msg("Data Master siap untuk pencocokan AI.",false,"success");
+   }
   }catch(error){
    table.dataset.state="error";table.setAttribute("aria-busy","false");table.replaceChildren();
    const panel=node("div","ui-error-banner dm-load-error");
