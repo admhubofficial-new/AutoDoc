@@ -1982,9 +1982,18 @@ async function buildSheetsPreview(): Promise<Record<string, unknown>> {
   };
   if (summary.review > 0) warnings.push(summary.review + " baris perlu ditinjau dan tidak dapat diterapkan otomatis.");
   if (source.truncated === true) warnings.push("Data sumber melebihi 5.000 baris; hanya 5.000 baris pertama yang dibaca.");
+  const previewSnapshot = JSON.stringify(changes.map((row) => ({
+    row_number: row.row_number, action: row.action, can_apply: row.can_apply,
+    current: row.current ?? null, proposed: row.proposed ?? null,
+    changed_fields: row.changed_fields ?? [], review_reason: row.review_reason ?? null,
+  })));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(previewSnapshot));
+  const previewToken = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+
   return {
     success: true, sheet_name: source.sheet_name, sheet_gid: source.sheet_gid,
     source_kind: source.source_kind, summary, warnings, changes,
+    preview_token: previewToken,
   };
 }
 
@@ -2019,6 +2028,10 @@ async function handleSheetsApply(request: Request): Promise<Response> {
   if (!Array.isArray(body.row_numbers) || body.row_numbers.length < 1 || body.row_numbers.length > 500) {
     throw new AppError(400, "Pilih 1 sampai 500 baris untuk diterapkan.");
   }
+  const previewToken = typeof body.preview_token === "string" ? body.preview_token : "";
+  if (!/^[a-f0-9]{64}$/.test(previewToken)) {
+    throw new AppError(400, "Pratinjau sudah kedaluwarsa. Baca ulang spreadsheet sebelum menerapkan perubahan.");
+  }
   const selected = new Set<number>();
   for (const value of body.row_numbers) {
     if (!Number.isSafeInteger(value) || value < 2 || value > 5001) {
@@ -2027,6 +2040,9 @@ async function handleSheetsApply(request: Request): Promise<Response> {
     selected.add(value);
   }
   const preview = await buildSheetsPreview();
+  if (preview.preview_token !== previewToken) {
+    throw new AppError(409, "Spreadsheet atau Data Master berubah setelah pratinjau. Baca & bandingkan ulang sebelum menerapkan data.");
+  }
   const changes = Array.isArray(preview.changes) ? preview.changes as Array<Record<string, unknown>> : [];
   const selectedRows = changes.filter((row) => selected.has(Number(row.row_number)) && row.can_apply === true);
   if (!selectedRows.length) throw new AppError(409, "Tidak ada baris terpilih yang siap diterapkan. Baca ulang spreadsheet dan periksa baris yang perlu ditinjau.");
@@ -2051,6 +2067,13 @@ async function handleSheetsPush(request: Request): Promise<Response> {
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
   const body = await readJson(request);
   if (body.confirm !== true) throw new AppError(400, "Konfirmasi pengiriman data belum diberikan.");
+  const preview = await buildSheetsPreview();
+  const summary = preview.summary as Record<string, number>;
+  const pending = (summary.updated ?? 0) + (summary.new ?? 0) + (summary.review ?? 0);
+  if (pending > 0) {
+    throw new AppError(409, "Masih ada " + pending + " baris perubahan dari Google Sheets yang belum diterapkan. Baca & bandingkan, selesaikan baris yang perlu ditinjau, lalu ulangi ekspor.");
+  }
+
   const config = MASTER_CONFIG.recipients;
   const query = new URLSearchParams({ select: config.columns, order: config.order, limit: "5000" });
   const recipients = await supabaseRequest<Array<Record<string, unknown>>>(
