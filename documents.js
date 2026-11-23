@@ -132,7 +132,8 @@ async function rememberCreationInputs(body){
   ["vehicles","no_kendaraan",body.no_kendaraan]
  ];
  for(const [entity,field,value] of tasks)await rememberMasterValue(entity,field,value);
- for(const value of body.menu_items||[])await rememberMasterValue("menus","teks_menu",value);
+ const allMenus=[...(body.menu_items||[]),...Object.values(body.recipient_menu_items||{}).flat()];
+ for(const value of allMenus)await rememberMasterValue("menus","teks_menu",value);
 }
 async function loadMaster(){
  status("Memuat daftar penerima dan data pendukung...");
@@ -343,6 +344,13 @@ async function createDocs(event){
  const includeOrganoleptic=$("#docsIncludeOrganoleptic",modal)?.checked===true;
  const menuItems=readMenuComponents();
  if(menuItems.length>8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
+ const dateValue=$("#docsDate",modal).value;
+ const aiPlan=getAiMenuPlan(dateValue);
+ if(aiPlan){
+  const assigned=new Set(aiPlan.groups.flatMap(group=>group.recipient_ids||[]).map(String));
+  const unassigned=selected.filter(id=>!assigned.has(String(id)));
+  if(unassigned.length){status(unassigned.length+" penerima belum dipetakan ke kelompok menu AI. Petakan atau hapus pilihan tersebut sebelum menerbitkan.",true);return}
+ }
  const body={
   tanggal:$("#docsDate",modal).value,
   jam_berangkat:$("#docsTime",modal).value,
