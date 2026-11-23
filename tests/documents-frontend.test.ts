@@ -387,10 +387,10 @@ test("archive history supports selecting individual or all documents for batch p
   assert.match(source, /id='docsPrintSelected'/);
   assert.match(source, /Cetak dipilih/);
   assert.match(source, /data-print-doc-id/);
-  assert.match(source, /selectedPrintIds\\.add/);
-  assert.match(source, /selectedPrintIds\\.delete/);
-  assert.match(source, /currentDocs\\.filter\\(doc=>selectedPrintIds\\.has\\(String\\(doc\\.id\\)\\)\\)/);
-  assert.match(source, /renderDocumentGroup\\(group,selectedPrintIds,updatePrintSelection\\)/);
-  assert.match(source, /\\.batch-page-break\\{break-before:page/);
-  assert.match(source, /docs\\/mark-printed/);
+  assert.match(source, /selectedPrintIds\.add/);
+  assert.match(source, /selectedPrintIds\.delete/);
+  assert.match(source, /currentDocs\.filter\(doc=>selectedPrintIds\.has\(String\(doc\.id\)\)\)/);
+  assert.match(source, /renderDocumentGroup\(group,selectedPrintIds,updatePrintSelection\)/);
+  assert.match(source, /\.batch-page-break\{break-before:page/);
+  assert.match(source, /docs\/mark-printed/);
 });
