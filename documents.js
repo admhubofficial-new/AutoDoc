@@ -155,6 +155,9 @@ function getAiMenuPlan(date){
  if(!plan||plan.tanggal!==date||!Array.isArray(plan.groups))return null;
  return plan;
 }
+function hasAiMenuPlanDateMismatch(date){
+ return !!(activeAiMenuPlan&&Array.isArray(activeAiMenuPlan.groups)&&activeAiMenuPlan.tanggal!==date);
+}
 function menuItemsForRecipient(recipientId,date){
  const plan=getAiMenuPlan(date||$("#docsDate",modal)?.value||today());
  if(plan){
@@ -184,16 +187,23 @@ function renderAiMenuPlanNotice(){
  const target=$("#docsAiMenuPlanNotice",modal);
  if(!target)return;
  target.replaceChildren();
- const plan=getAiMenuPlan($("#docsDate",modal)?.value||today());
- if(!plan){target.hidden=true;return}
+ const plan=activeAiMenuPlan;
+ if(!plan||!Array.isArray(plan.groups)){target.hidden=true;return}
  target.hidden=false;
- const heading=node("strong",null,"Menu AI aktif · "+plan.groups.length+" kelompok tujuan");
- const description=node("p",null,"Menu tiap penerima akan masuk ke snapshot dokumennya sendiri. Menu utama pada formulir menjadi menu kelompok pertama.");
+ const mismatch=hasAiMenuPlanDateMismatch($("#docsDate",modal)?.value||today());
+ const heading=node("strong",null,mismatch?"Tanggal rencana menu tidak cocok":"Menu AI · "+plan.groups.length+" kelompok");
+ const description=node("p",null,mismatch
+  ?"Rencana ini dibuat untuk "+plan.tanggal+". Samakan tanggal distribusi atau lepaskan rencana sebelum menerbitkan."
+  :"Menu per kelompok akan disimpan pada dokumen masing-masing.");
  target.append(heading,description);
+ if(mismatch)target.dataset.state="warning";else delete target.dataset.state;
  const list=node("ul");
+ const recipientNames=new Map((master.recipients||[]).map(item=>[String(item.id),item.nama]));
  plan.groups.forEach(group=>{
-  const count=(group.recipient_ids||[]).length;
-  list.append(node("li",null,(group.label||"Kelompok menu")+" · "+count+" penerima · "+(group.menu_items||[]).join(", ")));
+  const ids=(group.recipient_ids||[]).map(String);
+  const names=ids.map(id=>recipientNames.get(id)).filter(Boolean);
+  const detail=(group.menu_items||[]).join(", ");
+  list.append(node("li",null,(group.label||"Kelompok menu")+" · "+ids.length+" penerima"+(names.length?" ("+names.join(", ")+")":"")+" · "+detail));
  });
  target.append(list);
  const remove=node("button","docs-btn","Lepas penerapan AI");
@@ -274,21 +284,21 @@ function renderCreate(){
   "<section class='docs-create-form-panel'>"+
    "<div class='docs-create-intro'><h3 class='docs-section-title'>Buat dokumen distribusi</h3><p class='docs-note'>Isi informasi distribusi, tentukan menu dan penerima, lalu terbitkan.</p></div>"+
    "<form id='docsCreateForm' autocomplete='off'>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>1. Informasi distribusi</h4><p>Tentukan tanggal dan dokumen yang diperlukan.</p></div></div>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Distribusi</h4></div></div>"+
      "<fieldset class='docs-kind-group'><legend>Jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label></fieldset>"+
      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div><div class='docs-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
      "<label class='docs-organoleptic-option'><input id='docsIncludeOrganoleptic' type='checkbox'><span><strong>Tambahkan Formulir Uji Organoleptik</strong><small>Satu lembar A4 untuk setiap penerima.</small></span></label>"+
     "</section>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>2. Menu &amp; penerima</h4><p>Siapkan menu, lalu pilih sekolah atau tujuan distribusi.</p></div></div>"+
-     "<div class='docs-subsection-head'><div><strong>Menu distribusi</strong><small>Maksimal 8 komponen untuk setiap kelompok menu.</small></div><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Menu &amp; penerima</h4></div></div>"+
+     "<div class='docs-subsection-head'><div><strong>Menu distribusi</strong></div><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div>"+
      "<div id='docsAiMenuPlanNotice' class='docs-ai-menu-plan' hidden></div><div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
      "<div class='docs-menu-actions'><button type='button' class='docs-btn' id='docsAiMenuAssist'>Bantu isi dengan AI</button><button type='button' class='docs-btn primary' id='docsAddMenuItem'>+ Tambah komponen</button></div>"+
-     "<div class='docs-recipient-subsection'><div class='docs-subsection-head'><div><strong>Penerima tujuan <span id='docsSelectedCount' class='docs-visually-hidden' aria-live='polite'>(0 dipilih)</span></strong><small>Pilih satu atau beberapa tujuan distribusi.</small></div><span id='docsRecipientResultCount' class='docs-recipient-result-count' aria-live='polite'>"+recipients.length+" tujuan</span></div>"+
+     "<div class='docs-recipient-subsection'><div class='docs-subsection-head'><div><strong>Penerima tujuan <span id='docsSelectedCount' class='docs-visually-hidden' aria-live='polite'>(0 dipilih)</span></strong></div><span id='docsRecipientResultCount' class='docs-recipient-result-count' aria-live='polite'>"+recipients.length+" tujuan</span></div>"+
       "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari nama penerima...' aria-label='Cari penerima' autocomplete='off'><select id='docsRecipientGroup' aria-label='Filter kelompok penerima'><option value=''>Semua kelompok</option>"+groupOptions+"</select><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua hasil</button><button type='button' class='docs-btn' id='docsClearAll'>Hapus pilihan</button></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
      "</div>"+
     "</section>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>3. Informasi pengiriman</h4><p>Isi bila informasi petugas dan kendaraan perlu dicantumkan.</p></div></div>"+
-     "<details class='docs-shipping-details' id='docsShippingDisclosure'><summary><span>Petugas, pengemudi, dan kendaraan</span><small>Opsional</small></summary><div class='docs-shipping-fields'>"+
+    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Pengiriman</h4></div></div>"+
+     "<details class='docs-shipping-details' id='docsShippingDisclosure'><summary><span>Petugas, pengemudi, dan kendaraan</span></summary><div class='docs-shipping-fields'>"+
       "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas</label><input id='docsStaff' type='text' list='docsStaffSuggestions' maxlength='180' placeholder='Pilih atau ketik nama petugas' autocomplete='off'><datalist id='docsStaffSuggestions'>"+masterSuggestions(master.staff,"nama")+"</datalist></div><div class='docs-field'><label for='docsDriver'>Pengemudi</label><input id='docsDriver' type='text' list='docsDriverSuggestions' maxlength='180' placeholder='Pilih atau ketik nama pengemudi' autocomplete='off'><datalist id='docsDriverSuggestions'>"+masterSuggestions(master.drivers,"nama")+"</datalist></div><div class='docs-field'><label for='docsVehicle'>Kendaraan</label><input id='docsVehicle' type='text' list='docsVehicleSuggestions' maxlength='80' placeholder='Pilih atau ketik nomor kendaraan' autocomplete='off'><datalist id='docsVehicleSuggestions'>"+masterSuggestions(master.vehicles,"no_kendaraan")+"</datalist></div></div>"+
       "<p class='docs-field-hint'>Data baru akan disimpan ke Data Master setelah dokumen berhasil diterbitkan.</p>"+
      "</div></details>"+
