@@ -243,25 +243,39 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
       else if(def?.[2]==="boolean")merged[key]=input.checked;
       else merged[key]=input.value;
      });
+
      return {
-      kelompok:merged.kelompok,nama:merged.nama,jenjang:merged.jenjang,alamat:merged.alamat||"",
-      siswa_kecil:Number(merged.siswa_kecil||0),siswa_besar:Number(merged.siswa_besar||0),tendik:Number(merged.tendik||0),
-      ibu_hamil:Number(merged.ibu_hamil||0),ibu_menyusui:Number(merged.ibu_menyusui||0),balita:Number(merged.balita||0),
-      putus_sekolah:Number(merged.putus_sekolah||0),kader:Number(merged.kader||0),
-      urutan:Number(merged.urutan||100),aktif:merged.aktif!==false,keterangan:merged.keterangan||"",
-      perlu_verifikasi:merged.perlu_verifikasi===true,catatan_verifikasi:merged.catatan_verifikasi||""
+      id:row.current?.id||null,
+      expected:row.current||null,
+      data:{
+       kelompok:merged.kelompok,nama:merged.nama,jenjang:merged.jenjang,alamat:merged.alamat||"",
+       siswa_kecil:Number(merged.siswa_kecil||0),siswa_besar:Number(merged.siswa_besar||0),tendik:Number(merged.tendik||0),
+       ibu_hamil:Number(merged.ibu_hamil||0),ibu_menyusui:Number(merged.ibu_menyusui||0),balita:Number(merged.balita||0),
+       putus_sekolah:Number(merged.putus_sekolah||0),kader:Number(merged.kader||0),
+       urutan:Number(merged.urutan||100),aktif:merged.aktif!==false,keterangan:merged.keterangan||"",
+       perlu_verifikasi:merged.perlu_verifikasi===true,catatan_verifikasi:merged.catatan_verifikasi||""
+      }
      };
     })}catch(error){setMessageSafe(error.message||"Periksa kembali nilai penerima.",true);return}
-    if(payload.some(row=>!row.kelompok||!row.nama||!row.jenjang)){setMessageSafe("Kelompok, nama, dan jenjang harus lengkap pada setiap baris.",true);return}
+    if(payload.some(row=>!row.data.kelompok||!row.data.nama||!row.data.jenjang)){setMessageSafe("Kelompok, nama, dan jenjang harus lengkap pada setiap baris.",true);return}
     if(!confirm("Konfirmasi penyimpanan "+payload.length+" penerima? Hanya baris yang dicentang yang akan diperbarui/ditambahkan. Data penerima lain tidak dihapus."))return;
     save.disabled=true;save.textContent="Menyimpan...";
+    let saved=0;
     try{
-     const result=await api("master/import",{rows:payload});
+     for(const item of payload){
+      await api("ai/recipient-apply",{
+       confirm:true,expected:item.expected,
+       data:{...item.data,...(item.id?{id:item.id}:{})}
+      });
+      saved++;
+     }
      await onMasterChanged();
-     setMessageSafe((result.imported||payload.length)+" baris penerima berhasil disimpan. Periksa kembali Data Master.");
+     setMessageSafe(saved+" baris penerima berhasil disimpan. Periksa kembali Data Master.");
      checkboxesAfterSave(selected);
-    }catch(error){setMessageSafe(error.message||"Data penerima gagal disimpan.",true)}
-    finally{save.disabled=false;save.textContent="Konfirmasi & simpan penerima"}
+    }catch(error){
+     if(saved>0)await onMasterChanged();
+     setMessageSafe((saved?saved+" baris sudah tersimpan. ":"")+(error.message||"Data penerima gagal disimpan."),true);
+    }finally{save.disabled=false;save.textContent="Konfirmasi & simpan penerima"}
    }
    function checkboxesAfterSave(cards){cards.forEach(card=>{const input=card.querySelector("[data-include-recipient]");if(input){input.checked=false;input.disabled=true}})}
   }
@@ -314,7 +328,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
       });
       const identity=row.entity==="settings"?"nama_sppg":row.entity==="vehicles"?"no_kendaraan":row.entity==="menus"?"teks_menu":"nama";
       if(!String(data[identity]||"").trim())throw new Error("Kolom identitas wajib pada "+MASTER_TITLES[row.entity]+" belum diisi.");
-      payload.push({entity:row.entity,data,card});
+      payload.push({entity:row.entity,data,expected:row.current||null,card});
      }
     }catch(error){setMessageSafe(error.message||"Periksa kembali data master.",true);return}
     const preview=payload.map(item=>MASTER_TITLES[item.entity]+" · "+String(item.data.nama_sppg||item.data.nama||item.data.no_kendaraan||item.data.teks_menu)).join("\n");
@@ -323,7 +337,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
     let saved=0;
     try{
      for(const item of payload){
-      await api("master/save",{entity:item.entity,data:item.data});
+      await api("ai/master-apply",{confirm:true,entity:item.entity,data:item.data,expected:item.expected});
       saved++;
       const check=item.card.querySelector("[data-include-master]");
       if(check){check.checked=false;check.disabled=true}
