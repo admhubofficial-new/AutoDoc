@@ -254,7 +254,8 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
        putus_sekolah:Number(merged.putus_sekolah||0),kader:Number(merged.kader||0),
        urutan:Number(merged.urutan||100),aktif:merged.aktif!==false,keterangan:merged.keterangan||"",
        perlu_verifikasi:merged.perlu_verifikasi===true,catatan_verifikasi:merged.catatan_verifikasi||""
-      }
+      },
+      card
      };
     })}catch(error){setMessageSafe(error.message||"Periksa kembali nilai penerima.",true);return}
     if(payload.some(row=>!row.data.kelompok||!row.data.nama||!row.data.jenjang)){setMessageSafe("Kelompok, nama, dan jenjang harus lengkap pada setiap baris.",true);return}
@@ -268,6 +269,8 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
        data:{...item.data,...(item.id?{id:item.id}:{})}
       });
       saved++;
+      const checkbox=item.card.querySelector("[data-include-recipient]");
+      if(checkbox){checkbox.checked=false;checkbox.disabled=true}
      }
      await onMasterChanged();
      setMessageSafe(saved+" baris penerima berhasil disimpan. Periksa kembali Data Master.");
