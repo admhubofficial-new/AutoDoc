@@ -2,8 +2,8 @@
 "use strict";
 function buildPrintHtml(doc, escapeHtml, logoUrl){
  const snap=doc.snapshot_json||{},sppg=snap.sppg||{},dist=snap.distribusi||{},rec=snap.penerima||{},items=snap.rincian_porsi||[];
- const isBast=doc.jenis==="BAST",real=doc.realisasi||[];
- const realRows=real.items||{};
+ const isBast=doc.jenis==="BAST",real=doc.realisasi||{};
+ const realRows=real.items||[];
  const quantityByType=(field)=>realRows.reduce((map,item)=>{const type=String(item.jenis_porsi||"");map[type]=(map[type]||0)+Number(item[field]||0);return map;},{});
  const handedByType=quantityByType("jumlah_diserahkan"),receivedByType=quantityByType("jumlah_diterima");
  const snapshotByType=items.reduce((map,item)=>{const type=String(item.jenis_porsi||"");map[type]=(map[type]||0)+Number(item.jumlah||0);return map;},{});
