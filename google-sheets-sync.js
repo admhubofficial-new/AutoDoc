@@ -1,6 +1,5 @@
 (() => {
 "use strict";
-const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 function node(tag,className,text){
  const item=document.createElement(tag);
  if(className)item.className=className;
