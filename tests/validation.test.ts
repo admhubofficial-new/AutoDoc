@@ -162,3 +162,35 @@ test("OpenAI fetch deadline aborts a provider request that does not respond", as
   );
   assert.equal(aborted, true);
 });
+
+
+test("OpenAI fetch deadline remains active while reading a stalled response body", async () => {
+  let bodyAborted = false;
+  const pendingBodyFetch: typeof fetch = (_input, init) => Promise.resolve(
+    new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        init?.signal?.addEventListener("abort", () => {
+          bodyAborted = true;
+          controller.error(new Error("body aborted"));
+        }, { once: true });
+      },
+    })),
+  );
+  await assert.rejects(
+    fetchResponseTextWithTimeout("https://provider.test/responses", { method: "POST" }, 10, pendingBodyFetch),
+    RequestTimeoutError,
+  );
+  assert.equal(bodyAborted, true);
+});
+
+test("bounded JSON reader rejects an oversized declared body before reading the stream", async () => {
+  const request = new Request("https://autodoc.test/request", {
+    method: "POST",
+    headers: { "content-length": "1024" },
+    body: "{}",
+  });
+  await assert.rejects(
+    readBoundedJson(request, 64),
+    (error: unknown) => error instanceof RequestBodyError && error.status === 413,
+  );
+});
