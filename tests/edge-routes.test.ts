@@ -101,7 +101,7 @@ test("archive provides global search, page selection, and PIN-confirmed bulk del
   assert.match(archiveUi, /docs-delete-panel/);
   assert.match(archiveUi, /docsDeletePin/);
   assert.match(archiveUi, /docs\/delete-history/);
-  assert.match(archiveUi, /distribution_ids:ids/);
+  assert.match(archiveUi, /distribution_ids:\s*ids/);
   assert.match(archiveUi, /docsDaysPrevious/);
   assert.match(archiveUi, /docsDaysNext/);
   assert.match(documentsUi, /function renderDocumentGroup/);
