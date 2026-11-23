@@ -137,7 +137,7 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
       assert.equal(await page.locator("#" + id).getAttribute("required"), null);
     }
     const recipientCheckbox = page.locator("input[name='recipient']");
-    await recipientCheckbox.waitFor();
+    await page.waitForFunction(() => document.querySelector("input[name='recipient']")?.checked === true);
     assert.equal(await recipientCheckbox.isChecked(), true, "AI should preselect the mapped recipient");
     assert.equal(await page.locator("#docsSelectedCount").textContent(), "(1 dipilih)");
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
@@ -181,7 +181,7 @@ test("archive selection opens PIN confirmation without performing a delete", asy
 });
 
 
-test("AI assistant analyzes pasted menu text and applies a per-school plan without issuing documents", async () => {
+test("AI assistant applies school menu and preselects mapped recipients before issuance", async () => {
   const app = await openApp();
   try {
     const page = app.page;
