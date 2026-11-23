@@ -261,9 +261,9 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     await page.locator("#docsCreateForm").waitFor();
     const headings = await page.locator("#docsCreateForm .docs-form-section-head h4").allTextContents();
     assert.deepEqual(headings, [
-      "1. Informasi distribusi",
-      "2. Menu & penerima",
-      "3. Informasi pengiriman"
+      "Distribusi",
+      "Menu & penerima",
+      "Pengiriman"
     ]);
     assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
     const previewPosition = await page.locator("#docsPreviewDisclosure").evaluate(element => getComputedStyle(element).position);
