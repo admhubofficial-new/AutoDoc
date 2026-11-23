@@ -510,6 +510,143 @@ async function handleMasterImport(request: Request): Promise<Response> {
 
 
 
+function matchesMasterSnapshot(
+  current: Record<string, unknown>,
+  expected: Record<string, unknown>,
+  columns: string,
+): boolean {
+  const fields = columns.split(",").map((field) => field.trim()).filter(Boolean);
+  return fields.length > 0 && fields.every((field) =>
+    Object.prototype.hasOwnProperty.call(expected, field) &&
+    String(current[field] ?? "") === String(expected[field] ?? "")
+  );
+}
+
+function normalizedMasterIdentity(value: unknown): string {
+  return String(value ?? "").normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("id-ID");
+}
+
+async function handleAiMasterApply(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request, 64 * 1024);
+  if (body.confirm !== true) throw new AppError(400, "Konfirmasi penyimpanan Data Master belum diberikan.");
+  const entity = masterEntity(body.entity);
+  if (entity === "recipients") throw new AppError(400, "Gunakan jalur penyimpanan penerima manfaat.");
+  if (!body.data || typeof body.data !== "object" || Array.isArray(body.data)) {
+    throw new AppError(400, "Data yang akan disimpan tidak valid.");
+  }
+  const input = body.data as Record<string, unknown>;
+  const expected = body.expected;
+  if (expected !== null && (!expected || typeof expected !== "object" || Array.isArray(expected))) {
+    throw new AppError(400, "Snapshot pembanding tidak valid. Analisis ulang data sebelum menyimpan.");
+  }
+  const config = MASTER_CONFIG[entity];
+  const data = masterPayload(entity, input);
+  const id = entity === "settings" ? "1" : typeof input.id === "string" ? input.id : "";
+  if (expected) {
+    const snapshot = expected as Record<string, unknown>;
+    if (!id || String(snapshot.id ?? "") !== id) {
+      throw new AppError(400, "Identitas data yang dibandingkan tidak cocok. Analisis ulang sebelum menyimpan.");
+    }
+    const current = await selectOne<Record<string, unknown>>(config.table, config.columns, { id: "eq." + id });
+    if (!current || !matchesMasterSnapshot(current, snapshot, config.columns)) {
+      throw new AppError(409, "Data Master berubah sejak dianalisis. Baca ulang sumber dan buat pratinjau baru sebelum menyimpan.");
+    }
+  } else {
+    if (entity === "settings") throw new AppError(409, "Identitas SPPG harus diperbarui dari data yang sudah ada.");
+    const identityField = AI_MASTER_IDENTITY_FIELDS[entity];
+    const identity = normalizedMasterIdentity(input[identityField ?? ""]);
+    if (!identity) throw new AppError(400, "Kolom identitas utama wajib diisi.");
+    const currentRows = await supabaseRequest<Array<Record<string, unknown>>>(
+      config.table + "?" + new URLSearchParams({
+        select: "id," + identityField,
+        order: config.order,
+        limit: "5000",
+      }).toString(),
+    );
+    if (currentRows.some((row) => normalizedMasterIdentity(row[identityField ?? ""]) === identity)) {
+      throw new AppError(409, "Data " + entity + " dengan identitas tersebut sudah ada. Baca ulang Data Master sebelum menyimpan.");
+    }
+  }
+
+  let saved: unknown;
+  if (id) {
+    const query = new URLSearchParams({ id: "eq." + id, select: config.columns });
+    saved = await supabaseRequest<unknown[]>(config.table + "?" + query.toString(), {
+      method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(data),
+    });
+    if (!Array.isArray(saved) || saved.length === 0) {
+      throw new AppError(409, "Data Master tidak lagi tersedia untuk diperbarui. Analisis ulang sebelum menyimpan.");
+    }
+  } else {
+    saved = await supabaseRequest<unknown[]>(config.table + "?select=" + encodeURIComponent(config.columns), {
+      method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(data),
+    });
+    if (!Array.isArray(saved) || saved.length === 0) throw new AppError(502, "Data Master gagal ditambahkan.");
+  }
+  return respond(request, { success: true, data: Array.isArray(saved) ? saved[0] : saved });
+}
+
+async function handleAiRecipientApply(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request, 64 * 1024);
+  if (body.confirm !== true) throw new AppError(400, "Konfirmasi penyimpanan penerima belum diberikan.");
+  if (!body.data || typeof body.data !== "object" || Array.isArray(body.data)) {
+    throw new AppError(400, "Data penerima yang akan disimpan tidak valid.");
+  }
+  const input = body.data as Record<string, unknown>;
+  const expected = body.expected;
+  if (expected !== null && (!expected || typeof expected !== "object" || Array.isArray(expected))) {
+    throw new AppError(400, "Snapshot penerima tidak valid. Analisis ulang data sebelum menyimpan.");
+  }
+  const config = MASTER_CONFIG.recipients;
+  const data = masterPayload("recipients", input);
+  const id = typeof input.id === "string" ? input.id : "";
+  if (expected) {
+    const snapshot = expected as Record<string, unknown>;
+    if (!id || String(snapshot.id ?? "") !== id) {
+      throw new AppError(400, "Identitas penerima yang dibandingkan tidak cocok.");
+    }
+    const current = await selectOne<Record<string, unknown>>(config.table, config.columns, { id: "eq." + id });
+    if (!current || !matchesMasterSnapshot(current, snapshot, config.columns)) {
+      throw new AppError(409, "Data penerima berubah sejak dianalisis. Baca ulang sumber dan buat pratinjau baru sebelum menyimpan.");
+    }
+  } else {
+    const key = normalizedMasterIdentity(data.kelompok) + "|" + normalizedMasterIdentity(data.nama);
+    const rows = await supabaseRequest<Array<Record<string, unknown>>>(
+      config.table + "?" + new URLSearchParams({
+        select: "id,kelompok,nama",
+        kelompok: "eq." + String(data.kelompok),
+        limit: "5000",
+      }).toString(),
+    );
+    if (rows.some((row) =>
+      normalizedMasterIdentity(row.kelompok) + "|" + normalizedMasterIdentity(row.nama) === key
+    )) {
+      throw new AppError(409, "Penerima dengan kelompok dan nama tersebut sudah ada. Analisis ulang sebelum menyimpan.");
+    }
+  }
+
+  let saved: unknown;
+  if (id) {
+    const query = new URLSearchParams({ id: "eq." + id, select: config.columns });
+    saved = await supabaseRequest<unknown[]>(config.table + "?" + query.toString(), {
+      method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(data),
+    });
+    if (!Array.isArray(saved) || saved.length === 0) {
+      throw new AppError(409, "Penerima tidak lagi tersedia untuk diperbarui. Analisis ulang sebelum menyimpan.");
+    }
+  } else {
+    saved = await supabaseRequest<unknown[]>(config.table + "?select=" + encodeURIComponent(config.columns), {
+      method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(data),
+    });
+    if (!Array.isArray(saved) || saved.length === 0) throw new AppError(502, "Penerima gagal ditambahkan.");
+  }
+  return respond(request, { success: true, data: Array.isArray(saved) ? saved[0] : saved });
+}
+
 async function verifyMutationPin(request: Request, rawToken: unknown, purpose: string): Promise<void> {
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
   const token = normalizeToken(rawToken);
@@ -1794,6 +1931,7 @@ function normalizeAiAnalysis(
         alamat: current.alamat, siswa_kecil: current.siswa_kecil, siswa_besar: current.siswa_besar,
         tendik: current.tendik, ibu_hamil: current.ibu_hamil, ibu_menyusui: current.ibu_menyusui,
         balita: current.balita, putus_sekolah: current.putus_sekolah, kader: current.kader,
+        porsi_kecil: current.porsi_kecil, porsi_besar: current.porsi_besar, total_porsi: current.total_porsi,
         urutan: current.urutan, aktif: current.aktif, keterangan: current.keterangan,
         perlu_verifikasi: current.perlu_verifikasi, catatan_verifikasi: current.catatan_verifikasi,
       } : null;
@@ -2017,6 +2155,8 @@ Deno.serve(async (request: Request) => {
       case "master/recipients": return await handleMasterRecipients(request);
       case "master/save": return await handleMasterSave(request);
       case "master/import": return await handleMasterImport(request);
+      case "ai/recipient-apply": return await handleAiRecipientApply(request);
+      case "ai/master-apply": return await handleAiMasterApply(request);
       case "ai/analyze": return await handleAiAnalyze(request);
       case "dashboard/summary": return await handleDashboardSummary(request);
       case "docs/create": return await handleDocsCreate(request);
