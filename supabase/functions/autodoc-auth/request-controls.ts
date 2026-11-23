@@ -15,16 +15,25 @@ export class AiRequestGate {
   private readonly sessions = new Map<string, SessionWindow>();
   private inFlight = 0;
 
+  private readonly maxConcurrent: number;
+  private readonly maxPerWindow: number;
+  private readonly windowMs: number;
+  private readonly maxTrackedSessions: number;
+
   constructor(
-    private readonly maxConcurrent = 2,
-    private readonly maxPerWindow = 6,
-    private readonly windowMs = 10 * 60 * 1000,
-    private readonly maxTrackedSessions = 2000,
+    maxConcurrent = 2,
+    maxPerWindow = 6,
+    windowMs = 10 * 60 * 1000,
+    maxTrackedSessions = 2000,
   ) {
     if (![maxConcurrent, maxPerWindow, windowMs, maxTrackedSessions].every(Number.isSafeInteger) ||
         maxConcurrent < 1 || maxPerWindow < 1 || windowMs < 1 || maxTrackedSessions < 1) {
       throw new RangeError("Konfigurasi batas AI tidak valid.");
     }
+    this.maxConcurrent = maxConcurrent;
+    this.maxPerWindow = maxPerWindow;
+    this.windowMs = windowMs;
+    this.maxTrackedSessions = maxTrackedSessions;
   }
 
   acquire(sessionKey: string, nowMs = Date.now()): AiAdmissionResult {
