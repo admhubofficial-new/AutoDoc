@@ -1731,6 +1731,364 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
   });
 }
 
+
+const SHEETS_COLUMN_ALIASES = {
+  kelompok: ["kelompok", "kelompok sasaran", "kategori", "jenis penerima", "group"],
+  nama: ["nama", "nama penerima", "nama sekolah", "sekolah", "nama lembaga", "nama instansi", "nama satuan pendidikan", "nama sekolah/lembaga"],
+  jenjang: ["jenjang", "jenjang pendidikan", "tingkat", "tingkat pendidikan", "level pendidikan"],
+  alamat: ["alamat", "alamat sekolah", "lokasi"],
+  siswa_kecil: ["siswa kecil", "peserta didik kecil"],
+  siswa_besar: ["siswa besar", "peserta didik besar"],
+  tendik: ["tendik", "tenaga pendidik", "guru", "tenaga kependidikan"],
+  ibu_hamil: ["ibu hamil"],
+  ibu_menyusui: ["ibu menyusui"],
+  balita: ["balita"],
+  putus_sekolah: ["putus sekolah"],
+  kader: ["kader"],
+  urutan: ["urutan", "nomor urut"],
+  aktif: ["aktif", "status"],
+  keterangan: ["keterangan", "catatan"],
+  perlu_verifikasi: ["perlu verifikasi", "verifikasi"],
+  catatan_verifikasi: ["catatan verifikasi", "alasan verifikasi"],
+} as const;
+
+const SHEETS_COUNT_FIELDS = [
+  "siswa_kecil", "siswa_besar", "tendik", "ibu_hamil",
+  "ibu_menyusui", "balita", "putus_sekolah", "kader",
+] as const;
+
+function sheetsConfiguration(): { url: string; secret: string } {
+  const url = getEnv("GOOGLE_SHEETS_WEB_APP_URL")?.trim() ?? "";
+  const secret = getEnv("GOOGLE_SHEETS_WEBHOOK_SECRET")?.trim() ?? "";
+  if (!url || !secret) {
+    throw new AppError(503, "Integrasi Google Sheets belum dikonfigurasi. Tambahkan GOOGLE_SHEETS_WEB_APP_URL dan GOOGLE_SHEETS_WEBHOOK_SECRET di Supabase Secrets.");
+  }
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { throw new AppError(503, "URL Apps Script Google Sheets tidak valid."); }
+  if (parsed.protocol !== "https:" || parsed.hostname !== "script.google.com" ||
+      !/^\/macros\/s\/[^/]+\/exec$/.test(parsed.pathname)) {
+    throw new AppError(503, "URL Google Sheets harus berupa URL Web App Apps Script yang berakhir /macros/s/.../exec.");
+  }
+  if (secret.length < 32 || secret.length > 256) {
+    throw new AppError(503, "Secret integrasi Google Sheets harus berisi 32 sampai 256 karakter.");
+  }
+  return { url: parsed.toString(), secret };
+}
+
+async function callGoogleSheets(
+  action: string,
+  payload: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  const config = sheetsConfiguration();
+  let response: Response;
+  try {
+    response = await fetch(config.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ action, secret: config.secret, payload }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(25000),
+    });
+  } catch {
+    throw new AppError(502, "Tidak dapat menghubungi Google Apps Script. Periksa URL deployment dan status koneksi internet.");
+  }
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new AppError(502, "Google Apps Script merespons dengan status " + response.status + ".");
+  }
+  if (raw.length > 2 * 1024 * 1024) {
+    throw new AppError(502, "Respons Google Sheets terlalu besar. Batasi sumber hingga 5.000 baris.");
+  }
+  let result: unknown;
+  try { result = JSON.parse(raw); } catch {
+    throw new AppError(502, "Respons Apps Script bukan JSON. Pastikan deployment Web App sudah aktif dan URL /exec benar.");
+  }
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new AppError(502, "Format respons Google Sheets tidak valid.");
+  }
+  const payloadResult = result as Record<string, unknown>;
+  if (payloadResult.ok !== true) {
+    const message = typeof payloadResult.message === "string"
+      ? payloadResult.message
+      : "Google Sheets menolak permintaan.";
+    throw new AppError(502, message);
+  }
+  return payloadResult;
+}
+
+function sheetsHeaderToken(value: unknown): string {
+  return String(value ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function sheetsRecipientKey(group: unknown, name: unknown): string {
+  return sheetsHeaderToken(group) + "|" + sheetsHeaderToken(name);
+}
+
+function sheetsReadNumber(value: unknown): number | undefined | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return undefined;
+  const compact = raw.replace(/\s/g, "");
+  if (!/^\d+$/.test(compact) && !/^\d{1,3}(?:[.,]\d{3})+$/.test(compact)) return null;
+  const number = Number(compact.replace(/[.,]/g, ""));
+  return Number.isSafeInteger(number) && number >= 0 ? number : null;
+}
+
+function sheetsReadBoolean(value: unknown): boolean | undefined {
+  const raw = sheetsHeaderToken(value);
+  if (!raw) return undefined;
+  if (["0", "false", "tidak", "nonaktif", "non aktif", "no"].includes(raw)) return false;
+  if (["1", "true", "ya", "aktif", "yes"].includes(raw)) return true;
+  return undefined;
+}
+
+function sheetsNormalizeGroup(value: unknown): string | null {
+  const raw = sheetsHeaderToken(value);
+  if (raw.includes("posyandu")) return "Posyandu";
+  if (raw.includes("sekolah") || raw.includes("lembaga")) return "Sekolah/Lembaga";
+  return null;
+}
+
+async function buildSheetsPreview(): Promise<Record<string, unknown>> {
+  const source = await callGoogleSheets("readRecipients");
+  const headers = Array.isArray(source.headers) ? source.headers : [];
+  const sourceRows = Array.isArray(source.rows) ? source.rows : [];
+  if (!headers.length) {
+    throw new AppError(422, "Baris pertama tab sumber belum berisi judul kolom.");
+  }
+  const aliases = SHEETS_COLUMN_ALIASES as Record<string, readonly string[]>;
+  const columns: Record<string, number> = {};
+  for (const [field, names] of Object.entries(aliases)) {
+    const accepted = new Set(names.map(sheetsHeaderToken));
+    const index = headers.findIndex((value) => accepted.has(sheetsHeaderToken(value)));
+    if (index >= 0) columns[field] = index;
+  }
+  if (columns.kelompok === undefined || columns.nama === undefined) {
+    throw new AppError(422, "Kolom sumber wajib dikenali: Kelompok dan Nama. Header yang terbaca: " + headers.map(String).join(", "));
+  }
+
+  const config = MASTER_CONFIG.recipients;
+  const query = new URLSearchParams({ select: config.columns, order: config.order, limit: "5000" });
+  const currentRecipients = await supabaseRequest<Array<Record<string, unknown>>>(
+    config.table + "?" + query.toString(),
+  );
+  const candidates = new Map<string, Record<string, unknown>>();
+  for (const recipient of currentRecipients) {
+    const key = sheetsRecipientKey(recipient.kelompok, recipient.nama);
+    if (!candidates.has(key)) candidates.set(key, recipient);
+  }
+
+  const changes: Array<Record<string, unknown>> = [];
+  const warnings: string[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < sourceRows.length && index < 5000; index += 1) {
+    const rawRow = sourceRows[index] as Record<string, unknown>;
+    const values = Array.isArray(rawRow?.values) ? rawRow.values : [];
+    if (!values.some((value: unknown) => String(value ?? "").trim())) continue;
+    const rowNumber = Number(rawRow.row_number) || index + 2;
+    const get = (field: string): string => {
+      const column = columns[field];
+      return column === undefined ? "" : String(values[column] ?? "").trim();
+    };
+    const group = sheetsNormalizeGroup(get("kelompok"));
+    const name = get("nama");
+    const key = group && name ? sheetsRecipientKey(group, name) : "";
+    if (!group || !name) {
+      changes.push({
+        row_number: rowNumber, action: "review", can_apply: false,
+        proposed: { kelompok: group, nama: name || "Nama belum diisi", jenjang: get("jenjang") },
+        changed_fields: [], review_reason: "Kelompok atau nama tidak lengkap/tidak dikenali.",
+      });
+      continue;
+    }
+    if (seen.has(key)) {
+      changes.push({
+        row_number: rowNumber, action: "review", can_apply: false,
+        proposed: { kelompok: group, nama: name, jenjang: get("jenjang") },
+        changed_fields: [], review_reason: "Baris duplikat untuk kelompok dan nama yang sama.",
+      });
+      continue;
+    }
+    seen.add(key);
+    const current = candidates.get(key) ?? null;
+    const jenjang = get("jenjang");
+    const reviewReasons: string[] = [];
+    if (!current && !jenjang) reviewReasons.push("Jenjang wajib diisi untuk penerima baru.");
+    const proposed: Record<string, unknown> = current ? { ...current } : {
+      kelompok: group, nama: name, jenjang, alamat: null,
+      siswa_kecil: 0, siswa_besar: 0, tendik: 0, ibu_hamil: 0,
+      ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0,
+      urutan: Math.max(1, rowNumber * 10), aktif: true,
+      keterangan: null, perlu_verifikasi: false, catatan_verifikasi: null,
+    };
+    proposed.kelompok = group;
+    proposed.nama = name;
+    if (jenjang) proposed.jenjang = jenjang;
+    else if (!current) proposed.jenjang = "";
+
+    for (const field of ["alamat", "keterangan", "catatan_verifikasi"]) {
+      const value = get(field);
+      if (value) proposed[field] = value;
+    }
+    for (const field of SHEETS_COUNT_FIELDS) {
+      const column = columns[field];
+      const raw = column === undefined ? "" : String(values[column] ?? "").trim();
+      if (!current && (!raw || column === undefined)) {
+        reviewReasons.push("Kolom " + field.replace(/_/g, " ") + " harus diisi eksplisit untuk penerima baru.");
+        continue;
+      }
+      if (!raw) continue;
+      const parsed = sheetsReadNumber(raw);
+      if (parsed === null) reviewReasons.push("Nilai " + field.replace(/_/g, " ") + " pada baris ini bukan bilangan bulat yang valid.");
+      else if (parsed !== undefined) proposed[field] = parsed;
+    }
+    if (columns.urutan !== undefined && get("urutan")) {
+      const parsed = sheetsReadNumber(get("urutan"));
+      if (parsed === null || parsed === 0) reviewReasons.push("Urutan harus bilangan bulat minimal 1.");
+      else if (parsed !== undefined) proposed.urutan = parsed;
+    }
+    if (columns.aktif !== undefined && get("aktif")) {
+      const parsed = sheetsReadBoolean(get("aktif"));
+      if (parsed === undefined) reviewReasons.push("Status Aktif tidak dikenali; gunakan Aktif/Nonaktif atau Ya/Tidak.");
+      else proposed.aktif = parsed;
+    }
+    if (columns.perlu_verifikasi !== undefined && get("perlu_verifikasi")) {
+      const parsed = sheetsReadBoolean(get("perlu_verifikasi"));
+      if (parsed === undefined) reviewReasons.push("Nilai Perlu Verifikasi tidak dikenali.");
+      else proposed.perlu_verifikasi = parsed;
+    }
+
+    const changedFields = current
+      ? ["kelompok", "nama", "jenjang", "alamat", ...SHEETS_COUNT_FIELDS, "urutan", "aktif", "keterangan", "perlu_verifikasi", "catatan_verifikasi"]
+        .filter((field) => String(current[field] ?? "") !== String(proposed[field] ?? ""))
+      : ["kelompok", "nama", "jenjang", ...SHEETS_COUNT_FIELDS];
+    const reviewReason = reviewReasons.join(" ");
+    const action = reviewReason ? "review" : current ? (changedFields.length ? "update" : "same") : "new";
+    changes.push({
+      row_number: rowNumber, action,
+      can_apply: !reviewReason && (action === "new" || action === "update"),
+      current, proposed, changed_fields: changedFields, review_reason: reviewReason || null,
+    });
+  }
+
+  const applicable = changes.filter((row) => row.can_apply);
+  const summary = {
+    source_rows: changes.length,
+    updated: changes.filter((row) => row.action === "update").length,
+    new: changes.filter((row) => row.action === "new").length,
+    same: changes.filter((row) => row.action === "same").length,
+    review: changes.filter((row) => row.action === "review").length,
+    ready: applicable.length,
+  };
+  if (summary.review > 0) warnings.push(summary.review + " baris perlu ditinjau dan tidak dapat diterapkan otomatis.");
+  if (source.truncated === true) warnings.push("Data sumber melebihi 5.000 baris; hanya 5.000 baris pertama yang dibaca.");
+  const previewSnapshot = JSON.stringify(changes.map((row) => ({
+    row_number: row.row_number, action: row.action, can_apply: row.can_apply,
+    current: row.current ?? null, proposed: row.proposed ?? null,
+    changed_fields: row.changed_fields ?? [], review_reason: row.review_reason ?? null,
+  })));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(previewSnapshot));
+  const previewToken = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+
+  return {
+    success: true, sheet_name: source.sheet_name, sheet_gid: source.sheet_gid,
+    source_kind: source.source_kind, summary, warnings, changes,
+    preview_token: previewToken,
+  };
+}
+
+async function handleSheetsStatus(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  if (!getEnv("GOOGLE_SHEETS_WEB_APP_URL") || !getEnv("GOOGLE_SHEETS_WEBHOOK_SECRET")) {
+    return respond(request, { configured: false, connected: false, message: "Secret integrasi belum dipasang di Supabase." });
+  }
+  const health = await callGoogleSheets("health");
+  return respond(request, {
+    configured: true, connected: true,
+    spreadsheet_title: health.spreadsheet_title,
+    source_sheet_name: health.source_sheet_name,
+    source_sheet_gid: health.source_sheet_gid,
+    managed_sheet_exists: health.managed_sheet_exists,
+    message: typeof health.message === "string" ? health.message : "Koneksi aktif.",
+  });
+}
+
+async function handleSheetsPreview(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  await readJson(request);
+  return respond(request, await buildSheetsPreview());
+}
+
+async function handleSheetsApply(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request);
+  if (!Array.isArray(body.row_numbers) || body.row_numbers.length < 1 || body.row_numbers.length > 500) {
+    throw new AppError(400, "Pilih 1 sampai 500 baris untuk diterapkan.");
+  }
+  const previewToken = typeof body.preview_token === "string" ? body.preview_token : "";
+  if (!/^[a-f0-9]{64}$/.test(previewToken)) {
+    throw new AppError(400, "Pratinjau sudah kedaluwarsa. Baca ulang spreadsheet sebelum menerapkan perubahan.");
+  }
+  const selected = new Set<number>();
+  for (const value of body.row_numbers) {
+    if (!Number.isSafeInteger(value) || value < 2 || value > 5001) {
+      throw new AppError(400, "Nomor baris sumber tidak valid.");
+    }
+    selected.add(value);
+  }
+  const preview = await buildSheetsPreview();
+  if (preview.preview_token !== previewToken) {
+    throw new AppError(409, "Spreadsheet atau Data Master berubah setelah pratinjau. Baca & bandingkan ulang sebelum menerapkan data.");
+  }
+  const changes = Array.isArray(preview.changes) ? preview.changes as Array<Record<string, unknown>> : [];
+  const selectedRows = changes.filter((row) => selected.has(Number(row.row_number)) && row.can_apply === true);
+  if (!selectedRows.length) throw new AppError(409, "Tidak ada baris terpilih yang siap diterapkan. Baca ulang spreadsheet dan periksa baris yang perlu ditinjau.");
+  if (selectedRows.length !== selected.size) {
+    throw new AppError(409, "Sebagian baris tidak lagi siap diterapkan. Muat ulang pratinjau sebelum melanjutkan.");
+  }
+  const rows = selectedRows.map((row) => masterPayload("recipients", row.proposed as Record<string, unknown>));
+  const query = new URLSearchParams({ on_conflict: "kelompok,nama", select: MASTER_CONFIG.recipients.columns });
+  const saved = await supabaseRequest<unknown[]>(MASTER_CONFIG.recipients.table + "?" + query.toString(), {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(rows),
+  });
+  return respond(request, {
+    success: true, imported: Array.isArray(saved) ? saved.length : rows.length,
+    source_rows: selectedRows.map((row) => row.row_number),
+  });
+}
+
+async function handleSheetsPush(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request);
+  if (body.confirm !== true) throw new AppError(400, "Konfirmasi pengiriman data belum diberikan.");
+  const preview = await buildSheetsPreview();
+  const summary = preview.summary as Record<string, number>;
+  const pending = (summary.updated ?? 0) + (summary.new ?? 0) + (summary.review ?? 0);
+  if (pending > 0) {
+    throw new AppError(409, "Masih ada " + pending + " baris perubahan dari Google Sheets yang belum diterapkan. Baca & bandingkan, selesaikan baris yang perlu ditinjau, lalu ulangi ekspor.");
+  }
+
+  const config = MASTER_CONFIG.recipients;
+  const query = new URLSearchParams({ select: config.columns, order: config.order, limit: "5000" });
+  const recipients = await supabaseRequest<Array<Record<string, unknown>>>(
+    config.table + "?" + query.toString(),
+  );
+  const result = await callGoogleSheets("writeRecipients", { rows: recipients.map((row) => ({ ...row, recipient_id: row.id })) });
+  return respond(request, {
+    success: true,
+    row_count: Number(result.row_count ?? recipients.length),
+    sheet_name: result.sheet_name ?? "AutoDoc_Penerima",
+    updated_at: result.updated_at ?? null,
+  });
+}
+
+
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin");
   if (origin && origin !== APP_ORIGIN) {
@@ -1766,6 +2124,10 @@ Deno.serve(async (request: Request) => {
       case "master/save": return await handleMasterSave(request);
       case "master/import": return await handleMasterImport(request);
       case "ai/analyze": return await handleAiAnalyze(request);
+      case "sheets/status": return await handleSheetsStatus(request);
+      case "sheets/preview": return await handleSheetsPreview(request);
+      case "sheets/apply": return await handleSheetsApply(request);
+      case "sheets/push": return await handleSheetsPush(request);
       case "dashboard/summary": return await handleDashboardSummary(request);
       case "docs/create": return await handleDocsCreate(request);
       case "docs/days": return await handleDocsDays(request);
