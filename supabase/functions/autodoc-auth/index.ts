@@ -1577,9 +1577,9 @@ async function fetchAiMasterRecords(): Promise<Record<AiMasterEntity, Array<Reco
 function normalizeAiMasterUpdates(
   raw: unknown,
   currentMasterRecords: Record<AiMasterEntity, Array<Record<string, unknown>>>,
+  warnings: string[],
 ): Array<Record<string, unknown>> {
   if (!Array.isArray(raw)) return [];
-  const warnings: string[] = [];
   const seenNew = new Set<string>();
   return raw.slice(0, 300).map((value, index) => {
     const item = value && typeof value === "object" && !Array.isArray(value)
@@ -1616,6 +1616,10 @@ function normalizeAiMasterUpdates(
     if (entity === "settings" && (!current || action !== "update")) {
       action = "review";
       warnings.push("Identitas SPPG hanya dapat diperbarui pada data pengaturan yang sudah ada; usulan baru ditahan.");
+    }
+    if (current && action === "new") {
+      action = "review";
+      warnings.push("Usulan " + entity + " ditandai baru padahal ID data lama ditemukan. Baris ditahan agar tidak terjadi penggantian yang keliru.");
     }
     if (action === "update" && !current) {
       action = "review";
@@ -1664,7 +1668,7 @@ function normalizeAiMasterUpdates(
       source_quote: aiTextValue(item.source_quote, 300),
       source_reference: aiTextValue(item.source_reference, 180),
     };
-  }).map((row) => ({ ...row, warnings: warnings }));
+  });
 }
 
 function normalizeAiAnalysis(
@@ -1828,7 +1832,7 @@ function normalizeAiAnalysis(
       };
     });
   const masterUpdates = mode === "menus" || mode === "recipients"
-    ? [] : normalizeAiMasterUpdates(raw.master_updates, currentMasterRecords);
+    ? [] : normalizeAiMasterUpdates(raw.master_updates, currentMasterRecords, warnings);
   return {
     summary: aiTextValue(raw.summary, 1200),
     questions: Array.isArray(raw.questions) ? raw.questions.map((item) => aiTextValue(item, 500)).filter(Boolean).slice(0, 30) : [],
@@ -1845,7 +1849,7 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
   const body = await readJson(request, AI_MAX_REQUEST_BYTES);
   const mode = ["menus", "recipients", "master", "both"].includes(String(body.mode)) ? String(body.mode) : "";
-  if (!mode) throw new AppError(400, "Pilih data menu, penerima manfaat, atau keduanya.");
+  if (!mode) throw new AppError(400, "Pilih menu, penerima manfaat, Data Master lainnya, atau gabungan data.");
   const sourceText = cleanText(body.text, "Teks sumber", false, 40000) ?? "";
   const files = normalizeAiFiles(body.files ?? body.file);
   if (!sourceText && !files.length) throw new AppError(400, "Tempel teks atau pilih file untuk dianalisis.");
@@ -1887,8 +1891,7 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
     "Untuk Data Master lainnya, petakan ke entity settings (identitas SPPG), drivers (pengemudi), vehicles (nomor kendaraan), staff (petugas/jabatan), atau menus (daftar menu master). Gunakan master_updates terpisah dari menu_groups: menu_groups adalah menu distribusi harian per sekolah, sedangkan menus adalah daftar menu master yang bisa dipilih ulang.",
     "Gunakan matched_record_id hanya dari data master kandidat dengan entity yang sama. Jika cocok jelas, tandai update; bila identitas utama berbeda, ambigu, atau ada kemungkinan duplikat, pilih review. Data settings hanya boleh update record yang sudah ada, tidak boleh dibuat baru.",
     "Jangan menebak status aktif/nonaktif, urutan, jabatan, atau nilai identitas bila tidak tercantum. fields_present hanya memuat field yang benar-benar tampak pada sumber.",
-    "Data Master yang tidak relevan dengan isi file tidak perlu disentuh. Jangan membuat data baru dari nama yang hanya disebut sepintas atau sebagai contoh.");
-
+    "Data Master yang tidak relevan dengan isi file tidak perlu disentuh. Jangan membuat data baru dari nama yang hanya disebut sepintas atau sebagai contoh.",
     "fields_present hanya berisi kolom yang benar-benar terlihat di sumber. Nilai kolom yang tidak ada harus null dan tidak boleh dianggap nol. Nilai nol hanya bila sumber secara eksplisit menyebut nol.",
     "Jangan mengganti nama/kelompok penerima yang ada secara otomatis. Jangan menganggap penerima yang tidak ada dalam file harus dinonaktifkan.",
     "Jumlah yang dijumlahkan harus konsisten dengan kolom kategori; jangan mengarang total. Jelaskan konflik penjumlahan atau data tidak lengkap.",
