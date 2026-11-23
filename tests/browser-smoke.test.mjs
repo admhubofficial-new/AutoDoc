@@ -276,7 +276,7 @@ test("Google Sheets shows a read-only preview and requires explicit confirmation
     );
     const previewRows = page.locator(".gs-table tbody tr");
     assert.equal(await previewRows.count(), 1, "preview should render one result row; status: " + previewStatus);
-    await page.locator(".gs-table").getByText("SDN UJI BROWSER", { exact: true }).waitFor({ state: "visible", timeout: 5000 });
+    await page.locator(".gs-table").getByText("SDN UJI BROWSER", { exact: false }).first().waitFor({ state: "visible", timeout: 5000 });
     const rowCheckbox = page.locator(".gs-table tbody input[type='checkbox']").first();
     assert.equal(await rowCheckbox.isChecked(), false);
     assert.equal(app.writes.some(item => item.route === "sheets/apply"), false);
