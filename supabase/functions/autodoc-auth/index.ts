@@ -2010,7 +2010,9 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
     tendik: recipient.tendik, ibu_hamil: recipient.ibu_hamil,
     ibu_menyusui: recipient.ibu_menyusui, balita: recipient.balita,
     putus_sekolah: recipient.putus_sekolah, kader: recipient.kader,
-    aktif: recipient.aktif,
+    urutan: recipient.urutan, aktif: recipient.aktif,
+    keterangan: recipient.keterangan, perlu_verifikasi: recipient.perlu_verifikasi,
+    catatan_verifikasi: recipient.catatan_verifikasi,
   }));
   const currentMasterRecords = mode === "both" || mode === "master"
     ? await fetchAiMasterRecords()
@@ -2028,9 +2030,8 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
     "Untuk data penerima: satu baris sumber menjadi satu usulan. Pilih matched_recipient_id hanya jika kecocokan nama dan kelompok cukup kuat. Bila tidak cocok atau ambigu, action harus review/new sesuai bukti.",
     "Untuk Data Master lainnya, petakan ke entity settings (identitas SPPG), drivers (pengemudi), vehicles (nomor kendaraan), staff (petugas/jabatan), atau menus (daftar menu master). Gunakan master_updates terpisah dari menu_groups: menu_groups adalah menu distribusi harian per sekolah, sedangkan menus adalah daftar menu master yang bisa dipilih ulang.",
     "Gunakan matched_record_id hanya dari data master kandidat dengan entity yang sama. Jika cocok jelas, tandai update; bila identitas utama berbeda, ambigu, atau ada kemungkinan duplikat, pilih review. Data settings hanya boleh update record yang sudah ada, tidak boleh dibuat baru.",
-    "Jangan menebak status aktif/nonaktif, urutan, jabatan, atau nilai identitas bila tidak tercantum. fields_present hanya memuat field yang benar-benar tampak pada sumber.",
-    "Data Master yang tidak relevan dengan isi file tidak perlu disentuh. Jangan membuat data baru dari nama yang hanya disebut sepintas atau sebagai contoh.",
-    "fields_present hanya berisi kolom yang benar-benar terlihat di sumber. Nilai kolom yang tidak ada harus null dan tidak boleh dianggap nol. Nilai nol hanya bila sumber secara eksplisit menyebut nol.",
+    "Jangan menebak status aktif/nonaktif, urutan, jabatan, atau nilai identitas bila tidak tercantum. fields_present hanya berisi kolom yang benar-benar terlihat di sumber.",
+    "Data Master yang tidak relevan dengan isi file tidak perlu disentuh. Jangan membuat data baru dari nama yang hanya disebut sepintas atau sebagai contoh." Nilai kolom yang tidak ada harus null dan tidak boleh dianggap nol. Nilai nol hanya bila sumber secara eksplisit menyebut nol.",
     "Jangan mengganti nama/kelompok penerima yang ada secara otomatis. Jangan menganggap penerima yang tidak ada dalam file harus dinonaktifkan.",
     "Jumlah yang dijumlahkan harus konsisten dengan kolom kategori; jangan mengarang total. Jelaskan konflik penjumlahan atau data tidak lengkap.",
     "Tulis source_quote singkat dan source_reference untuk setiap baris perubahan; sebutkan nama file, halaman, nama sheet, nomor baris, atau bagian bila tersedia.",
