@@ -330,3 +330,52 @@ test("daily menu editor is isolated, capped at eight, and delegates preview refr
   const documentsTag = htmlSource.indexOf('src="./documents.js');
   assert.ok(menuTag > previewTag && documentsTag > menuTag);
 });
+
+
+test("BAST print shows before/after quantities and names above aligned signature lines", () => {
+  const sandbox = { window: {} };
+  runInNewContext(printRendererSource, sandbox);
+  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+  const snapshot = {
+    sppg: { nama_kepala_sppi: "Kepala SPPI" },
+    distribusi: { nama_petugas: "Petugas Distribusi" },
+    penerima: { nama: "SDN Contoh" },
+    rincian_porsi: [
+      { kelompok_sasaran: "Siswa kecil", jenis_porsi: "Porsi Kecil", jumlah: 20 },
+      { kelompok_sasaran: "Balita", jenis_porsi: "Porsi Kecil", jumlah: 5 },
+      { kelompok_sasaran: "Siswa besar", jenis_porsi: "Porsi Besar", jumlah: 10 }
+    ],
+    ringkasan: { porsi_kecil: 25, porsi_besar: 10, total_porsi: 35 }
+  };
+  const bast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/2",snapshot_json:snapshot,realisasi:{
+    document_id:"real-2",nama_penerima:"Nama Penerima",items:[
+      {jenis_porsi:"Porsi Kecil",jumlah_diserahkan:25,jumlah_diterima:24},
+      {jenis_porsi:"Porsi Besar",jumlah_diserahkan:10,jumlah_diterima:9}
+    ]
+  }},escapeHtml,"logo.png");
+  assert.match(bast, /Jumlah Sebelum/);
+  assert.match(bast, /Jumlah Sesudah/);
+  assert.match(bast, /25<\/td><td style='text-align:right'>24/);
+  assert.match(bast, /10<\/td><td style='text-align:right'>9/);
+  assert.match(bast, /Nama Penerima<\/div><div class='sign-line'/);
+  assert.match(bast, /Petugas Distribusi<\/div><div class='sign-line'/);
+  assert.doesNotMatch(bast, /Dokumen dibuat oleh/);
+  assert.doesNotMatch(bast, /Snapshot dokumen:/);
+  const pending = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/3",snapshot_json:snapshot},escapeHtml,"logo.png");
+  assert.match(pending, /Jumlah Sesudah/);
+  assert.match(pending, /25<\/td><td style='text-align:right'>—/);
+  assert.match(pending, /10<\/td><td style='text-align:right'>—/);
+});
+
+test("organoleptic signature names render above aligned horizontal lines", () => {
+  const left = organolepticSource.indexOf("left.append(leftHeading");
+  const right = organolepticSource.indexOf("right.append(rightHeading");
+  assert.ok(left >= 0 && right > left);
+  assert.ok(organolepticSource.indexOf('sign-person",data.ahliGizi||""),organolepticElement(doc,"div","sign-line"') >= 0);
+  assert.ok(organolepticSource.indexOf('sign-person",""),organolepticElement(doc,"div","sign-line"') >= 0);
+  assert.match(source, /sign-heading\{height:10mm/);
+  assert.match(source, /sign-person\{height:5mm/);
+});
