@@ -109,7 +109,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    const sourceText=source.value.trim(),files=selectedFiles.slice();
    if(!sourceText&&!files.length){setMessageSafe("Tempel teks atau pilih setidaknya satu file terlebih dahulu.",true);return}
    clearAnalysis();
-   if(!date.value&&modeSelect.value!=="recipients"){setMessageSafe("Tanggal distribusi perlu dipilih untuk mengelompokkan menu.",true);date.focus();return}
+   if(!date.value&&(modeSelect.value==="both"||modeSelect.value==="menus")){setMessageSafe("Tanggal distribusi perlu dipilih untuk mengelompokkan menu.",true);date.focus();return}
    analyze.disabled=true;analyze.textContent="AI sedang membaca...";
    setMessageSafe("Menganalisis isi dan mencocokkan data penerima. Ini belum mengubah Data Master.");
    try{
@@ -132,7 +132,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    const summary=text(target,"div","ai-result-summary");
    text(summary,"strong","","Hasil pembacaan AI");
    text(summary,"p","",data.summary||"AI tidak memberikan ringkasan.");
-   text(target,"div","ai-notice","PENTING: AI hanya memberi usulan. Periksa penerima, komponen menu, tanggal, dan jumlah. Tidak ada perubahan data sebelum Anda menekan tombol konfirmasi.");
+   text(target,"div","ai-notice","PENTING: AI hanya memberi usulan. Periksa penerima, menu distribusi, identitas, petugas, pengemudi, kendaraan, dan jumlah. Tidak ada perubahan data sebelum Anda menekan tombol konfirmasi.");
    if(data.questions?.length){
     const q=text(target,"div","ai-flag-list");
     data.questions.forEach(item=>text(q,"div","ai-question","Perlu konfirmasi: "+item));
