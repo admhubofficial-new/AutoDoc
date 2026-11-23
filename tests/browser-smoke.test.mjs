@@ -267,8 +267,16 @@ test("Google Sheets shows a read-only preview and requires explicit confirmation
     await page.locator(".gs-status.ok").getByText("Google Sheets berhasil terhubung.").waitFor();
 
     await page.getByRole("button", { name: "Baca & bandingkan" }).click();
-    await page.locator(".gs-table").getByText("SDN UJI BROWSER", { exact: true }).waitFor();
-    assert.equal(app.writes.some(item => item.route === "sheets/preview"), true);
+    await page.waitForTimeout(300);
+    const previewStatus = await page.locator(".gs-status").textContent();
+    assert.equal(
+      app.writes.some(item => item.route === "sheets/preview"),
+      true,
+      "preview API should be requested; status: " + previewStatus + "; errors: " + app.errors.join(" | ")
+    );
+    const previewRows = page.locator(".gs-table tbody tr");
+    assert.equal(await previewRows.count(), 1, "preview should render one result row; status: " + previewStatus);
+    await page.locator(".gs-table").getByText("SDN UJI BROWSER", { exact: true }).waitFor({ state: "visible", timeout: 5000 });
     const rowCheckbox = page.locator(".gs-table tbody input[type='checkbox']").first();
     assert.equal(await rowCheckbox.isChecked(), false);
     assert.equal(app.writes.some(item => item.route === "sheets/apply"), false);
