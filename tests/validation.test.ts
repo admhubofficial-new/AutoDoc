@@ -194,3 +194,13 @@ test("bounded JSON reader rejects an oversized declared body before reading the 
     (error: unknown) => error instanceof RequestBodyError && error.status === 413,
   );
 });
+
+
+test("bounded JSON reader handles highly fragmented input with bounded aggregation", async () => {
+  const raw = JSON.stringify({ value: "fragmented".repeat(100) });
+  const encoder = new TextEncoder();
+  const chunks = Array.from(raw, character => encoder.encode(character));
+  const request = streamedRequest(chunks);
+  const parsed = await readBoundedJson(request, 2048);
+  assert.equal(parsed.value, "fragmented".repeat(100));
+});
