@@ -183,15 +183,16 @@ test("AI analysis is session protected, calls OpenAI only server-side, and never
 });
 
 test("AI file analysis enforces allowed extensions and a bounded upload size", () => {
-  assert.match(source, /const AI_MAX_REQUEST_BYTES = 10 \* 1024 \* 1024/);
+  assert.match(source, /const AI_MAX_REQUEST_BYTES = 10 * 1024 * 1024/);
   assert.match(source, /combinedBase64Length > 8_500_000/);
   assert.match(source, /allowedExtensions/);
   assert.match(source, /new Set\(\[\s*"pdf", "doc", "docx", "xls"/);
-  assert.match(source, /function normalizeAiFiles/);\n  assert.match(source, /inputFiles\.length > 5/);\n  assert.match(source, /files\.map\(\(file\) => file\.name\)/);
+  assert.match(source, /function normalizeAiFiles/);
+  assert.match(source, /inputFiles\.length > 5/);
+  assert.match(source, /files\.map\(\(file\) => file\.name\)/);
   assert.match(source, /input_file/);
   assert.match(source, /input_image/);
 });
-
 test("AI structured output distinguishes fields present in a file and refuses guesses about recipient identity", () => {
   assert.match(source, /fields_present/);
   assert.match(source, /matched_recipient_id/);
