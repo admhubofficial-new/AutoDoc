@@ -42,7 +42,7 @@ function close(){
  if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();
 }
 function show(loadFormData=true){
- if(!modal){style();build()}
+ if(!modal)build()
  returnFocusEl=document.activeElement;
  modal.hidden=false;
  modal.style.display="flex";
