@@ -140,7 +140,7 @@ function render(container,message,api){
   if(!window.confirm("Terapkan "+rowNumbers.length+" baris terpilih ke Data Master AutoDoc? Data lain yang tidak dipilih tidak akan dihapus."))return;
   applyBtn.disabled=true;status("Menerapkan perubahan terpilih…");
   try{
-   const result=await api("sheets/apply",{row_numbers:rowNumbers});
+   const result=await api("sheets/apply",{row_numbers:rowNumbers,preview_token:previewData?.preview_token});
    await loadPreview();
    status((result.imported||0)+" baris berhasil diterapkan ke Data Master AutoDoc.","ok");
    window.dispatchEvent(new Event("autodoc:data-changed"));
