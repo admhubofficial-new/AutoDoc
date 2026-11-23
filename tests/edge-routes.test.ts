@@ -4,6 +4,7 @@ import { Script } from "node:vm";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../supabase/functions/autodoc-auth/index.ts", import.meta.url), "utf8");
+const validationSource = readFileSync(new URL("../supabase/functions/autodoc-auth/validation.ts", import.meta.url), "utf8");
 const documentsUi = readFileSync(new URL("../documents.js", import.meta.url), "utf8");
 const archiveUi = readFileSync(new URL("../archive.js", import.meta.url), "utf8");
 const masterUi = readFileSync(new URL("../master.js", import.meta.url), "utf8");
@@ -329,8 +330,8 @@ test("document creation has a dedicated streaming-safe 1 MiB body limit", () => 
   assert.match(source, /DOCS_CREATE_MAX_BODY_BYTES = 1024 \* 1024/);
   assert.match(body, /readJson\(request, DOCS_CREATE_MAX_BODY_BYTES\)/);
   assert.match(source, /return await readBoundedJson\(request, maxBytes\)/);
-  assert.match(source, /request\.body\.getReader\(\)/);
-  assert.match(source, /totalBytes > maxBytes/);
+  assert.match(validationSource, /request\.body\.getReader\(\)/);
+  assert.match(validationSource, /totalBytes > maxBytes/);
 });
 
 test("AI analysis has per-session admission control, bounded concurrency, timeout, and Retry-After handling", () => {
