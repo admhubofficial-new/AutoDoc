@@ -57,7 +57,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
   const shell=text(host,"div","ai-assistant");
   const inputPanel=text(shell,"section","ai-panel");
   text(inputPanel,"h4","","Asisten AI AutoDoc");
-  text(inputPanel,"p","ai-lead","Tempel teks menu atau unggah file daftar menu/perubahan penerima. AI akan membaca isi, mencocokkan nama dengan Data Master, lalu menyiapkan usulan yang dapat diperiksa sebelum disimpan.");
+  text(inputPanel,"p","ai-lead","Tempel teks atau unggah dokumen untuk dipetakan ke menu distribusi, penerima manfaat, serta Data Master seperti identitas SPPG, pengemudi, kendaraan, petugas, dan daftar menu master.");
   const grid=text(inputPanel,"div","ai-form-grid");
   const modeSelect=el("select");modeSelect.id="aiMode";
   [["both","Menu, penerima & Data Master"],["menus","Klasifikasi menu harian"],["recipients","Perubahan penerima manfaat"],["master","Data Master lainnya"]].forEach(([value,label])=>{const opt=el("option");opt.value=value;opt.textContent=label;modeSelect.append(opt)});
@@ -237,8 +237,11 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
      const row=rows[Number(card.dataset.recipientRow)];
      const merged={...(row.current||{}),...(row.proposed||{})};
      card.querySelectorAll("[data-recipient-field]").forEach(input=>{
-      const key=input.dataset.recipientField;
-      if(COUNT_FIELDS.has(key)){if(input.value.trim()===""||!Number.isSafeInteger(Number(input.value))||Number(input.value)<0)throw new Error("Nilai "+key+" harus bilangan bulat minimal 0.");merged[key]=Number(input.value)}else merged[key]=input.value;
+      const key=input.dataset.recipientField,def=RECIPIENT_FIELDS.find(item=>item[0]===key);
+      if(COUNT_FIELDS.has(key)){if(input.value.trim()===""||!Number.isSafeInteger(Number(input.value))||Number(input.value)<0)throw new Error("Nilai "+key+" harus bilangan bulat minimal 0.");merged[key]=Number(input.value)}
+      else if(def?.[2]==="number"){if(input.value.trim()===""||!Number.isSafeInteger(Number(input.value))||Number(input.value)<1)throw new Error("Urutan harus bilangan bulat minimal 1.");merged[key]=Number(input.value)}
+      else if(def?.[2]==="boolean")merged[key]=input.checked;
+      else merged[key]=input.value;
      });
      return {
       kelompok:merged.kelompok,nama:merged.nama,jenjang:merged.jenjang,alamat:merged.alamat||"",
