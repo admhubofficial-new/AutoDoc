@@ -409,6 +409,7 @@ function syncPreflightSummary(){
  const menuCount=typeof menuController?.count==="function"?menuController.count():modal.querySelectorAll("#docsMenuItems .docs-menu-input").length;
  const missing=[];
  if(!validDate)missing.push("tanggal distribusi");
+ if(hasAiMenuPlanDateMismatch(dateValue))missing.push("samakan tanggal dengan rencana menu AI ("+activeAiMenuPlan.tanggal+") atau lepaskan rencana");
  if(!kinds.length)missing.push("jenis dokumen");
  if(!selectedIds.size)missing.push("minimal satu penerima");
  if(menuCount>8)missing.push("maksimal 8 komponen menu");
@@ -434,6 +435,11 @@ function updateSelectedCount(){
 }
 async function createDocs(event){
  event.preventDefault();status("");syncPreflightSummary();
+ const dateValue=$("#docsDate",modal)?.value||"";
+ if(hasAiMenuPlanDateMismatch(dateValue)){
+  status("Penerbitan diblokir: rencana menu AI dibuat untuk "+activeAiMenuPlan.tanggal+". Samakan tanggal distribusi atau lepaskan rencana menu AI.",true);
+  $("#docsDate",modal)?.focus();return;
+ }
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
  if(!selected.length){status("Pilih minimal satu penerima.",true);$("#docsRecipientSearch",modal)?.focus();return}
  const kinds=selectedDocumentKinds();
