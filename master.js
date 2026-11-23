@@ -53,7 +53,7 @@ function init(){
  }
  search.addEventListener("input",applySearch);
  function open(nextEntity,initialSearch){
-  if(nextEntity==="ai"||nextEntity==="sheets"||nextEntity&&Object.prototype.hasOwnProperty.call(defs,nextEntity))entity=nextEntity;
+  if(nextEntity==="ai"||(nextEntity&&Object.prototype.hasOwnProperty.call(defs,nextEntity)))entity=nextEntity;
   const requestedSearch=String(initialSearch||"");
   returnFocusEl=document.activeElement;
   modal.hidden=false;document.body.style.overflow="hidden";search.value="";render();
@@ -66,20 +66,13 @@ function init(){
  }
  window.AutoDocMaster=Object.freeze({open,close});
  function render(){
-  tabs.innerHTML="";Object.entries(defs).forEach(([key,d])=>{const b=el("button",null,d.title);b.type="button";b.setAttribute("aria-selected",String(key===entity));b.onclick=()=>{entity=key;render()};tabs.append(b)});const aiTab=el("button",null,"Asisten AI");aiTab.type="button";aiTab.setAttribute("aria-selected",String(entity==="ai"));aiTab.onclick=()=>{entity="ai";render()};tabs.append(aiTab);const sheetsTab=el("button",null,"Google Sheets");sheetsTab.type="button";sheetsTab.setAttribute("aria-selected",String(entity==="sheets"));sheetsTab.onclick=()=>{entity="sheets";render()};tabs.append(sheetsTab);
-  title.textContent=entity==="ai"?"Asisten AI AutoDoc":entity==="sheets"?"Google Sheets":defs[entity].title;actions.innerHTML="";search.value="";
+  tabs.innerHTML="";Object.entries(defs).forEach(([key,d])=>{const b=el("button",null,d.title);b.type="button";b.setAttribute("aria-selected",String(key===entity));b.onclick=()=>{entity=key;render()};tabs.append(b)});const aiTab=el("button",null,"Asisten AI");aiTab.type="button";aiTab.setAttribute("aria-selected",String(entity==="ai"));aiTab.onclick=()=>{entity="ai";render()};tabs.append(aiTab);
+  title.textContent=entity==="ai"?"Asisten AI AutoDoc":defs[entity].title;actions.innerHTML="";search.value="";
   if(entity==="ai"){
    intro.textContent="Tempel teks atau unggah dokumen. AI akan menyiapkan usulan menu per sekolah dan perbandingan penerima manfaat. Tidak ada perubahan tersimpan sebelum Anda mengonfirmasi.";
    search.hidden=true;table.hidden=true;formSlot.innerHTML="";
    if(aiController)aiController.render(formSlot);
    else formSlot.textContent="Modul Asisten AI belum siap.";
-   return;
-  }
-  if(entity==="sheets"){
-   intro.textContent="Sinkronisasi dua arah antara Data Master AutoDoc dan Google Sheets. Semua perubahan dari spreadsheet ditinjau terlebih dahulu.";
-   search.hidden=true;table.hidden=true;formSlot.innerHTML="";
-   if(window.AutoDocSheetsSync)window.AutoDocSheetsSync.render(formSlot,message,api);
-   else formSlot.textContent="Modul Google Sheets belum siap. Muat ulang halaman.";
    return;
   }
   intro.textContent="Data master dipakai untuk dokumen baru. Dokumen yang sudah diterbitkan tetap menyimpan snapshot lama.";
@@ -109,7 +102,7 @@ function init(){
   if(row?.id){const id=el("input");id.type="hidden";id.dataset.key="id";id.value=row.id;f.append(id)}
   const buttons=el("div","dm-form-actions");const cancel=el("button","dm-btn","Batal");cancel.type="button";cancel.onclick=()=>formSlot.innerHTML="";const save=el("button","dm-btn primary","Simpan");save.type="submit";buttons.append(cancel,save);f.append(buttons);f.onsubmit=async e=>{e.preventDefault();const data={};f.querySelectorAll("[data-key]").forEach(x=>data[x.dataset.key]=x.type==="checkbox"?x.checked:x.value);save.disabled=true;try{await api("master/save",{entity,data});await load();message.textContent="Data berhasil disimpan.";window.dispatchEvent(new Event("autodoc:data-changed"))}catch(err){message.textContent=err.message;message.style.color="#a43c32";save.disabled=false}};formSlot.append(f);f.scrollIntoView({behavior:"smooth",block:"nearest"});
  }
- async function load(){message.textContent="Memuat data...";try{const d=await api("master/list");cache=d.data||{};if(entity!=="ai"&&entity!=="sheets")render();message.textContent=""}catch(e){message.textContent=e.message;message.style.color="#a43c32"}}
+ async function load(){message.textContent="Memuat data...";try{const d=await api("master/list");cache=d.data||{};if(entity!=="ai")render();message.textContent=""}catch(e){message.textContent=e.message;message.style.color="#a43c32"}}
  async function importCsv(){
   const input=el("input");input.type="file";input.accept=".csv,text/csv";
   input.onchange=async()=>{

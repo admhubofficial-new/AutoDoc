@@ -54,27 +54,6 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         aktif: true, urutan: 10, total_porsi: 16, siswa_kecil: 16, siswa_besar: 0, tendik: 0,
         ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0
       }], staff: [], drivers: [], vehicles: [], menus: [] } };
-    } else if (routeName === "sheets/status") {
-      payload = { configured: true, connected: true, spreadsheet_title: "PENERIMA MANFAAT UPDATE 2026", source_sheet_name: "Sheet2", source_sheet_gid: 585084563, managed_sheet_exists: false };
-    } else if (routeName === "sheets/preview") {
-      writes.push({ route: routeName, body: request.postDataJSON() });
-      payload = {
-        success: true, sheet_name: "Sheet2", source_kind: "original", preview_token: "a".repeat(64),
-        summary: { source_rows: 1, updated: 1, new: 0, same: 0, review: 0, ready: 1 },
-        warnings: [],
-        changes: [{
-          row_number: 2, action: "update", can_apply: true,
-          current: { id: recipientId, nama: "SDN UJI BROWSER" },
-          proposed: { id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga" },
-          changed_fields: ["siswa_kecil"]
-        }]
-      };
-    } else if (routeName === "sheets/apply") {
-      writes.push({ route: routeName, body: request.postDataJSON() });
-      payload = { success: true, imported: 1 };
-    } else if (routeName === "sheets/push") {
-      writes.push({ route: routeName, body: request.postDataJSON() });
-      payload = { success: true, row_count: 1, sheet_name: "AutoDoc_Penerima" };
     } else if (routeName === "ai/analyze") {
       writes.push({ route: routeName, body: request.postDataJSON() });
       const aiBody = request.postDataJSON();
@@ -258,41 +237,24 @@ test("AI beneficiary update is only imported after the user selects the row and 
   }
 });
 
-test("Google Sheets shows a read-only preview and requires explicit confirmation for both sync directions", async () => {
+test("AI assistant can read and map multiple source files in one review", async () => {
   const app = await openApp();
   try {
     const page = app.page;
     await page.locator('[data-home-nav="master"]').click();
-    await page.getByRole("button", { name: "Google Sheets" }).click();
-    await page.locator(".gs-status.ok").getByText("Google Sheets berhasil terhubung.").waitFor();
-
-    await page.getByRole("button", { name: "Baca & bandingkan" }).click();
-    await page.waitForTimeout(300);
-    const previewStatus = await page.locator(".gs-status").textContent();
-    assert.equal(
-      app.writes.some(item => item.route === "sheets/preview"),
-      true,
-      "preview API should be requested; status: " + previewStatus + "; errors: " + app.errors.join(" | ")
-    );
-    const previewRows = page.locator(".gs-table tbody tr");
-    assert.equal(await previewRows.count(), 1, "preview should render one result row; status: " + previewStatus);
-    await page.locator(".gs-table").getByText("SDN UJI BROWSER", { exact: false }).first().waitFor({ state: "visible", timeout: 5000 });
-    const rowCheckbox = page.locator(".gs-table tbody input[type='checkbox']").first();
-    assert.equal(await rowCheckbox.isChecked(), false);
-    assert.equal(app.writes.some(item => item.route === "sheets/apply"), false);
-
-    await rowCheckbox.check();
-    await page.once("dialog", dialog => dialog.accept());
-    await page.getByRole("button", { name: /Terapkan 1 baris terpilih/ }).click();
-    await page.getByText(/1 baris berhasil diterapkan/).waitFor();
-    const apply = app.writes.find(item => item.route === "sheets/apply");
-    assert.deepEqual(apply.body.row_numbers, [2]);
-    assert.equal(apply.body.preview_token, "a".repeat(64));
-
-    await page.once("dialog", dialog => dialog.accept());
-    await page.getByRole("button", { name: "Kirim AutoDoc ke Sheets" }).click();
-    const push = app.writes.find(item => item.route === "sheets/push");
-    assert.equal(push.body.confirm, true);
+    await page.getByRole("button", { name: "Asisten AI" }).click();
+    await page.locator("#aiSourceFiles").setInputFiles([
+      { name: "menu-harian.csv", mimeType: "text/csv", buffer: Buffer.from("Tujuan,Menu\\nSDN UJI BROWSER,Nasi Putih; Ayam Kecap") },
+      { name: "catatan-penerima.txt", mimeType: "text/plain", buffer: Buffer.from("Catatan data penerima manfaat untuk ditinjau.") }
+    ]);
+    await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
+    await page.getByText("Menu SDN Uji Browser", { exact: true }).waitFor();
+    const request = app.writes.find(item => item.route === "ai/analyze");
+    assert.ok(request);
+    assert.equal(request.body.files.length, 2);
+    assert.deepEqual(request.body.files.map(file => file.name), ["menu-harian.csv", "catatan-penerima.txt"]);
+    await page.locator("#aiSourceText").fill("Sumber berubah setelah analisis.");
+    assert.equal(await page.locator(".ai-result-content").isVisible(), false, "old AI proposals must disappear when source changes");
     assert.deepEqual(app.errors, []);
   } finally {
     await app.context.close();
