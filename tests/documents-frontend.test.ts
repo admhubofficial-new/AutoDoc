@@ -367,8 +367,8 @@ test("BAST print shows before/after quantities and names above aligned signature
   assert.doesNotMatch(bast, /Snapshot dokumen:/);
   const pending = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/3",snapshot_json:snapshot},escapeHtml,"logo.png");
   assert.match(pending, /Jumlah Sesudah/);
-  assert.match(pending, /25<\/td><td style='text-align:right'>—/);
-  assert.match(pending, /10<\/td><td style='text-align:right'>—/);
+  assert.match(pending, /25<\/td><td style='text-align:right'><\/td>/);
+  assert.match(pending, /10<\/td><td style='text-align:right'><\/td>/);
 });
 
 test("organoleptic signature names render above aligned horizontal lines", () => {
@@ -398,8 +398,46 @@ test("archive history supports selecting individual or all documents for batch p
 
 
 test("optional distribution details print as blank fields rather than dash placeholders", () => {
-  for (const field of ["dist.jam_berangkat", "dist.nama_petugas", "dist.nama_pengemudi", "dist.no_kendaraan", "dist.menu", "rec.nama", "rec.kelompok", "rec.alamat"]) {
+  assert.ok(printRendererSource.includes("[rec.kelompok,rec.jenjang].filter(Boolean).join(\" / \")"));
+  for (const field of ["dist.jam_berangkat", "dist.nama_petugas", "dist.nama_pengemudi", "dist.no_kendaraan", "dist.menu", "rec.nama", "rec.alamat"]) {
     assert.ok(printRendererSource.includes(field + '||"'), field + " should be blank when absent");
     assert.ok(!printRendererSource.includes(field + '||"—"'), field + " must not show a dash");
   }
+});
+
+
+test("SJ and BAST letterhead removes SPPG code and generic operational caption", () => {
+  assert.doesNotMatch(printRendererSource, /top-meta|kode_sppg|SPPG-DMJ|Dokumen operasional MBG/);
+  assert.ok(printRendererSource.includes("grid-template-columns:70px minmax(0,1fr)"));
+  assert.ok(printRendererSource.includes("escapeHtml(sppgLocation)"));
+});
+
+test("missing SJ and BAST fields and unentered BAST realization print blank, not dashes", () => {
+  const sandbox = { window: {} };
+  runInNewContext(printRendererSource, sandbox);
+  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+  const snapshot = {
+    sppg: {}, distribusi: {}, penerima: {}, rincian_porsi: [],
+    ringkasan: { total_porsi: 16 }
+  };
+  for (const jenis of ["SJ", "BAST"]) {
+    const html = buildPrintHtml({jenis,nomor_lengkap:"DOC/1",snapshot_json:snapshot},escapeHtml,"logo.png");
+    assert.doesNotMatch(html, /—/);
+    for (const label of ["Alamat", "Menu", "Pengemudi", "Kendaraan", "Petugas"]) {
+      assert.ok(html.includes("<b>"+label+"</b>: </div>"), label + " should be blank when absent");
+    }
+    assert.ok(html.includes("<b>Total porsi</b>: 16</div>"));
+  }
+  const pendingBast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/2",snapshot_json:snapshot},escapeHtml,"logo.png");
+  assert.ok(pendingBast.includes("Jumlah Sesudah"));
+  assert.doesNotMatch(pendingBast, /—/);
+});
+
+test("organoleptic meal options remain normal text for manual marking", () => {
+  assert.ok(organolepticSource.includes('["Pagi","Siang","Sore"]'));
+  assert.ok(organolepticSource.includes('wrap.append(doc.createTextNode(meal))'));
+  assert.ok(!organolepticSource.includes('organolepticElement(doc,"s"'));
 });

@@ -11,10 +11,9 @@ function organolepticInfoRow(doc,parent,label,valueNode){
 }
 function organolepticMealNode(doc,selected){
  const wrap=organolepticElement(doc,"span","val");
- ["pagi","siang","sore"].forEach((meal,index)=>{
+ ["Pagi","Siang","Sore"].forEach((meal,index)=>{
   if(index)wrap.append(doc.createTextNode("/"));
-  if(meal===selected)wrap.append(doc.createTextNode(meal));
-  else wrap.append(organolepticElement(doc,"s","",meal));
+  wrap.append(doc.createTextNode(meal));
  });
  return wrap;
 }
