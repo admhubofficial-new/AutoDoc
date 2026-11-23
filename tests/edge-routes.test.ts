@@ -200,3 +200,14 @@ test("AI structured output distinguishes fields present in a file and refuses gu
   assert.match(source, /Jangan mengganti nama\/kelompok penerima yang ada secara otomatis/);
   assert.match(source, /action = "review"/);
 });
+
+
+test("AI menu mappings are restricted to selected recipients and copied into immutable document snapshots", () => {
+  const body = functionBody("handleDocsCreate", "handleDocsDays");
+  assert.match(body, /recipient_menu_items/);
+  assert.match(body, /ids\.some\(id => !recipientIds\.includes\(id\)\)/);
+  assert.match(body, /const effectiveMenuItems = recipientMenuItems\[recipientId\] \?\? menuItems/);
+  assert.match(body, /recipientDistributionPayload/);
+  assert.match(body, /menu_items: effectiveMenuItems\.map/);
+  assert.match(body, /distribusi: \{ \.\.\.recipientDistributionPayload, id: distribution\.id \}/);
+});
