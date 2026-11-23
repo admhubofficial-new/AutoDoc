@@ -66,8 +66,8 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /function updateLivePreview\(\)/);
   assert.match(previewSource, /window\.AutoDocPrintRenderer/);
   assert.match(previewSource, /frame\.srcdoc=html/);
-  assert.match(source, /form\.addEventListener\("input",\(\)=>previewController\?\.updateLivePreview\(\)\)/);
-  assert.match(source, /form\.addEventListener\("change",\(\)=>previewController\?\.updateLivePreview\(\)\)/);
+  assert.match(source, /form\.addEventListener\("input",\(\)=>\{syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
+  assert.match(source, /form\.addEventListener\("change",\(\)=>\{syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
   assert.match(previewSource, /PRATINJAU · BELUM DITERBITKAN/);
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
@@ -321,7 +321,7 @@ test("live document preview is isolated in its own module and initialized before
 });
 
 test("daily menu editor is isolated, capped at eight, and delegates preview refresh", () => {
-  assert.match(menuSource, /window\.AutoDocMenuEditor=Object\.freeze/);
+  assert.match(menuSource, /window\.AutoDocMenuEditor\s*=\s*Object\.freeze/);
   assert.match(menuSource, /items\.length\s*>=\s*8/);
   assert.match(menuSource, /Geser .* ke atas/);
   assert.match(menuSource, /Hapus komponen/);

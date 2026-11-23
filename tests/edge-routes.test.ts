@@ -137,14 +137,14 @@ test("inline application script remains syntactically valid", () => {
   scripts.forEach(match => new Script(match[1]));
 });
 
-test("home dashboard avoids duplicate latest distribution and emphasizes global pending work", () => {
-  assert.match(dashboardUi, /\["BAST perlu realisasi", counts\.bast_pending\]/);
-  assert.match(dashboardUi, /\["Total distribusi", counts\.distributions\]/);
-  assert.match(dashboardUi, /const earlierRows = rows\.slice\(1\)/);
-  assert.match(dashboardUi, /"Distribusi sebelumnya"/);
-  assert.match(dashboardUi, /action\("＋ Buat dokumen", true/);
-  assert.match(dashboardUi, /action\("Lihat arsip", false/);
-  assert.match(indexHtml, /dashboard\.js\?v=p0-css-consolidation-20261124/);
+test("home dashboard separates the global BAST queue and exposes latest distribution archive", () => {
+  assert.match(dashboardUi, /const pendingBast = Number\(counts\.bast_pending\)/);
+  assert.match(dashboardUi, /BAST menunggu realisasi/);
+  assert.match(dashboardUi, /rows\.slice\(1, 5\)/);
+  assert.match(dashboardUi, /Arsip distribusi terakhir/);
+  assert.match(dashboardUi, /action\("＋ Buat Dokumen", true/);
+  assert.match(dashboardUi, /action\("Buka arsip terakhir", false/);
+  assert.match(indexHtml, /dashboard\.js\?v=p1-operator-workspace-20261124/);
 });
 
 test("SPPG identity exposes separate Kepala SPPG, Kepala SPPI, and Ahli Gizi Dapur fields", () => {

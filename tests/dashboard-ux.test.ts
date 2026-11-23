@@ -49,7 +49,7 @@ test("dashboard is an operator action center with an operational date, BAST queu
   }
   assert.match(dashboard, /counts\.bast_pending/);
   assert.match(dashboard, /recent_distributions/);
-  assert.match(dashboard, /data-dashboard-action/);
+  assert.match(dashboard, /dashboardAction/);
   assert.match(dashboard, /setState\("loading"\)/);
   assert.match(dashboard, /setState\("error"\)/);
   assert.match(dashboard, /setState\("success"\)/);
