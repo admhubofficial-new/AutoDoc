@@ -47,7 +47,13 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     if (routeName === "setup/status") payload = { setupRequired: false };
     else if (routeName === "auth/session") payload = { authenticated };
     else if (routeName === "dashboard/summary") {
-      payload = { counts: { distributions: 1, bast_pending: 0 }, recent_distributions: [] };
+      payload = {
+        counts: { distributions: 2, bast_pending: 2, sppg_missing_fields: 1, ahli_gizi_missing: 1, recipients_missing_address: 1, recipients_need_verification: 1 },
+        recent_distributions: [
+          { id: distributionId, tanggal: "2026-11-23", menu: "Nasi, ayam", documents_count: 4, bast_pending: 1 },
+          { id: "33333333-3333-4333-8333-333333333333", tanggal: "2026-11-22", menu: "Nasi, telur", documents_count: 2, bast_pending: 0 }
+        ]
+      };
     } else if (routeName === "master/list") {
       payload = { data: { settings: [{ nama_kepala_sppg: "Kepala SPPG", nama_kepala_sppi: "Kepala SPPI", nama_ahli_gizi: "Ahli Gizi" }], recipients: [{
         id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga", jenjang: "SD", alamat: "Alamat Uji",
@@ -217,6 +223,63 @@ test("P0 shared design system and active navigation context work without runtime
     assert.deepEqual(app.errors, []);
   } finally {
     await app.context.close();
+  }
+});
+
+test("P1 operator dashboard and document form work on desktop and mobile", async () => {
+  const desktop = await openApp();
+  try {
+    const page = desktop.page;
+    await page.locator(".home-operator-hero").waitFor();
+    assert.equal(await page.locator("#opsDashboard").getAttribute("data-state"), "success");
+    assert.notEqual((await page.locator(".home-operational-date").getAttribute("datetime")) || "", "");
+    assert.equal((await page.locator(".home-bast-count").textContent()).trim(), "2");
+    assert.equal(await page.locator(".home-master-check").isVisible(), true);
+    assert.equal(await page.locator(".home-archive-card").isVisible(), true);
+
+    await page.locator('[data-dashboard-action="create"]').click();
+    await page.locator("#docsCreateForm").waitFor();
+    const headings = await page.locator("#docsCreateForm .docs-form-section-head h4").allTextContents();
+    assert.deepEqual(headings.slice(0, 5), [
+      "1. Jenis & tanggal",
+      "2. Rincian perjalanan",
+      "3. Menu distribusi",
+      "4. Penerima & porsi",
+      "5. Ringkasan sebelum terbit"
+    ]);
+    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
+    const previewPosition = await page.locator("#docsPreviewDisclosure").evaluate(element => getComputedStyle(element).position);
+    assert.equal(previewPosition, "sticky");
+
+    await page.locator("input[name='recipient']").check();
+    const summary = await page.locator("#docsPreflightSummary").innerText();
+    assert.match(summary, /1 penerima/);
+    assert.match(summary, /16 porsi/);
+    assert.match(summary, /Siap diperiksa sebelum terbit/);
+    const recipientOverflow = await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY);
+    assert.equal(recipientOverflow, "visible");
+    assert.equal(desktop.writes.some(item => item.route === "docs/create"), false);
+    assert.deepEqual(desktop.errors, []);
+  } finally {
+    await desktop.context.close();
+  }
+
+  const mobile = await openApp({ viewport: { width: 390, height: 844 } });
+  try {
+    const page = mobile.page;
+    await page.locator('[data-dashboard-action="create"]').click();
+    await page.locator("#docsCreateForm").waitFor();
+    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
+    const recipientHead = page.locator(".docs-recipient-head");
+    assert.equal(await recipientHead.evaluate(element => getComputedStyle(element).position), "sticky");
+    assert.equal(await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY), "visible");
+    await page.locator("input[name='recipient']").check();
+    assert.match(await page.locator("#docsSelectedPortion").textContent(), /16 porsi/);
+    await page.locator("#docsPreviewDisclosure > summary").click();
+    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
+    assert.deepEqual(mobile.errors, []);
+  } finally {
+    await mobile.context.close();
   }
 });
 

@@ -66,8 +66,8 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /function updateLivePreview\(\)/);
   assert.match(previewSource, /window\.AutoDocPrintRenderer/);
   assert.match(previewSource, /frame\.srcdoc=html/);
-  assert.match(source, /form\.addEventListener\("input",\(\)=>previewController\?\.updateLivePreview\(\)\)/);
-  assert.match(source, /form\.addEventListener\("change",\(\)=>previewController\?\.updateLivePreview\(\)\)/);
+  assert.match(source, /form\.addEventListener\("input",\(\)=>\{syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
+  assert.match(source, /form\.addEventListener\("change",\(\)=>\{syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
   assert.match(previewSource, /PRATINJAU · BELUM DITERBITKAN/);
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
@@ -76,7 +76,7 @@ test("live print preview uses the production renderer and follows form changes",
 });
 
 test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
-  assert.match(menuSource, /items\.length>=8/);
+  assert.match(menuSource, /items\.length\s*>=\s*8/);
   assert.match(source, /docsMenuSuggestions/);
   assert.match(menuSource, /Geser .* ke atas/);
   assert.match(menuSource, /Geser .* ke bawah/);
@@ -321,8 +321,8 @@ test("live document preview is isolated in its own module and initialized before
 });
 
 test("daily menu editor is isolated, capped at eight, and delegates preview refresh", () => {
-  assert.match(menuSource, /window\.AutoDocMenuEditor=Object\.freeze/);
-  assert.match(menuSource, /items\.length>=8/);
+  assert.match(menuSource, /window\.AutoDocMenuEditor\s*=\s*Object\.freeze/);
+  assert.match(menuSource, /items\.length\s*>=\s*8/);
   assert.match(menuSource, /Geser .* ke atas/);
   assert.match(menuSource, /Hapus komponen/);
   assert.match(source, /window\.AutoDocMenuEditor\.create/);
@@ -479,4 +479,39 @@ test("organoleptic archive and creation printing use recipient-specific snapshot
   assert.match(source, /menuByRecipient\?\.\[recipientId\]/);
   assert.match(source, /pendingOrganolepticPrint\.menuByRecipient/);
   assert.match(source, /printOrganolepticForms\(getArchiveRecipients\(\),getArchiveRecipientMenus\(\)\)/);
+});
+
+test("P1 creation form keeps the five operator decisions in order and summarizes readiness before issuance", () => {
+  const steps = [
+    "1. Jenis &amp; tanggal",
+    "2. Rincian perjalanan",
+    "3. Menu distribusi",
+    "4. Penerima &amp; porsi",
+    "5. Ringkasan sebelum terbit"
+  ];
+  const positions = steps.map(step => source.indexOf(step));
+  assert.ok(positions.every(position => position >= 0));
+  assert.deepEqual(positions, [...positions].sort((a, b) => a - b));
+  assert.match(source, /function syncPreflightSummary\(\)/);
+  assert.match(source, /docsPreflightSummary/);
+  assert.match(source, /docsSelectedPortion/);
+  assert.match(source, /menuController\?\.count/);
+  assert.match(source, /Periksa kembali rincian berikut sebelum menerbitkan/);
+  assert.match(source, /state=state\|\|\(bad\?"error":message\?"success":""\)/);
+  assert.match(source, /status\("Memuat daftar penerima dan data pendukung...",false,"loading"\)/);
+});
+
+test("mobile recipient selection has one page scroll and a live sticky search header", () => {
+  const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  assert.ok(stylesSource.includes(".docs-recipient-box-compact .docs-recipient-list{max-height:none;overflow:visible"));
+  assert.ok(stylesSource.includes(".docs-recipient-box-compact .docs-recipient-head{position:sticky"));
+  assert.ok(source.includes("id='docsRecipientSearch'"));
+  assert.ok(source.includes("aria-live='polite'>(0 dipilih)"));
+});
+
+test("preview disclosure stays open on desktop and can collapse on mobile", () => {
+  assert.ok(source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure' open>"));
+  assert.ok(previewSource.includes('window.matchMedia("(max-width:720px)")'));
+  assert.ok(previewSource.includes("disclosure.open=!mobilePreview.matches"));
+  assert.ok(previewSource.includes('disclosure.addEventListener("toggle",fitPreviewFrame)'));
 });
