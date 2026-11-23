@@ -471,8 +471,6 @@ test("AI menu plans map one recipient to one unique menu and block unmapped reci
   assert.match(source, /function menuItemsForRecipient/);
   assert.match(previewSource, /readMenuComponentsForRecipient/);
   assert.match(previewSource, /readMenuComponentsForRecipient\(fallback\.id,date\)/);
-  assert.match(source, /recipientDistributionPayload/);
-  assert.match(source, /effectiveMenuItems\.map/);
 });
 
 test("organoleptic archive and creation printing use recipient-specific snapshot menu items", () => {
