@@ -13,8 +13,8 @@
       const toolbar = node("div", "docs-days-toolbar");
       const heading = node("div", "docs-archive-heading");
       heading.append(
-        node("h3", "docs-section-title", "Arsip distribusi"),
-        node("p", "docs-note", "Cari distribusi, buka dokumen terkait, atau pilih beberapa riwayat untuk dihapus.")
+        node("h3", "docs-section-title", "Daftar Distribusi"),
+        node("p", "docs-note", "Pilih tanggal distribusi untuk membuka dokumen, mencetak ulang, atau memeriksa realisasi.")
       );
       const searchGroup = node("div", "docs-archive-search");
       const input = node("input", "docs-archive-search-input");
@@ -30,6 +30,11 @@
       searchGroup.append(input, clearSearch);
       toolbar.append(heading, searchGroup);
 
+      const dangerZone = node("section", "docs-danger-zone");
+      dangerZone.setAttribute("aria-labelledby", "docsDangerZoneTitle");
+      const dangerTitle = node("h4", "docs-danger-zone-title", "Area berbahaya · Penghapusan riwayat");
+      dangerTitle.id = "docsDangerZoneTitle";
+      const dangerDescription = node("p", "docs-danger-zone-description", "Penghapusan bersifat permanen dan memerlukan PIN MASUK. Tindakan ini dipisahkan dari alur membuka distribusi dan mencetak dokumen.");
       const selection = node("div", "docs-days-selection");
       const selectAllLabel = node("label", "docs-days-select-all");
       const selectAll = node("input");
@@ -64,7 +69,8 @@
       next.id = "docsDaysNext";
       pagination.append(previous, pageLabel, next);
 
-      workspace.append(toolbar, selection, live, confirmSlot, list, pagination);
+      dangerZone.append(dangerTitle, dangerDescription, selection, confirmSlot);
+      workspace.append(toolbar, live, list, pagination, dangerZone);
       target.append(workspace);
 
       let offset = 0;

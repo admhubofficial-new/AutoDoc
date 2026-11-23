@@ -56,7 +56,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
   }
   if(typeof setMessage==="function")setMessage(message,bad,state);
  }
- function render(container){
+ function render(container,options={}){
   host=container;
   host.innerHTML="";
   const shell=text(host,"div","ai-assistant");
@@ -66,6 +66,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
   const grid=text(inputPanel,"div","ai-form-grid");
   const modeSelect=el("select");modeSelect.id="aiMode";
   [["both","Menu, penerima & Data Master"],["menus","Klasifikasi menu harian"],["recipients","Perubahan penerima manfaat"],["master","Data Master lainnya"]].forEach(([value,label])=>{const opt=el("option");opt.value=value;opt.textContent=label;modeSelect.append(opt)});
+  if(["both","menus","recipients","master"].includes(options?.mode))modeSelect.value=options.mode;
   field(grid,"Apa yang ingin dianalisis?",modeSelect);
   const date=el("input");date.type="date";date.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta"}).format(new Date());date.id="aiDate";
   field(grid,"Tanggal distribusi untuk menu",date);
@@ -166,12 +167,20 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
     const w=text(target,"div","ai-flag-list");
     data.warnings.forEach(item=>text(w,"div","ai-flag",item));
    }
-   if(data.menu_groups?.length)renderMenuGroups(target,data.menu_groups);
-   else if(mode!=="recipients"&&mode!=="master")text(target,"p","ai-helper","Belum ditemukan kelompok menu harian yang bisa dipetakan.");
-   if(data.recipient_updates?.length)renderRecipientUpdates(target,data.recipient_updates);
-   else if(mode!=="menus"&&mode!=="master")text(target,"p","ai-helper","Tidak ada perubahan penerima manfaat yang berhasil diekstrak dari sumber.");
-   if(data.master_updates?.length)renderMasterUpdates(target,data.master_updates);
-   else if(mode==="master"||mode==="both")text(target,"p","ai-helper","Tidak ditemukan perubahan Pengemudi, Kendaraan, Petugas, Daftar Menu Master, atau Identitas SPPG pada sumber.");
+   const queue=text(target,"section","ai-review-queue");
+   queue.setAttribute("aria-labelledby","aiReviewQueueTitle");
+   const queueHead=text(queue,"header","ai-review-queue-head");
+   const queueTitle=text(queueHead,"h4","","Antrean pemeriksaan");queueTitle.id="aiReviewQueueTitle";
+   text(queueHead,"p","ai-helper",total?total+" usulan menunggu pemeriksaan operator. Tinjau sumber, kecocokan, dan nilai sebelum menerapkan atau menyimpan.":"Antrean kosong. Tidak ada usulan yang perlu dikonfirmasi dari sumber ini.");
+   const queueCount=text(queueHead,"strong","ai-review-queue-count",total+" usulan");
+   queueCount.setAttribute("aria-label",total+" usulan dalam antrean pemeriksaan");
+   const lanes=text(queue,"div","ai-review-lanes");
+   if(data.menu_groups?.length)renderMenuGroups(lanes,data.menu_groups);
+   else if(mode!=="recipients"&&mode!=="master")text(lanes,"p","ai-helper","Belum ditemukan kelompok menu harian yang bisa dipetakan.");
+   if(data.recipient_updates?.length)renderRecipientUpdates(lanes,data.recipient_updates);
+   else if(mode!=="menus"&&mode!=="master")text(lanes,"p","ai-helper","Tidak ada perubahan penerima manfaat yang berhasil diekstrak dari sumber.");
+   if(data.master_updates?.length)renderMasterUpdates(lanes,data.master_updates);
+   else if(mode==="master"||mode==="both")text(lanes,"p","ai-helper","Tidak ditemukan perubahan Pengemudi, Kendaraan, Petugas, Daftar Menu Master, atau Identitas SPPG pada sumber.");
   }
   function renderMenuGroups(target,groups){
    const section=text(target,"section","ai-list");
@@ -180,6 +189,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
     const card=text(section,"article","ai-card");card.dataset.menuGroup=String(index);
     const head=text(card,"div","ai-card-head");
     text(head,"strong","",group.label||"Kelompok menu "+(index+1));
+    text(head,"span","ai-review-status","Menunggu pemeriksaan");
     text(head,"span","ai-confidence "+(group.confidence==="tinggi"?"high":group.confidence==="rendah"?"low":""),group.confidence||"rendah");
     const body=text(card,"div","ai-card-body");
     text(body,"small","ai-helper",group.reason||"Alasan klasifikasi tidak tersedia.");
@@ -192,6 +202,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
     recipients.forEach(recipient=>{
      const label=text(targetList,"label","ai-target");
      const check=el("input");check.type="checkbox";check.dataset.recipientId=String(recipient.id);
+     check.setAttribute("aria-label","Pilih "+(recipient.nama||"penerima")+" untuk "+(group.label||"kelompok menu"));
      check.checked=recipient.aktif!==false&&(group.target_ids||[]).includes(String(recipient.id));
      label.append(check);
      const caption=text(label,"span", "",recipient.nama||"(Tanpa nama)");
@@ -231,9 +242,11 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
     const head=text(card,"div","ai-card-head");
     const selectable=(row.action!=="review"&&row.changed_fields?.length>0)||row.can_complete_manually===true;
     const check=el("input");check.type="checkbox";check.dataset.includeRecipient="";check.checked=false;check.disabled=!selectable;
+    check.setAttribute("aria-label","Pilih usulan penerima "+(row.proposed?.nama||"baru"));
     head.append(check);
     const title=(row.proposed?.nama||"Penerima baru")+(row.current?" · data lama":" · data baru");
     text(head,"div","",title);
+    text(head,"span","ai-review-status",row.action==="review"?"Perlu pemeriksaan manual":"Menunggu pemeriksaan");
     text(head,"span","ai-confidence "+(row.confidence==="tinggi"?"high":row.confidence==="rendah"?"low":""),row.confidence||"rendah");
     const body=text(card,"div","ai-card-body");
     text(body,"small","ai-helper",row.reason||"Tidak ada alasan yang diberikan.");
@@ -246,7 +259,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
      const wrap=text(body,"div","ai-change");
      const lab=text(wrap,"label",""," "+def[1]);
      const current=row.current?.[key]??"";
-     const input=el("input");input.type=def[2]==="number"?"number":def[2]==="boolean"?"checkbox":"text";input.dataset.recipientField=key;
+     const input=el("input");input.id="aiRecipientField_"+index+"_"+key;lab.htmlFor=input.id;input.type=def[2]==="number"?"number":def[2]==="boolean"?"checkbox":"text";input.dataset.recipientField=key;
      if(def[2]==="boolean")input.checked=row.proposed?.[key]===true;else input.value=row.proposed?.[key]??"";
      if(def[2]==="number"){input.min=key==="urutan"?"1":"0";input.step="1";input.inputMode="numeric";}
      lab.append(text(lab,"small","","Sebelumnya: "+(current===""?"(kosong)":current)));
@@ -316,9 +329,10 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
     const card=text(section,"article","ai-card");card.dataset.masterRow=String(index);
     const head=text(card,"div","ai-card-head");
     const selectable=(row.action==="new"||row.action==="update")&&(row.changed_fields||[]).length>0&&fields.length>0;
-    const check=el("input");check.type="checkbox";check.dataset.includeMaster="";check.checked=false;check.disabled=!selectable;head.append(check);
+    const check=el("input");check.type="checkbox";check.dataset.includeMaster="";check.checked=false;check.disabled=!selectable;check.setAttribute("aria-label","Pilih usulan "+(MASTER_TITLES[row.entity]||"Data Master"));head.append(check);
     const label=(row.proposed?.nama_sppg||row.proposed?.nama||row.proposed?.no_kendaraan||row.proposed?.teks_menu||MASTER_TITLES[row.entity]||"Data Master");
     text(head,"div","",MASTER_TITLES[row.entity]+ " · "+label);
+    text(head,"span","ai-review-status",row.action==="review"?"Perlu pemeriksaan manual":"Menunggu pemeriksaan");
     text(head,"span","ai-confidence "+(row.confidence==="tinggi"?"high":row.confidence==="rendah"?"low":""),row.confidence||"rendah");
     const body=text(card,"div","ai-card-body");
     text(body,"small","ai-helper",row.reason||"Tidak ada alasan klasifikasi.");
@@ -329,7 +343,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
      const def=fields.find(item=>item[0]===key);if(!def)return;
      const wrap=text(body,"div","ai-change");
      const lab=text(wrap,"label",""," "+def[1]);
-     const input=el("input");input.type=def[2]==="number"?"number":def[2]==="boolean"?"checkbox":"text";input.dataset.masterField=key;
+     const input=el("input");input.id="aiMasterField_"+index+"_"+key;lab.htmlFor=input.id;input.type=def[2]==="number"?"number":def[2]==="boolean"?"checkbox":"text";input.dataset.masterField=key;
      if(def[2]==="boolean")input.checked=row.proposed?.[key]===true;else input.value=row.proposed?.[key]??"";
      if(def[2]==="number"){input.min=key==="urutan"?"1":"0";input.step="1";input.inputMode="numeric";}
      lab.append(text(lab,"small","","Sebelumnya: "+(row.current?.[key]===null||row.current?.[key]===undefined?"(baru/kosong)":String(row.current[key]))));

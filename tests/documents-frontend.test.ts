@@ -535,8 +535,10 @@ test("P2 BAST realization connects labels, communicates local states, and preser
   assert.match(realizationSource, /panel\.dataset\.state = "error"/);
   assert.match(realizationSource, /api\("docs\/realization", data\)/);
   assert.match(realizationSource, /min: -50, max: 100/);
-  assert.match(realizationSource, /max: deliveredSmall/);
-  assert.match(realizationSource, /max: deliveredLarge/);
+  assert.match(realizationSource, /input\.max = String\(delivered\)/);
+  assert.match(realizationSource, /addPortionComparison\("Porsi kecil", "diterima_kecil", deliveredSmall, oldSmall\)/);
+  assert.match(realizationSource, /addPortionComparison\("Porsi besar", "diterima_besar", deliveredLarge, oldLarge\)/);
+  assert.match(realizationSource, /docs-realization-confirmation/);
 });
 
 test("P2 Data Master search, loading/error recovery, and form controls are accessible without inline colors", () => {
@@ -556,4 +558,45 @@ test("P2 AI review labels analysis states and keeps the user-confirmed apply bou
   assert.match(aiSource, /api\("ai\/recipient-apply"/);
   assert.match(aiSource, /api\("ai\/master-apply"/);
   assert.match(aiSource, /confirm:true/);
+});
+
+
+test("P2 archive separates distribution list, detail context, and destructive confirmation area", () => {
+  assert.match(archiveSource, /Daftar Distribusi/);
+  assert.match(archiveSource, /docs-danger-zone/);
+  assert.match(archiveSource, /Area berbahaya · Penghapusan riwayat/);
+  assert.match(archiveSource, /dangerZone\.append\(dangerTitle, dangerDescription, selection, confirmSlot\)/);
+  assert.match(source, /docs-distribution-detail/);
+  assert.match(source, /docs-print-area/);
+  assert.match(source, /Kembali ke daftar distribusi/);
+});
+
+test("P2 Data Master provides desktop category navigation, mobile selection, grouped recipient fields, and a CSV preview gate", () => {
+  assert.match(masterSource, /dm-category-select/);
+  assert.match(masterSource, /tabs\.insertBefore\(tabButton,categorySelect\)/);
+  assert.match(masterSource, /data-mobileCards/);
+  assert.match(masterSource, /recipientGroups/);
+  assert.match(masterSource, /Rincian jumlah/);
+  assert.match(masterSource, /dm-import-preview/);
+  assert.match(masterSource, /Konfirmasi impor /);
+  assert.doesNotMatch(masterSource, /if\(!confirm\("Impor /);
+});
+
+test("P2 quick AI menu shortcut opens menu mode and analysis results are organized as a review queue", () => {
+  assert.match(source, /docsAiMenuAssist/);
+  assert.match(source, /AutoDocMaster\?\.open\("ai","",\{mode:"menus"\}\)/);
+  assert.match(aiSource, /render\(container,options=\{\}\)/);
+  assert.match(aiSource, /Antrean pemeriksaan/);
+  assert.match(aiSource, /ai-review-status/);
+  assert.match(aiSource, /confirm:true/);
+});
+
+test("P3 visual audit styles cover vertical desktop navigation, mobile dropdown, recipient cards, and paired realization", () => {
+  const stylesSource = readFileSync(new URL("../theme.css", import.meta.url), "utf8");
+  assert.match(stylesSource, /\.dm-tabs\{grid-column:1;grid-row:2;position:static;display:flex;flex-direction:column/);
+  assert.match(stylesSource, /\.dm-category-select\{display:block/);
+  assert.match(stylesSource, /\.dm-table\[data-mobile-cards=true\] tr\.dm-data-row/);
+  assert.match(stylesSource, /\.docs-portion-comparison\{display:grid;grid-template-columns:repeat\(2/);
+  assert.match(stylesSource, /\.docs-danger-zone\{display:grid/);
+  assert.match(stylesSource, /\.ai-review-queue\{display:grid/);
 });

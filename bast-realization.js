@@ -67,7 +67,35 @@
         if (options.autocomplete) input.autocomplete = options.autocomplete;
         wrap.append(label, input);
         if (options.hint) wrap.append(node("small", "docs-field-hint", options.hint));
-        form.append(wrap);
+        (options.parent || form).append(wrap);
+        return input;
+      }
+
+      const comparison = node("section", "docs-portion-comparison");
+      comparison.setAttribute("aria-label", "Perbandingan porsi diserahkan dan diterima");
+      form.append(comparison);
+
+      function addPortionComparison(labelText, name, delivered, currentValue) {
+        const card = node("section", "docs-portion-card");
+        const title = node("h6", null, labelText);
+        const deliveredBlock = node("div", "docs-portion-metric");
+        deliveredBlock.append(node("span", null, "Diserahkan"), node("strong", null, delivered.toLocaleString("id-ID") + " porsi"));
+        const receivedBlock = node("div", "docs-field docs-portion-received");
+        const label = node("label", null, labelText + " diterima *");
+        const input = node("input");
+        input.id = "docsRealization_" + name;
+        input.name = name;
+        input.type = "number";
+        input.min = "0";
+        input.max = String(delivered);
+        input.step = "1";
+        input.required = true;
+        input.inputMode = "numeric";
+        input.value = String(currentValue ?? "");
+        label.htmlFor = input.id;
+        receivedBlock.append(label, input);
+        card.append(title, deliveredBlock, receivedBlock);
+        comparison.append(card);
         return input;
       }
 
@@ -90,14 +118,8 @@
         value: previous.ompreng_kembali ?? "",
         hint: "Masukkan jumlah utuh, tanpa tanda pemisah"
       });
-      addField("Porsi kecil diterima *", "diterima_kecil", "number", {
-        min: 0, max: deliveredSmall, step: 1, required: true, value: oldSmall,
-        hint: "Diserahkan: " + deliveredSmall.toLocaleString("id-ID") + " porsi"
-      });
-      addField("Porsi besar diterima *", "diterima_besar", "number", {
-        min: 0, max: deliveredLarge, step: 1, required: true, value: oldLarge,
-        hint: "Diserahkan: " + deliveredLarge.toLocaleString("id-ID") + " porsi"
-      });
+      addPortionComparison("Porsi kecil", "diterima_kecil", deliveredSmall, oldSmall);
+      addPortionComparison("Porsi besar", "diterima_besar", deliveredLarge, oldLarge);
       addField("Nama penerima *", "nama_penerima", "text", {
         required: true, maxLength: 180, value: previous.nama_penerima || "", autocomplete: "name"
       });
@@ -108,10 +130,16 @@
         maxLength: 1000, value: previous.catatan || "", wide: true,
         hint: "Catatan tambahan bila ada perbedaan jumlah atau kondisi makanan"
       });
+      const confirmation = node("section", "docs-realization-confirmation");
+      confirmation.setAttribute("aria-labelledby", "docsRealizationConfirmationTitle");
+      const confirmationTitle = node("h6", null, "Verifikasi & konfirmasi");
+      confirmationTitle.id = "docsRealizationConfirmationTitle";
+      confirmation.append(confirmationTitle, node("p", "docs-note", "Langkah ini memastikan realisasi disimpan setelah operator memasukkan PIN akses."));
       addField("PIN akses untuk konfirmasi *", "token", "password", {
         required: true, minLength: 6, maxLength: 128, autocomplete: "current-password",
-        hint: "Diperlukan untuk mengonfirmasi penyimpanan realisasi"
+        hint: "PIN diperlukan untuk mengonfirmasi penyimpanan realisasi", parent: confirmation
       });
+      form.append(confirmation);
 
       const actions = node("div", "docs-form-actions docs-realization-actions");
       const cancel = node("button", "docs-btn cancel-realization", "Tutup");
