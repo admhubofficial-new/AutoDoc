@@ -57,6 +57,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     } else if (routeName === "sheets/status") {
       payload = { configured: true, connected: true, spreadsheet_title: "PENERIMA MANFAAT UPDATE 2026", source_sheet_name: "Sheet2", source_sheet_gid: 585084563, managed_sheet_exists: false };
     } else if (routeName === "sheets/preview") {
+      writes.push({ route: routeName, body: request.postDataJSON() });
       payload = {
         success: true, sheet_name: "Sheet2", source_kind: "original",
         summary: { source_rows: 1, updated: 1, new: 0, same: 0, review: 0, ready: 1 },
@@ -267,6 +268,7 @@ test("Google Sheets shows a read-only preview and requires explicit confirmation
 
     await page.getByRole("button", { name: "Baca & bandingkan" }).click();
     await page.locator(".gs-table").getByText("SDN UJI BROWSER", { exact: true }).waitFor();
+    assert.equal(app.writes.some(item => item.route === "sheets/preview"), true);
     const rowCheckbox = page.locator(".gs-table tbody input[type='checkbox']").first();
     assert.equal(await rowCheckbox.isChecked(), false);
     assert.equal(app.writes.some(item => item.route === "sheets/apply"), false);
