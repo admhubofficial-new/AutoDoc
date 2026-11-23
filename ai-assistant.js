@@ -28,11 +28,9 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
   });
  }
  function setMessageSafe(message,bad=false){
+  const node=host?.querySelector(".ai-status");
+  if(node){node.textContent=message||"";node.classList.toggle("error",!!bad)}
   if(typeof setMessage==="function")setMessage(message,bad);
-  else {
-   const node=host?.querySelector(".ai-status");
-   if(node){node.textContent=message||"";node.classList.toggle("error",!!bad)}
-  }
  }
  function render(container){
   host=container;
@@ -131,7 +129,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     recipients.forEach(recipient=>{
      const label=text(targetList,"label","ai-target");
      const check=el("input");check.type="checkbox";check.dataset.recipientId=String(recipient.id);
-     check.checked=(group.target_ids||[]).includes(String(recipient.id));
+     check.checked=recipient.aktif!==false&&(group.target_ids||[]).includes(String(recipient.id));
      label.append(check);
      const caption=text(label,"span", "",recipient.nama||"(Tanpa nama)");
      caption.append(text(caption,"small",""," · "+(recipient.kelompok||"")+" · "+(recipient.jenjang||"")));
@@ -146,7 +144,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     groups.forEach((group,index)=>{
      const card=section.querySelector("[data-menu-group='"+index+"']");
      const menuItems=card.querySelector("[data-menu-items]").value.split(/\r?\n/).map(item=>item.trim()).filter(Boolean);
-     if(menuItems.length<1||menuItems.length>8)throw new Error("Kelompok "+(index+1)+" harus memiliki 1 sampai 8 komponen menu.");
+     if(menuItems.length<1||menuItems.length>8){conflict=conflict||"invalid-menu-"+(index+1);setMessageSafe("Kelompok "+(index+1)+" harus memiliki 1 sampai 8 komponen menu.",true);return;}
      const recipientIds=Array.from(card.querySelectorAll("[data-recipient-id]:checked")).map(input=>input.dataset.recipientId);
      recipientIds.forEach(id=>{
       if(mapped[id])conflict=getRecipients().find(item=>String(item.id)===id)?.nama||id;
@@ -154,13 +152,12 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
      });
      finalGroups.push({label:group.label||"Menu "+(index+1),menu_items:menuItems,recipient_ids:recipientIds});
     });
-    if(conflict){setMessageSafe("Penerima "+conflict+" terpilih pada lebih dari satu kelompok menu. Atur hanya satu menu untuk setiap penerima.",true);return}
+    if(conflict){if(conflict.startsWith("invalid-menu-"))return;setMessageSafe("Penerima "+conflict+" terpilih pada lebih dari satu kelompok menu. Atur hanya satu menu untuk setiap penerima.",true);return}
     if(!finalGroups.some(group=>group.recipient_ids.length)){setMessageSafe("Pilih minimal satu sekolah/tujuan pada kelompok menu.",true);return}
     const plan={tanggal:dateValue,groups:finalGroups,created_at:new Date().toISOString()};
     if(!confirm("Terapkan "+finalGroups.length+" kelompok menu ke formulir Buat Dokumen untuk tanggal "+dateValue+"? Menu per penerima akan masuk ke snapshot dokumen saat diterbitkan."))return;
     onApplyMenuPlan(plan);
    });
-   apply.addEventListener("click",()=>{});
   }
   function renderRecipientUpdates(target,rows){
    const section=text(target,"section","ai-list");
@@ -194,16 +191,15 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
    });
    const controls=text(target,"div","ai-action-row");
    const save=button(controls,"Konfirmasi & simpan penerima","primary",saveRecipientRows);
-   save.addEventListener("click",()=>{});
    async function saveRecipientRows(){
     const selected=Array.from(section.querySelectorAll("[data-recipient-row]")).filter(card=>card.querySelector("[data-include-recipient]")?.checked);
     if(!selected.length){setMessageSafe("Pilih minimal satu usulan penerima yang sudah diperiksa.",true);return}
-    const payload=selected.map(card=>{
+    let payload;try{payload=selected.map(card=>{
      const row=rows[Number(card.dataset.recipientRow)];
      const merged={...(row.current||{}),...(row.proposed||{})};
      card.querySelectorAll("[data-recipient-field]").forEach(input=>{
       const key=input.dataset.recipientField;
-      merged[key]=COUNT_FIELDS.has(key)?Number(input.value):input.value;
+      if(COUNT_FIELDS.has(key)){if(input.value.trim()===""||!Number.isSafeInteger(Number(input.value))||Number(input.value)<0)throw new Error("Nilai "+key+" harus bilangan bulat minimal 0.");merged[key]=Number(input.value)}else merged[key]=input.value;
      });
      return {
       kelompok:merged.kelompok,nama:merged.nama,jenjang:merged.jenjang,alamat:merged.alamat||"",
@@ -213,7 +209,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
       urutan:Number(merged.urutan||100),aktif:merged.aktif!==false,keterangan:merged.keterangan||"",
       perlu_verifikasi:merged.perlu_verifikasi===true,catatan_verifikasi:merged.catatan_verifikasi||""
      };
-    });
+    })}catch(error){setMessageSafe(error.message||"Periksa kembali nilai penerima.",true);return}
     if(payload.some(row=>!row.kelompok||!row.nama||!row.jenjang)){setMessageSafe("Kelompok, nama, dan jenjang harus lengkap pada setiap baris.",true);return}
     if(!confirm("Konfirmasi penyimpanan "+payload.length+" penerima? Hanya baris yang dicentang yang akan diperbarui/ditambahkan. Data penerima lain tidak dihapus."))return;
     save.disabled=true;save.textContent="Menyimpan...";
