@@ -167,7 +167,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     const card=text(section,"article","ai-card");card.dataset.recipientRow=String(index);
     const head=text(card,"div","ai-card-head");
     const selectable=row.action!=="review"&&row.changed_fields?.length>0;
-    const check=el("input");check.type="checkbox";check.dataset.includeRecipient="";check.checked=selectable&&(row.confidence==="tinggi"||row.confidence==="sedang");check.disabled=!selectable;
+    const check=el("input");check.type="checkbox";check.dataset.includeRecipient="";check.checked=false;check.disabled=!selectable;
     head.append(check);
     const title=(row.proposed?.nama||"Penerima baru")+(row.current?" · data lama":" · data baru");
     const titleBox=text(head,"div","",title);
