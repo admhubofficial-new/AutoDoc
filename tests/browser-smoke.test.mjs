@@ -194,7 +194,10 @@ test("AI assistant analyzes pasted menu text and applies a per-school plan witho
     await page.once("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: "Terapkan menu ke Buat Dokumen" }).click();
     await page.locator("#docsCreateForm").waitFor();
-    await page.locator("input[name='recipient']").check();
+    const recipientCheckbox = page.locator("input[name='recipient']");
+    await recipientCheckbox.waitFor();
+    assert.equal(await recipientCheckbox.isChecked(), true, "AI should preselect the mapped recipient");
+    assert.equal(await page.locator("#docsSelectedCount").textContent(), "(1 dipilih)");
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("Nasi Putih", { exact: false }).waitFor();
     assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
