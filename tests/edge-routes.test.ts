@@ -183,7 +183,7 @@ test("AI analysis is session protected, calls OpenAI only server-side, and never
 });
 
 test("AI file analysis enforces allowed extensions and a bounded upload size", () => {
-  assert.match(source, /const AI_MAX_REQUEST_BYTES = 10 * 1024 * 1024/);
+  assert.match(source, /const AI_MAX_REQUEST_BYTES = 10 \\* 1024 \\* 1024/);
   assert.match(source, /combinedBase64Length > 8_500_000/);
   assert.match(source, /allowedExtensions/);
   assert.match(source, /new Set\(\[\s*"pdf", "doc", "docx", "xls"/);
