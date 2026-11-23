@@ -141,8 +141,8 @@ function render(container,message,api){
   applyBtn.disabled=true;status("Menerapkan perubahan terpilih…");
   try{
    const result=await api("sheets/apply",{row_numbers:rowNumbers});
-   status((result.imported||0)+" baris berhasil diterapkan ke Data Master AutoDoc.","ok");
    await loadPreview();
+   status((result.imported||0)+" baris berhasil diterapkan ke Data Master AutoDoc.","ok");
    window.dispatchEvent(new Event("autodoc:data-changed"));
   }catch(error){status(error.message||"Gagal menerapkan perubahan.","error")}
   finally{refreshSelection()}
