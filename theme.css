@@ -175,7 +175,7 @@ button,input,select,textarea{font-family:inherit}
 .docs-field input,.docs-field select,.docs-recipient-tools input,.docs-preview-head select,.dm-field input,.dm-field select,.dm-search,.token-input{min-height:44px}
 .docs-btn,.dm-btn,.home-action,.submit-button{min-height:44px}
 .docs-close,.dm-close{min-width:40px;min-height:40px}
-.docs-field textarea,.dm-field textarea,.ai-field textarea{min-height:88px}
+.ai-field input,.ai-field select{min-height:44px}
 .home-summary-item strong,.docs-status{font-variant-numeric:tabular-nums lining-nums}
 @media(max-width:720px){
  .home-page .home-workspace{min-width:0}
