@@ -2056,7 +2056,7 @@ async function handleSheetsPush(request: Request): Promise<Response> {
   const recipients = await supabaseRequest<Array<Record<string, unknown>>>(
     config.table + "?" + query.toString(),
   );
-  const result = await callGoogleSheets("writeRecipients", { rows: recipients });
+  const result = await callGoogleSheets("writeRecipients", { rows: recipients.map((row) => ({ ...row, recipient_id: row.id })) });
   return respond(request, {
     success: true,
     row_count: Number(result.row_count ?? recipients.length),
