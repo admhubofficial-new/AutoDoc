@@ -127,9 +127,9 @@ function init(){
   table.dataset.state="loading";
   table.setAttribute("aria-busy","true");
   table.replaceChildren();
-  const skeleton=node("div","dm-loading-state");
+  const skeleton=el("div","dm-loading-state");
   skeleton.setAttribute("role","status");skeleton.setAttribute("aria-live","polite");
-  skeleton.append(node("span","ui-skeleton dm-skeleton-line"),node("span","ui-skeleton dm-skeleton-line wide"),node("span","ui-skeleton dm-skeleton-line"));
+  skeleton.append(el("span","ui-skeleton dm-skeleton-line"),el("span","ui-skeleton dm-skeleton-line wide"),el("span","ui-skeleton dm-skeleton-line"));
   table.append(skeleton);
   try{
    const d=await api("master/list");cache=d.data||{};
@@ -143,10 +143,10 @@ function init(){
    }
   }catch(error){
    table.dataset.state="error";table.setAttribute("aria-busy","false");table.replaceChildren();
-   const panel=node("div","ui-error-banner dm-load-error");
-   const content=node("div","ui-error-banner__content");
-   content.append(node("strong","ui-error-banner__title","Data Master gagal dimuat"),node("span",null,error.message||"Periksa sesi dan koneksi, lalu coba lagi."));
-   const retry=node("button","dm-btn","Coba lagi");retry.type="button";retry.addEventListener("click",load);
+   const panel=el("div","ui-error-banner dm-load-error");
+   const content=el("div","ui-error-banner__content");
+   content.append(el("strong","ui-error-banner__title","Data Master gagal dimuat"),el("span",null,error.message||"Periksa sesi dan koneksi, lalu coba lagi."));
+   const retry=el("button","dm-btn","Coba lagi");retry.type="button";retry.addEventListener("click",load);
    panel.append(content,retry);table.append(panel);
    msg(error.message||"Data Master gagal dimuat.",true,"error");
   }
