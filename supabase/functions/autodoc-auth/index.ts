@@ -786,6 +786,41 @@ async function handleDocsCreate(request: Request): Promise<Response> {
     waktu_makan: distribution.waktu_makan ?? waktuMakan,
     nama_ahli_gizi: distribution.nama_ahli_gizi ?? null,
   };
+  if (Object.keys(recipientMenuItems).length) {
+    const existingDocs = await supabaseRequest<Array<Record<string, unknown>>>(
+      "documents?" + new URLSearchParams({
+        select: "id,recipient_id,snapshot_json",
+        distribution_id: "eq." + String(distribution.id),
+        recipient_id: "in.(" + Object.keys(recipientMenuItems).join(",") + ")",
+      }).toString(),
+    );
+    for (const existing of existingDocs) {
+      const recipientId = String(existing.recipient_id ?? "");
+      const requestedMenu = recipientMenuItems[recipientId];
+      if (!requestedMenu) continue;
+      const snapshot = existing.snapshot_json && typeof existing.snapshot_json === "object"
+        ? existing.snapshot_json as Record<string, unknown> : {};
+      const previousDistribution = snapshot.distribusi && typeof snapshot.distribusi === "object"
+        ? snapshot.distribusi as Record<string, unknown> : {};
+      const previousItems = Array.isArray(previousDistribution.menu_items)
+        ? previousDistribution.menu_items.map((item) => {
+          if (typeof item === "string") return item;
+          return item && typeof item === "object"
+            ? String((item as Record<string, unknown>).nama_komponen ?? "") : "";
+        }).filter(Boolean)
+        : null;
+      const matches = previousItems
+        ? JSON.stringify(previousItems) === JSON.stringify(requestedMenu)
+        : String(previousDistribution.menu ?? "") === joinMenuComponents(requestedMenu);
+      if (!matches) {
+        throw new AppError(
+          409,
+          "Menu untuk penerima yang sudah memiliki dokumen tidak dapat diganti. Snapshot dokumen lama tetap dipertahankan; buat koreksi melalui proses administrasi yang berlaku.",
+        );
+      }
+    }
+  }
+
   const sppgSnapshot = settingsForDistributionSnapshot(settings, distribution);
 
   const tasks = recipients.flatMap((recipient) => {
