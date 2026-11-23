@@ -30,8 +30,8 @@ jobs:
         run: deno check supabase/functions/autodoc-auth/index.ts
       - name: Periksa sintaks utilitas Data Master
         run: node --check master-utils.js
-      - name: Periksa sintaks sinkronisasi Google Sheets
-        run: node --check google-sheets-sync.js
+      - name: Periksa sintaks Asisten AI
+        run: node --check ai-assistant.js
       - name: Periksa sintaks frontend Data Master
         run: node --check master.js
       - name: Periksa sintaks frontend dokumen
