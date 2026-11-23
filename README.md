@@ -1,87 +1,144 @@
 # AutoDoc
 
-Website otomatisasi dokumen-dokumen penunjang pekerjaan di Satuan Pelayanan Pemenuhan Gizi Gratis Darmaraja 01.
+Website administrasi distribusi MBG untuk SPPG Darmaraja 01. Aplikasi membantu operator menyiapkan Surat Jalan (SJ), BAST, formulir uji organoleptik, arsip distribusi, Data Master, dan pemetaan sumber data menggunakan asisten AI.
 
-## Modul Surat Jalan & BAST MBG
+## Arsitektur dan teknologi
 
-### Tahap 1 — Database
+- **Frontend:** HTML, CSS, dan JavaScript vanilla; dipublikasikan melalui GitHub Pages.
+- **Backend:** Supabase Edge Function `autodoc-auth` (Deno/TypeScript).
+- **Database:** PostgreSQL/Supabase, dengan operasi browser selalu melalui Edge Function.
+- **Integrasi:** Supabase REST/RPC/Storage, OpenAI Responses API dari server, dan Google Fonts (Inter).
+- **Tidak digunakan:** Google Sheets dan Apps Script.
 
-- 13 tabel aplikasi dengan Row Level Security aktif.
-- Tidak ada policy untuk role `anon` maupun `authenticated`.
-- Akses data aplikasi hanya melalui backend tepercaya menggunakan kunci Supabase server-side.
-- Nomor SJ dan BAST memakai counter terpisah, dengan fungsi PostgreSQL atomik.
-- Bucket `assets` untuk logo dan `bast-ttd` privat untuk scan BAST.
-- Data awal: 17 penerima, 443 porsi kecil, 1.751 porsi besar, total 2.194.
+File frontend utama:
+- `index.html`, `config.js`: bootstrap, login, shell aplikasi, navigasi, konfigurasi URL/publishable key.
+- `dashboard.js`: ringkasan dan shortcut operasional.
+- `documents.js`, `document-menu.js`, `document-preview.js`: alur pembuatan dokumen, editor menu, dan pratinjau.
+- `documents-print.js`, `organoleptic-print.js`: keluaran cetak SJ/BAST dan uji organoleptik.
+- `archive.js`, `bast-realization.js`: arsip distribusi dan realisasi BAST.
+- `master.js`, `master-utils.js`, `ai-assistant.js`: Data Master, impor CSV, dan asisten AI.
+- `styles.css`, `theme.css`: tampilan aplikasi.
 
-### Tahap 2 — Setup dan autentikasi PIN
+Backend:
+- `supabase/functions/autodoc-auth/index.ts`: endpoint API, autentikasi, validasi, operasi database, dan panggilan OpenAI.
+- `session.ts`: cookie sesi dan identitas throttle yang ditandatangani HMAC.
+- `validation.ts`: validasi input, pembacaan JSON berbatas stream, timeout HTTP, dan parsing Retry-After.
+- `request-controls.ts`: admission gate AI per sesi dan per Edge Function isolate.
+- `distribution-workflow.ts`: normalisasi aturan distribusi, jenis dokumen, waktu makan, dan komponen menu.
 
-- Frontend statis dipublikasikan melalui GitHub Pages.
-- Backend autentikasi dijalankan melalui Supabase Edge Function `autodoc-auth`.
-- Secret awal dibaca di server dari Supabase Edge Function Secrets dengan nama `PIN MASUK` (juga mendukung nama `PIN_MASUK`).
-- Saat Setup Awal, pengguna memasukkan PIN yang sudah disimpan di Supabase. Edge Function mencocokkannya di server, kemudian mengirim PIN itu langsung ke RPC database untuk disimpan sebagai hash; PIN asli tidak disimpan ke tabel atau dikembalikan ke browser.
-- PIN/token minimal 6 dan maksimal 128 karakter; database memakai SHA-256 pre-hash lalu bcrypt cost 12 melalui pgcrypto.
-- Setelah setup awal, login membandingkan PIN terhadap hash di database. Perubahan PIN berikutnya menggunakan mekanisme rotasi token database dan tidak mengubah secret bootstrap.
-- Cookie sesi HMAC-SHA256, HttpOnly, Secure, SameSite=None dan Partitioned untuk panggilan lintas situs GitHub Pages ↔ Supabase, berlaku 12 jam.
-- Lima kegagalan PIN berturut-turut mengunci akses bersama selama 15 menit.
-- Validasi sesi memeriksa `session_version` di database; perubahan PIN membatalkan sesi lama semua perangkat.
-- Endpoint verifikasi ulang PIN tersedia untuk tindakan yang memerlukannya. Penerbitan SJ/BAST memerlukan sesi login aktif tanpa PIN ulang; realisasi BAST tetap memerlukan konfirmasi PIN di dalam permintaan mutasinya.
-- Kunci backend Supabase hanya dibaca Edge Function; yang ada di frontend hanya publishable key yang memang boleh dipublikasikan.
-- CORS hanya mengizinkan origin `https://admhubofficial-new.github.io`.
+## Skema database dan akses
 
+Database saat ini mempunyai **14 tabel aplikasi** pada schema `public`:
 
+- Operasional: `distributions`, `distribution_menu_items`.
+- Dokumen: `documents`, `bast_realisasi`, `bast_realisasi_items`, `counters`.
+- Data Master: `settings`, `recipients`, `master_pengemudi`, `master_kendaraan`, `master_petugas`, `master_menu`.
+- Keamanan/audit: `login_attempts`, `audit_log`.
 
-### Tahap 3 — Dashboard operasional\n\n- Ringkasan jumlah distribusi, dokumen SJ/BAST, status dokumen, dan BAST yang menunggu realisasi.\n- Pemantauan kelengkapan Data Master dan daftar lima distribusi terbaru.\n- Ringkasan dibaca melalui Edge Function dengan sesi aktif; tidak ada akses langsung browser ke tabel Supabase.\n\n### Tahap 3A — Penyempurnaan alur UI/UX operasional
+Seluruh 14 tabel mengaktifkan RLS. Tidak ada policy tabel aplikasi untuk `anon` atau `authenticated`, dan kedua role tersebut tidak memiliki grant tabel. Akses data aplikasi dilakukan oleh backend tepercaya menggunakan kredensial server-side. Jangan membuka akses tabel dari browser atau menambahkan policy publik hanya untuk menghilangkan peringatan advisor.
 
-- Navigasi utama menggunakan Beranda, Buat Dokumen, Arsip, dan Data Master.
-- Pembuatan SJ/BAST memakai tiga langkah: informasi distribusi, pemilihan penerima secara eksplisit, dan pemeriksaan sebelum penerbitan.
-- Arsip menampilkan daftar distribusi terbaru yang dapat dicari berdasarkan tanggal, menu, petugas, pengemudi, atau kendaraan; daftar dapat ditelusuri per 60 distribusi hingga halaman arsip lama, dan dokumen dikelompokkan per penerima.
-- Arsip mendukung cetak massal Surat Jalan atau BAST per tanggal, serta cetak dokumen per penerima.
-- Data Master dapat dibuka langsung ke jenis data tertentu dan menyediakan pencarian pada daftar aktif.
-- Dialog dokumen dan Data Master menjaga fokus keyboard serta dapat ditutup dengan Escape.
-- Penyempurnaan tampilan tidak mengubah kontrak penerbitan, nomor dokumen, snapshot, autentikasi, PIN, atau penguncian percobaan.
+Nomor SJ dan BAST memakai counter terpisah. Penerbitan nomor menggunakan RPC PostgreSQL atomik; penyimpanan distribusi/menu dan realisasi BAST menggunakan RPC agar data terkait konsisten. Snapshot dokumen yang sudah diterbitkan dilindungi dari perubahan.
 
-### Tahap 4 — Surat Jalan & BAST MBG
+### Storage
 
-- Penerbitan pasangan Surat Jalan dan BAST per penerima pada tanggal distribusi.
-- Nomor SJ dan BAST menggunakan counter database terpisah dan fungsi PostgreSQL atomik yang sudah tersedia.
-- Data distribusi, identitas SPPG, penerima, menu, petugas, pengemudi, kendaraan, dan rincian porsi disimpan sebagai snapshot immutable pada saat penerbitan.
-- Penerbitan SJ/BAST hanya memerlukan sesi login aktif (tanpa PIN ulang). Penyimpanan realisasi BAST tetap memerlukan verifikasi PIN ulang.
-- Dokumen dapat ditampilkan dan dicetak dengan layout A4 melalui dialog cetak browser (termasuk Save as PDF).
-- Realisasi BAST mencatat kondisi makanan, jam diterima, suhu, jumlah porsi diserahkan/diterima, ompreng, identitas penerima, dan catatan.
-- Penyimpanan realisasi BAST dan perubahan status dokumen berjalan atomik dalam satu transaksi database.
-- Data distribusi dikunci dari perubahan setelah dokumen pertama diterbitkan agar riwayat dan snapshot dokumen tetap konsisten.
-- Jika proses penerbitan sebagian gagal, pengulangan untuk tanggal dan penerima yang sama menggunakan kembali nomor dokumen yang sudah berhasil dibuat dan melengkapi sisanya.
-- Status `dicetak` dicatat setelah dialog cetak browser dipanggil dan ditutup; browser tidak menyediakan sinyal andal untuk membedakan hasil cetak fisik dari pembatalan dialog.
-- Impor Data Master mendukung file CSV ber-delimiter koma, titik koma, atau tab, termasuk nilai berpetik dan status aktif yang kosong (default aktif).
-- Cetak mengubah status dokumen dari dibuat menjadi dicetak; penyimpanan realisasi BAST mengubah status menjadi selesai.
+Bucket yang ditemukan di Supabase:
 
-### Konfigurasi Supabase
+| Bucket | Akses | Batas saat ini | Kegunaan/keadaan |
+|---|---|---:|---|
+| `logo bgn` | Public | Tidak dibatasi pada konfigurasi bucket | URL logo yang digunakan frontend |
+| `assets` | Public | 5 MB | Bucket aset gambar yang disediakan |
+| `bast-ttd` | Private | 10 MB | Disiapkan untuk gambar/PDF scan BAST; alur upload dan signed URL belum tersedia di UI |
 
-Pastikan secret yang sudah dibuat tetap tersimpan di:
+Jangan mengubah bucket, policy Storage, atau URL logo sebelum memeriksa referensi aktif. Jangan menjadikan bucket `bast-ttd` public.
 
-**Supabase → Edge Functions → Secrets**
+## Login dan keamanan sesi
 
-Nama yang saat ini dikenali oleh kode: `PIN MASUK`. Kode juga mendukung `PIN_MASUK` jika key tersebut diubah ke format underscore. Jangan menyalin nilai PIN ke GitHub, source code, atau chat.
+- Secret bootstrap dibaca hanya dari Supabase Edge Function Secrets dengan nama `PIN MASUK` (kode juga mengenali `PIN_MASUK`).
+- Secret AI dibaca hanya dari server melalui nama `API OPEN AI AutoDoc`.
+- PIN/token 6–128 karakter; database menyimpan hash dengan SHA-256 pre-hash dan bcrypt.
+- Cookie sesi ditandatangani HMAC-SHA256, memakai `HttpOnly`, `Secure`, `SameSite=None`, dan `Partitioned`, dengan masa berlaku 12 jam.
+- Validasi sesi memeriksa `session_version` sehingga rotasi PIN dapat membatalkan sesi lama.
+- Lima kegagalan autentikasi berturut-turut mengunci percobaan pada identitas browser bertanda tangan selama 15 menit. Ini mencegah satu browser secara langsung mengunci seluruh operator. Karena aplikasi masih memakai PIN bersama, identitas tersebut bukan identitas personal; penghapusan cookie/browser data dapat menghasilkan identitas throttle baru. Ini bukan pengganti akun pengguna individual.
+- CORS hanya mengizinkan origin `https://admhubofficial-new.github.io`. CORS bukan pengganti pemeriksaan sesi.
+- Frontend hanya memuat publishable key. Jangan pernah menaruh `service_role`, `sb_secret`, PIN, atau API key OpenAI di frontend.
 
-Edge Function memakai variabel default proyek Supabase:
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY` legacy, atau `SUPABASE_SECRET_KEYS` jika proyek memakai secret API key baru.
+Edge Function menggunakan `verify_jwt=false` karena pemeriksaan origin, cookie sesi, dan PIN dilakukan di backend aplikasi. Jangan menghapus pemeriksaan tersebut.
 
-### Deployment
+## Fitur dan alur kerja
 
-- Push ke `main` memicu GitHub Pages untuk memperbarui frontend statis.
-- Edge Function `autodoc-auth` perlu dideploy ke proyek Supabase dengan JWT gateway verification dimatikan; fungsi melakukan validasi origin, PIN, session, dan pembatasan percobaan sendiri.
-- Publishable key di `config.js` adalah public key dan memang untuk frontend. Jangan pernah menaruh `service_role` atau `sb_secret` di sana.
+### Dashboard
+Menampilkan ringkasan distribusi dan dokumen, BAST yang menunggu realisasi, kelengkapan Data Master, serta distribusi terbaru.
 
-### Pengujian
+### Buat dokumen SJ/BAST
+- Form pembuatan menggunakan **satu halaman**, bukan wizard tiga langkah.
+- Pengguna memilih tanggal, waktu makan (pagi/siang/sore), maksimal delapan komponen menu, jenis dokumen, dan penerima secara eksplisit.
+- Pratinjau mengikuti perubahan formulir.
+- Data identitas SPPG, penerima, distribusi, menu, serta rincian porsi disimpan sebagai snapshot ketika dokumen diterbitkan.
+- Nomor dibuat backend melalui RPC atomik. Retry penerbitan parsial tidak boleh membuat ulang nomor yang sudah berhasil.
+- Penerbitan memerlukan sesi aktif; tidak meminta PIN kedua.
+- Detail petugas, pengemudi, kendaraan, dan jam berangkat boleh kosong.
 
-- `npm test` — unit test helper sesi/PIN, tanggal, waktu, UUID, bilangan bulat, content-range count, parser CSV, dan kontrak alur endpoint dokumen/dashboard.
-- Pengujian integrasi produksi yang menulis data tidak dijalankan otomatis agar tidak mengonsumsi nomor dokumen atau mengubah data operasional. Dashboard hanya menjalankan permintaan HEAD/GET dan tidak menulis database.\n- Pengulangan tanggal distribusi dengan dokumen yang sudah terbit harus menggunakan detail perjalanan yang sama; backend mengubah percobaan pengubahan snapshot menjadi konflik HTTP 409 yang mudah dipahami.
-- `deno check supabase/functions/autodoc-auth/index.ts` — pemeriksaan tipe Edge Function.
+### Arsip dan cetak
+- Arsip mendukung pencarian global, paginasi, pemilihan dokumen, dan cetak massal.
+- Penghapusan riwayat dapat memilih beberapa distribusi dan memerlukan verifikasi PIN ulang. Operasi dibatasi 60 distribusi; counter nomor tidak di-reset.
+- Status cetak dicatat melalui endpoint khusus setelah dialog cetak dipanggil dan dikonfirmasi sesuai alur aplikasi. Browser tidak dapat memastikan printer fisik benar-benar mencetak.
+- Dokumen menggunakan snapshot historis, bukan Data Master terbaru.
 
-### Catatan data sumber
+### Realisasi BAST
+Mencatat kondisi makanan, jam diterima, suhu, jumlah porsi diterima, ompreng, nama/jabatan penerima, dan catatan. Verifikasi PIN ulang dipertahankan; penyimpanan realisasi dan item menggunakan RPC transaksional.
 
-- Kabupaten Sumedang disalin dari sheet Pengaturan dan ditandai perlu diverifikasi.
-- Kader Cempaka 1–6 masing-masing 2 orang dipertahankan sesuai catatan asumsi workbook dan ditandai perlu verifikasi.
-- Alamat penerima, alamat SPPG, nama kepala SPPG, pengemudi, kendaraan, petugas dan menu yang kosong tetap kosong untuk dilengkapi melalui Data Master.
-- File logo belum tersedia dalam workbook. Bucket `assets` sudah disiapkan; unggah `logo-bgn.png` saat tersedia.
+### Formulir uji organoleptik
+Keluaran A4 portrait, satu penerima per halaman, dengan pilihan menu/penilaian dan area tulis manual. Formulir ini tidak membuat nomor SJ/BAST dan tidak mengubah status dokumen.
+
+### Data Master
+Mencakup identitas SPPG, penerima manfaat, pengemudi, kendaraan, petugas, dan menu master. Impor CSV menerima delimiter koma, titik koma, atau tab, termasuk quoted fields dan UTF-8 BOM.
+
+### Asisten AI
+- Menerima teks atau hingga lima file dengan total ukuran file maksimal 6 MB di UI.
+- Mendukung PDF, Word, Excel, CSV/TSV, TXT/Markdown, RTF, ODT, PowerPoint, JSON, HTML/XML, IIF, dan gambar JPG/JPEG/PNG/WebP.
+- Menganalisis menu harian, penerima manfaat, dan data master seperti identitas SPPG, pengemudi, kendaraan, petugas, dan menu master.
+- Analisis tidak menulis database. Hasil ditampilkan untuk diperiksa dan hanya diterapkan setelah pengguna memilih baris serta mengonfirmasi.
+- Endpoint apply memeriksa sesi, konfirmasi eksplisit, snapshot data terkini, dan duplikasi.
+- File sumber diperlakukan sebagai data tidak tepercaya; instruksi yang tertulis di dalam dokumen tidak boleh diikuti.
+- OpenAI Responses API dipanggil dari Edge Function dengan `store: false` dan structured output. API key tidak pernah dikirim ke browser.
+- Panggilan OpenAI memiliki deadline 45 detik. Respons 429/503 dipetakan ke pesan yang sesuai dan header `Retry-After` diteruskan.
+- Admission gate membatasi enam analisis per sesi per jendela 10 menit dan maksimal dua permintaan aktif per Edge Function isolate. Batas ini melindungi worker dari burst, tetapi **bukan kuota global/billing yang persisten** karena status gate berada di memori isolate. Tetapkan usage/spend limits juga pada proyek OpenAI dan tinjau penggunaan secara berkala.
+
+## Endpoint backend
+
+Semua endpoint terdaftar di `supabase/functions/autodoc-auth/index.ts`:
+
+- Setup/autentikasi: `setup/status`, `setup/complete`, `auth/login`, `auth/session`, `auth/logout`, `auth/verify-token`, `auth/change-token`.
+- Data Master: `master/list`, `master/recipients`, `master/save`, `master/import`.
+- AI: `ai/analyze`, `ai/recipient-apply`, `ai/master-apply`.
+- Dashboard: `dashboard/summary`.
+- Dokumen: `docs/create`, `docs/days`, `docs/list`, `docs/mark-printed`, `docs/realization`, `docs/delete-history`.
+
+Batas body umum adalah 8 KiB. `docs/create` mempunyai batas khusus 1 MiB agar dapat menampung pemetaan menu delapan komponen untuk sampai 100 penerima. Semua body dibaca secara streaming dan ditolak segera ketika batas byte terlampaui.
+
+## Migrasi Supabase
+
+File `20261121185410_delete_distribution_history.sql` sekarang menggunakan timestamp yang sama dengan baris `delete_distribution_history` pada `supabase_migrations.schema_migrations`. Isi file disamakan dengan statement SQL yang tercatat pada ledger produksi.
+
+Rekonsiliasi ini hanya memperbaiki nama/path migrasi dalam repositori. Tidak ada statement migrasi yang dijalankan ke database produksi dan tidak ada perubahan pada tabel ledger produksi. Migrasi yang sudah diterapkan harus diperlakukan append-only.
+
+## Pengujian
+
+Perintah utama:
+
+```bash
+npm test
+npm run test:browser
+deno check supabase/functions/autodoc-auth/index.ts
+```
+
+Unit/contract tests mencakup validasi, sesi, autentikasi, endpoint, body-size limits, streaming cancellation, timeout provider, Retry-After, admission gate, dan regresi fitur dokumen. Browser smoke tests menggunakan mock endpoint untuk memeriksa alur UI; pengujian mock bukan bukti integrasi produksi.
+
+Jangan menjalankan test yang menulis, menghapus, atau mengonsumsi nomor dokumen di database produksi. Gunakan database lokal/disposable untuk pengujian integrasi PostgreSQL.
+
+## Deployment
+
+- Push ke `main` memicu deployment GitHub Pages.
+- Edge Function `autodoc-auth` harus dideploy terpisah setelah perubahan backend disetujui dan siap dirilis.
+- Pertahankan `verify_jwt=false` hanya selama pemeriksaan sesi/origin khusus di dalam fungsi tetap aktif.
+- Verifikasi workflow Pages dan versi Edge Function secara terpisah; merge saja bukan bukti deployment berhasil.
