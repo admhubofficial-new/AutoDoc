@@ -465,7 +465,7 @@ test("AI assistant always previews proposed changes and requires explicit confir
 
 test("AI menu plans map one recipient to one unique menu and block unmapped recipients before issuance", () => {
   assert.match(aiSource, /Terapkan menu ke Buat Dokumen/);
-  assert.match(aiSource, /Satu penerima tidak boleh berada pada dua kelompok menu/);
+  assert.match(source, /Satu penerima tidak boleh berada pada dua kelompok menu/);
   assert.match(source, /recipient_menu_items:recipientMenuMap/);
   assert.match(source, /belum dipetakan ke kelompok menu AI/);
   assert.match(source, /function menuItemsForRecipient/);
