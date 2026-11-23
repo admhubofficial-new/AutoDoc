@@ -219,7 +219,7 @@ test("AI beneficiary update is only imported after the user selects the row and 
     await row.locator("[data-include-recipient]").check();
     await page.once("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: "Konfirmasi & simpan penerima" }).click();
-    await page.getByText(/baris penerima berhasil disimpan/).waitFor();
+    await page.locator(".ai-status").getByText(/baris penerima berhasil disimpan/).waitFor();
     const importRequest = app.writes.find(item => item.route === "master/import");
     assert.ok(importRequest);
     assert.equal(importRequest.body.rows[0].siswa_kecil, 18);
