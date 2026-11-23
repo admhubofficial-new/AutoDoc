@@ -136,7 +136,10 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     for (const id of ["docsStaff", "docsDriver", "docsVehicle"]) {
       assert.equal(await page.locator("#" + id).getAttribute("required"), null);
     }
-    await page.locator("input[name='recipient']").check();
+    const recipientCheckbox = page.locator("input[name='recipient']");
+    await recipientCheckbox.waitFor();
+    assert.equal(await recipientCheckbox.isChecked(), true, "AI should preselect the mapped recipient");
+    assert.equal(await page.locator("#docsSelectedCount").textContent(), "(1 dipilih)");
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("PRATINJAU · BELUM DITERBITKAN").waitFor();
     await page.locator("#docsStaff").fill("Petugas Browser Test");
@@ -195,7 +198,11 @@ test("AI assistant analyzes pasted menu text and applies a per-school plan witho
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("Nasi Putih", { exact: false }).waitFor();
     assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
-    assert.equal(app.writes.some(item => item.route === "docs/create"), false);
+    await page.getByRole("button", { name: "Terbitkan dokumen" }).click();
+    const createRequest = app.writes.find(item => item.route === "docs/create");
+    assert.ok(createRequest, "document creation should use the mocked local API");
+    assert.deepEqual(createRequest.body.recipient_menu_items[recipientId], ["Nasi Putih", "Ayam Kecap"]);
+    assert.equal(createRequest.body.recipient_ids.includes(recipientId), true);
     assert.equal(app.writes.some(item => item.route === "master/import"), false);
     assert.deepEqual(app.errors, []);
   } finally {
