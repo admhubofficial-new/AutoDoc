@@ -115,12 +115,13 @@ function render(container,message,api){
   finally{connectBtn.disabled=false}
  }
  connectBtn.addEventListener("click",checkConnection);
- readBtn.addEventListener("click",async()=>{
+ async function loadPreview(){
   readBtn.disabled=true;status("Membaca spreadsheet dan mencocokkan penerima…");
   try{const data=await api("sheets/preview",{});drawPreview(data);status("Pratinjau selesai. Tidak ada data yang diubah.","ok")}
   catch(error){previewPanel.hidden=true;status(error.message||"Gagal membaca spreadsheet.","error")}
   finally{readBtn.disabled=!connectionReady}
- });
+ }
+ readBtn.addEventListener("click",loadPreview);
  selectAll.addEventListener("click",()=>{
   const eligible=(previewData?.changes||[]).filter(row=>row.can_apply);
   const allSelected=eligible.every(row=>selected.has(row.row_number));
@@ -139,7 +140,7 @@ function render(container,message,api){
   try{
    const result=await api("sheets/apply",{row_numbers:rowNumbers});
    status((result.imported||0)+" baris berhasil diterapkan ke Data Master AutoDoc.","ok");
-   await readBtn.click();
+   await loadPreview();
    window.dispatchEvent(new Event("autodoc:data-changed"));
   }catch(error){status(error.message||"Gagal menerapkan perubahan.","error")}
   finally{refreshSelection()}
