@@ -447,7 +447,6 @@ async function createDocs(event){
  const includeOrganoleptic=$("#docsIncludeOrganoleptic",modal)?.checked===true;
  const menuItems=readMenuComponents();
  if(menuItems.length>8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
- const dateValue=$("#docsDate",modal).value;
  const aiPlan=getAiMenuPlan(dateValue);
  if(aiPlan){
   const assigned=new Set(aiPlan.groups.flatMap(group=>group.recipient_ids||[]).map(String));
