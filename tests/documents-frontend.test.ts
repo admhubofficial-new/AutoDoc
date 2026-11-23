@@ -459,7 +459,7 @@ test("AI assistant always previews proposed changes and requires explicit confir
   assert.match(aiSource, /Perlu konfirmasi:/);
   assert.match(aiSource, /Konfirmasi & simpan penerima/);
   assert.match(aiSource, /if\(!confirm\("Konfirmasi penyimpanan/);
-  assert.match(aiSource, /api\("master\/import",\{rows:payload\}\)/);
+  assert.match(aiSource, /api\("ai\/recipient-apply"/);
   assert.match(aiSource, /action==="review"/);
 });
 
