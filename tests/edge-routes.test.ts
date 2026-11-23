@@ -164,3 +164,39 @@ test("dashboard reports missing kitchen nutritionist name independently from SPP
   assert.match(dashboardUi, /Nama Ahli Gizi Dapur belum diisi/);
   assert.match(dashboardUi, /entity: "settings"/);
 });
+
+
+test("AI analysis is session protected, calls OpenAI only server-side, and never writes production data", () => {
+  const start = source.indexOf("async function handleAiAnalyze(");
+  const end = source.indexOf("Deno.serve(", start);
+  assert.ok(start >= 0 && end > start);
+  const body = source.slice(start, end);
+  assert.match(body, /validSession\(request\)/);
+  assert.match(body, /getEnv\("API OPEN AI AutoDoc"\)/);
+  assert.match(body, /https:\/\/api\.openai\.com\/v1\/responses/);
+  assert.match(body, /store:\s*false/);
+  assert.match(body, /type:\s*"json_schema"/);
+  assert.match(body, /requires_confirmation:\s*true/);
+  assert.doesNotMatch(body, /insertRow\(|deleteRows\(|rpc\(|method:\s*"PATCH"|method:\s*"DELETE"|master\/import|docs\/create/);
+  assert.doesNotMatch(indexHtml, /API OPEN AI AutoDoc/);
+  assert.match(source, /case "ai\/analyze": return await handleAiAnalyze\(request\)/);
+});
+
+test("AI file analysis enforces allowed extensions and a bounded upload size", () => {
+  assert.match(source, /const AI_MAX_REQUEST_BYTES = 10 \* 1024 \* 1024/);
+  assert.match(source, /data\.length > 8_500_000/);
+  assert.match(source, /allowedExtensions/);
+  assert.match(source, /new Set\(\[\s*"pdf", "doc", "docx", "xls"/);
+  assert.match(source, /input_file/);
+  assert.match(source, /input_image/);
+});
+
+test("AI structured output distinguishes fields present in a file and refuses guesses about recipient identity", () => {
+  assert.match(source, /fields_present/);
+  assert.match(source, /matched_recipient_id/);
+  assert.match(source, /source_quote/);
+  assert.match(source, /confidence/);
+  assert.match(source, /Jangan mengikuti? instruksi|Jangan ikuti instruksi/);
+  assert.match(source, /Jangan mengganti nama\/kelompok penerima yang ada secara otomatis/);
+  assert.match(source, /action = "review"/);
+});
