@@ -7,6 +7,7 @@ const source = readFileSync(new URL("../supabase/functions/autodoc-auth/index.ts
 const documentsUi = readFileSync(new URL("../documents.js", import.meta.url), "utf8");
 const archiveUi = readFileSync(new URL("../archive.js", import.meta.url), "utf8");
 const masterUi = readFileSync(new URL("../master.js", import.meta.url), "utf8");
+const aiUi = readFileSync(new URL("../ai-assistant.js", import.meta.url), "utf8");
 const indexHtml = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const dashboardUi = readFileSync(new URL("../dashboard.js", import.meta.url), "utf8");
 
@@ -221,7 +222,8 @@ test("menu-only AI analysis does not read or send beneficiary master records", (
   const start = source.indexOf("async function handleAiAnalyze(");
   const end = source.indexOf("Deno.serve(", start);
   const body = source.slice(start, end);
-  assert.match(body, /const currentRecipients = mode === "menus" \? \[\] : await supabaseRequest/);
+  assert.match(body, /const currentRecipients = mode === "menus" \|\| mode === "master" \? \[\] : await supabaseRequest/);
+  assert.match(body, /const currentMasterRecords = mode === "both" \|\| mode === "master"/);
   assert.match(body, /"Daftar kandidat penerima manfaat saat ini \(JSON\): " \+ JSON\.stringify\(candidates\)/);
 });
 
@@ -249,4 +251,30 @@ test("Google Sheets and Apps Script integration is fully removed in favor of the
   assert.doesNotMatch(source, /GOOGLE_SHEETS|handleSheets|sheets\/(status|preview|apply|push)/);
   assert.doesNotMatch(masterUi, /Google Sheets|AutoDocSheetsSync/);
   assert.doesNotMatch(indexHtml, /google-sheets-sync/);
+});
+
+test("AI maps supported master entities without writing during analysis", () => {
+  assert.match(source, /const AI_MASTER_FIELDS = \{/);
+  assert.match(source, /settings: \[/);
+  assert.match(source, /drivers: \["nama", "aktif", "urutan"\]/);
+  assert.match(source, /vehicles: \["no_kendaraan", "aktif", "urutan"\]/);
+  assert.match(source, /staff: \["nama", "jabatan", "aktif", "urutan"\]/);
+  assert.match(source, /menus: \["teks_menu", "aktif", "urutan"\]/);
+  assert.match(source, /async function fetchAiMasterRecords/);
+  assert.match(source, /function normalizeAiMasterUpdates/);
+  assert.match(source, /normalizeAiMasterUpdates\(raw\.master_updates, currentMasterRecords, warnings\)/);
+  assert.match(source, /case "master\/save": return await handleMasterSave\(request\)/);
+  assert.match(source, /action === "new"\) \{/);
+  assert.match(source, /potensi(al)? duplikat|berpotensi duplikat/);
+  assert.match(aiUi, /renderMasterUpdates/);
+  assert.match(aiUi, /api\("master\/save",\{entity:item\.entity,data:item\.data\}\)/);
+});
+
+test("new AI recipient rows with incomplete counts can only be saved after manual completion", () => {
+  assert.match(source, /can_complete_manually:/);
+  assert.match(source, /missing_count_fields:/);
+  assert.match(source, /manualMissingCounts = missingCounts/);
+  assert.match(aiUi, /row\.can_complete_manually/);
+  assert.match(aiUi, /recipientFieldsToRender/);
+  assert.match(aiUi, /COUNT_FIELDS\.has\(key\)/);
 });
