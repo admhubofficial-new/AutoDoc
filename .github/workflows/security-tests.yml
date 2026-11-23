@@ -28,18 +28,13 @@ jobs:
           deno-version: v2.x
       - name: Periksa tipe Supabase Edge Function
         run: deno check supabase/functions/autodoc-auth/index.ts
-      - name: Periksa sintaks utilitas Data Master
-        run: node --check master-utils.js
-      - name: Periksa sintaks Asisten AI
-        run: node --check ai-assistant.js
-      - name: Periksa sintaks frontend Data Master
-        run: node --check master.js
-      - name: Periksa sintaks frontend dokumen
-        run: node --check documents.js
-      - name: Periksa sintaks dashboard operasional
-        run: node --check dashboard.js
-      - name: Periksa sintaks konfigurasi frontend
-        run: node --check config.js
+      - name: Lint modul Supabase Edge Function
+        run: deno lint supabase/functions/autodoc-auth
+      - name: Periksa sintaks seluruh modul frontend
+        run: |
+          for file in ./*.js; do
+            node --check "$file"
+          done
       - name: Jalankan unit test
         run: npm test
       - name: Siapkan Chromium untuk uji browser

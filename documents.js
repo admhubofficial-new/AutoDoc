@@ -9,7 +9,7 @@ function nowInJakarta(){
  const values=Object.fromEntries(parts.filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));
  return values.year+"-"+values.month+"-"+values.day;
 }
-const today=()=>nowInJakarta().date;
+const today=()=>nowInJakarta();
 let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, activeAiMenuPlan=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
 
 async function api(route,body){

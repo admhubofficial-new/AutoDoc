@@ -265,7 +265,7 @@ test("document print renderer formats SJ and BAST snapshots and escapes user con
 test("distribution date defaults to today in WIB and departure time starts empty", () => {
   assert.match(source, /function nowInJakarta\(\)/);
   assert.ok(source.includes('timeZone:"Asia/Jakarta"'));
-  assert.match(source, /const today=\(\)=>nowInJakarta\(\)/);
+  assert.match(source, /const today=\(\)=>nowInJakarta\(\);/);
   assert.match(source, /const todayVal=today\(\)/);
   assert.match(source, /<input id='docsTime' type='time'>/);
   assert.doesNotMatch(source, /currentTime\.time|Terisi otomatis mengikuti waktu WIB/);
