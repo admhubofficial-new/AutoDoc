@@ -403,3 +403,40 @@ test("optional distribution details print as blank fields rather than dash place
     assert.ok(!printRendererSource.includes(field + '||"—"'), field + " must not show a dash");
   }
 });
+
+
+test("SJ and BAST letterhead removes SPPG code and generic operational caption", () => {
+  assert.doesNotMatch(printRendererSource, /top-meta|kode_sppg|SPPG-DMJ|Dokumen operasional MBG/);
+  assert.match(printRendererSource, /grid-template-columns:70px minmax\\(0,1fr\\)/);
+  assert.match(printRendererSource, /escapeHtml\\(sppgLocation\\)/);
+});
+
+test("missing SJ and BAST fields and unentered BAST realization print blank, not dashes", () => {
+  const sandbox = { window: {} };
+  runInNewContext(printRendererSource, sandbox);
+  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+  const snapshot = {
+    sppg: {}, distribusi: {}, penerima: {}, rincian_porsi: [],
+    ringkasan: { total_porsi: 16 }
+  };
+  for (const jenis of ["SJ", "BAST"]) {
+    const html = buildPrintHtml({jenis,nomor_lengkap:"DOC/1",snapshot_json:snapshot},escapeHtml,"logo.png");
+    assert.doesNotMatch(html, /—/);
+    for (const label of ["Alamat", "Menu", "Pengemudi", "Kendaraan", "Petugas"]) {
+      assert.match(html, new RegExp("<b>"+label+"<\\/b>: <\\/div>"));
+    }
+    assert.match(html, /<b>Total porsi<\\/b>: 16<\\/div>/);
+  }
+  const pendingBast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/2",snapshot_json:snapshot},escapeHtml,"logo.png");
+  assert.match(pendingBast, /Jumlah Sesudah/);
+  assert.doesNotMatch(pendingBast, /—/);
+});
+
+test("organoleptic meal options remain normal text for manual marking", () => {
+  assert.match(organolepticSource, /\["Pagi","Siang","Sore"\]/);
+  assert.match(organolepticSource, /wrap\.append\(doc\.createTextNode\(meal\)\)/);
+  assert.doesNotMatch(organolepticSource, /organolepticElement\(doc,"s"/);
+});
