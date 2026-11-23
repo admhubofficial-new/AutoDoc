@@ -1733,9 +1733,9 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
 
 
 const SHEETS_COLUMN_ALIASES = {
-  kelompok: ["kelompok", "kategori", "jenis penerima", "group"],
-  nama: ["nama", "nama penerima", "nama sekolah", "sekolah", "nama lembaga", "nama instansi", "nama satuan pendidikan"],
-  jenjang: ["jenjang", "tingkat", "tingkat pendidikan", "level pendidikan"],
+  kelompok: ["kelompok", "kelompok sasaran", "kategori", "jenis penerima", "group"],
+  nama: ["nama", "nama penerima", "nama sekolah", "sekolah", "nama lembaga", "nama instansi", "nama satuan pendidikan", "nama sekolah/lembaga"],
+  jenjang: ["jenjang", "jenjang pendidikan", "tingkat", "tingkat pendidikan", "level pendidikan"],
   alamat: ["alamat", "alamat sekolah", "lokasi"],
   siswa_kecil: ["siswa kecil", "peserta didik kecil"],
   siswa_besar: ["siswa besar", "peserta didik besar"],
