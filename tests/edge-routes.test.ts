@@ -305,3 +305,9 @@ test("AI master save rejects duplicate new identities and never changes an ident
   assert.match(source, /if \(current && identityField && proposed\[identityField\] !== current\[identityField\]\)/);
   assert.match(source, /Perubahan identitas utama/);
 });
+
+test("AI updates include every original column in the PATCH filter to prevent a concurrent overwrite", () => {
+  assert.match(source, /function masterSnapshotFilters/);
+  assert.equal((source.match(/masterSnapshotFilters\(expected as Record<string, unknown>, config\.columns\)/g) || []).length, 2);
+  assert.match(source, /value === null \|\| value === undefined\s*\? "is\.null"/);
+});
