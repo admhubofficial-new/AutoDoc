@@ -114,12 +114,10 @@ export async function readBoundedJson(
     if (error instanceof RequestBodyError) throw error;
     throw new RequestBodyError(400, "Format permintaan tidak valid.");
   } finally {
-    if (!completed) {
-      try {
-        reader.releaseLock();
-      } catch {
-        // The stream may already have released its reader after cancellation.
-      }
+    try {
+      reader.releaseLock();
+    } catch {
+      // The stream may already have released its reader after cancellation.
     }
   }
 
