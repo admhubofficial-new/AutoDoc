@@ -168,13 +168,17 @@ button,input,select,textarea{font-family:inherit}
 .home-operational-date{color:var(--color-ink);font-size:18px;font-weight:700;line-height:1.35}
 .home-operator-description{margin:0;color:var(--color-muted);font-size:12px;line-height:1.5}
 .home-create-cta{min-height:48px;padding:0 19px;font-size:13px;white-space:nowrap}
+.home-action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 13px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-primary);text-decoration:none;font-size:11px;font-weight:680;cursor:pointer}
+.home-action.primary{color:#fff}
+.home-action:not(.primary):hover{background:var(--color-primary-soft)}
+.home-action:focus-visible,.home-inline-link:focus-visible{outline:3px solid rgba(29,91,67,.28);outline-offset:2px}
 .home-work-grid{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:14px;align-items:stretch}
 .home-work-card,.home-archive-card{min-width:0;padding:19px 20px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface)}
 .home-work-card h2,.home-archive-card h2{margin:0;color:var(--color-ink);font-size:14px;font-weight:700;letter-spacing:-.1px}
 .home-bast-queue{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
 .home-bast-count{color:var(--color-primary);font-size:34px;font-weight:750;line-height:1.1;font-variant-numeric:tabular-nums}
 .home-card-description,.home-panel-description{margin:0;color:var(--color-muted);font-size:11px;line-height:1.55}
-.home-master-check{display:grid;align-content:start;gap:10px}
+.home-master-check{display:grid;align-content:start;gap:10px;min-width:0;padding:19px 20px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface)}
 .home-master-check h2{margin:0;color:var(--color-ink);font-size:14px;font-weight:700}
 .home-master-ready{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border:1px solid #d8e9dc;border-radius:8px;background:#fbfdfb}
 .home-master-ready-mark{display:grid;place-items:center;flex:0 0 20px;width:20px;height:20px;border-radius:50%;background:var(--color-success-soft);color:var(--color-success);font-size:12px;font-weight:800}
