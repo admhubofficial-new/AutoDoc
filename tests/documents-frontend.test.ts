@@ -367,8 +367,8 @@ test("BAST print shows before/after quantities and names above aligned signature
   assert.doesNotMatch(bast, /Snapshot dokumen:/);
   const pending = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/3",snapshot_json:snapshot},escapeHtml,"logo.png");
   assert.match(pending, /Jumlah Sesudah/);
-  assert.match(pending, /25<\/td><td style='text-align:right'>—/);
-  assert.match(pending, /10<\/td><td style='text-align:right'>—/);
+  assert.match(pending, /25<\/td><td style='text-align:right'><\/td>/);
+  assert.match(pending, /10<\/td><td style='text-align:right'><\/td>/);
 });
 
 test("organoleptic signature names render above aligned horizontal lines", () => {
