@@ -407,8 +407,8 @@ test("optional distribution details print as blank fields rather than dash place
 
 test("SJ and BAST letterhead removes SPPG code and generic operational caption", () => {
   assert.doesNotMatch(printRendererSource, /top-meta|kode_sppg|SPPG-DMJ|Dokumen operasional MBG/);
-  assert.match(printRendererSource, /grid-template-columns:70px minmax\\(0,1fr\\)/);
-  assert.match(printRendererSource, /escapeHtml\\(sppgLocation\\)/);
+  assert.ok(printRendererSource.includes("grid-template-columns:70px minmax(0,1fr)"));
+  assert.ok(printRendererSource.includes("escapeHtml(sppgLocation)"));
 });
 
 test("missing SJ and BAST fields and unentered BAST realization print blank, not dashes", () => {
@@ -426,17 +426,17 @@ test("missing SJ and BAST fields and unentered BAST realization print blank, not
     const html = buildPrintHtml({jenis,nomor_lengkap:"DOC/1",snapshot_json:snapshot},escapeHtml,"logo.png");
     assert.doesNotMatch(html, /—/);
     for (const label of ["Alamat", "Menu", "Pengemudi", "Kendaraan", "Petugas"]) {
-      assert.match(html, new RegExp("<b>"+label+"<\\/b>: <\\/div>"));
+      assert.ok(html.includes("<b>"+label+"</b>: </div>"), label + " should be blank when absent");
     }
-    assert.match(html, /<b>Total porsi<\\/b>: 16<\\/div>/);
+    assert.ok(html.includes("<b>Total porsi</b>: 16</div>"));
   }
   const pendingBast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/2",snapshot_json:snapshot},escapeHtml,"logo.png");
-  assert.match(pendingBast, /Jumlah Sesudah/);
+  assert.ok(pendingBast.includes("Jumlah Sesudah"));
   assert.doesNotMatch(pendingBast, /—/);
 });
 
 test("organoleptic meal options remain normal text for manual marking", () => {
-  assert.match(organolepticSource, /\["Pagi","Siang","Sore"\]/);
-  assert.match(organolepticSource, /wrap\.append\(doc\.createTextNode\(meal\)\)/);
-  assert.doesNotMatch(organolepticSource, /organolepticElement\(doc,"s"/);
+  assert.ok(organolepticSource.includes('["Pagi","Siang","Sore"]'));
+  assert.ok(organolepticSource.includes('wrap.append(doc.createTextNode(meal))'));
+  assert.ok(!organolepticSource.includes('organolepticElement(doc,"s"'));
 });
