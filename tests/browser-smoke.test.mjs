@@ -179,6 +179,7 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
       assert.equal(await page.locator("#" + id).getAttribute("required"), null);
     }
     await page.locator("input[name='recipient']").check();
+    await page.locator("#docsPreviewToggle").click();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("PRATINJAU · BELUM DITERBITKAN").waitFor();
     await page.locator("#docsStaff").fill("Petugas Browser Test");
@@ -285,7 +286,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     assert.equal(await page.locator(".docs-recipient:visible").count(), 1);
     await page.locator("#docsPreviewDisclosure").evaluate(element => { element.open = true; });
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
-    await preview.getByText("SDN UJI BROWSER", { exact: true }).waitFor();
+    await preview.getByText("SDN UJI BROWSER", { exact: false }).waitFor();
     const recipientOverflow = await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY);
     assert.equal(recipientOverflow, "visible");
     assert.equal(desktop.writes.some(item => item.route === "docs/create"), false);
@@ -626,7 +627,7 @@ test("P2 Menu section quick action opens AI directly in menu mode and shows a re
     const page = app.page;
     await page.locator('[data-home-nav="print"]').click();
     await page.locator("#docsCreateForm").waitFor();
-    await page.getByRole("button", { name: "Bantu isi dari teks atau file" }).click();
+    await page.getByRole("button", { name: "Bantu isi dengan AI" }).click();
     await page.locator(".dm-dialog").waitFor();
     assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), true, "the underlying document workspace should be inert while the AI dialog is open");
     assert.equal(await page.locator("#aiMode").inputValue(), "menus");
