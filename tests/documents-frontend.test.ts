@@ -484,39 +484,47 @@ test("organoleptic archive and creation printing use recipient-specific snapshot
   assert.match(source, /printOrganolepticForms\(getArchiveRecipients\(\),getArchiveRecipientMenus\(\)\)/);
 });
 
-test("P1 creation form keeps the five operator decisions in order and summarizes readiness before issuance", () => {
+test("P4 creation form groups the operator flow and keeps readiness in one compact status", () => {
   const steps = [
-    "1. Jenis &amp; tanggal",
-    "2. Rincian perjalanan",
-    "3. Menu distribusi",
-    "4. Penerima &amp; porsi",
-    "5. Ringkasan sebelum terbit"
+    "1. Informasi distribusi",
+    "2. Menu &amp; penerima",
+    "3. Informasi pengiriman"
   ];
   const positions = steps.map(step => source.indexOf(step));
   assert.ok(positions.every(position => position >= 0));
   assert.deepEqual(positions, [...positions].sort((a, b) => a - b));
-  assert.match(source, /function syncPreflightSummary\(\)/);
+  assert.ok(!source.includes("5. Ringkasan sebelum terbit"));
+  assert.ok(!source.includes("docs-preflight-section"));
+  assert.ok(source.includes("function syncPreflightSummary()"));
   assert.match(source, /docsPreflightSummary/);
-  assert.match(source, /docsSelectedPortion/);
-  assert.match(source, /menuController\?\.count/);
-  assert.match(source, /Periksa kembali rincian berikut sebelum menerbitkan/);
-  assert.match(source, /state=state\|\|\(bad\?"error":message\?"success":""\)/);
-  assert.match(source, /status\("Memuat daftar penerima dan data pendukung...",false,"loading"\)/);
+  assert.match(source, /docsSubmitCount/);
+  assert.match(source, /menuController\\?\\.count/);
+  assert.match(source, /Siap diterbitkan/);
+  assert.match(source, /Pilih minimal satu penerima untuk melanjutkan/);
+  assert.ok(source.includes("button.disabled=!ready"));
+  assert.match(source, /status\\(\"Memuat daftar penerima dan data pendukung...\",false,\"loading\"\\)/);
 });
 
-test("mobile recipient selection has one page scroll and a live sticky search header", () => {
+test("mobile recipient selection stays in the page flow and offers clear grouped filters", () => {
   const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   assert.ok(stylesSource.includes(".docs-recipient-box-compact .docs-recipient-list{max-height:none;overflow:visible"));
-  assert.ok(stylesSource.includes(".docs-recipient-box-compact .docs-recipient-head{position:sticky"));
+  assert.ok(stylesSource.includes(".docs-recipient-box-compact .docs-recipient-head{position:static"));
   assert.ok(source.includes("id='docsRecipientSearch'"));
-  assert.ok(source.includes("aria-live='polite'>(0 dipilih)"));
+  assert.ok(source.includes("id='docsRecipientGroup'"));
+  assert.ok(source.includes("Pilih semua hasil"));
+  assert.ok(source.includes("Hapus pilihan"));
 });
 
-test("preview disclosure stays open on desktop and can collapse on mobile", () => {
-  assert.ok(source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure' open>"));
-  assert.ok(previewSource.includes('window.matchMedia("(max-width:720px)")'));
-  assert.ok(previewSource.includes("disclosure.open=!mobilePreview.matches"));
+test("preview disclosure is collapsed until the operator asks to inspect the document", () => {
+  assert.ok(source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure'>"));
+  assert.ok(!source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure' open>"));
+  assert.ok(source.includes("id='docsPreviewToggle'"));
+  assert.ok(source.includes("aria-controls='docsPreviewDisclosure'"));
   assert.ok(previewSource.includes('disclosure.addEventListener("toggle",fitPreviewFrame)'));
+  assert.doesNotMatch(previewSource, /disclosure\.open=!mobilePreview\.matches/);
+  assert.doesNotMatch(previewSource, /mobilePreview\\.addEventListener/);
+  assert.match(previewSource, /Pratinjau belum tersedia/);
+  assert.match(previewSource, /Pilih penerima pada formulir/);
 });
 
 
