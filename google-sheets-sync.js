@@ -1,7 +1,6 @@
 (() => {
 "use strict";
 const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
-let active=false;
 function node(tag,className,text){
  const item=document.createElement(tag);
  if(className)item.className=className;
@@ -15,8 +14,8 @@ function installStyles(){
  document.head.append(style);
 }
 function render(container,message,api){
- if(!container||active)return;
- active=true;installStyles();container.innerHTML="";
+ if(!container)return;
+ installStyles();container.innerHTML="";
  const root=node("div","gs-shell");
  const intro=node("p","gs-intro","Hubungkan Google Sheets untuk membaca perubahan Penerima Manfaat dan mengirim data AutoDoc kembali ke spreadsheet. Tab sumber lama tetap dijaga; ekspor pertama membuat tab khusus AutoDoc_Penerima.");
  const connection=node("section","gs-panel");
