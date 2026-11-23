@@ -220,3 +220,13 @@ test("menu-only AI analysis does not read or send beneficiary master records", (
   assert.match(body, /const currentRecipients = mode === "menus" \? \[\] : await supabaseRequest/);
   assert.match(body, /"Daftar kandidat penerima manfaat saat ini \(JSON\): " \+ JSON\.stringify\(candidates\)/);
 });
+
+
+test("every previously issued recipient menu is checked before retry, including non-AI default-menu retries", () => {
+  const body = functionBody("handleDocsCreate", "handleDocsDays");
+  assert.match(body, /const effectiveMenuByRecipient: Record<string, string\[\]>/);
+  assert.match(body, /recipient_id: "in\.\(" \+ recipientIds\.join\(","\) \+ "\)"/);
+  assert.match(body, /const requestedMenu = effectiveMenuByRecipient\[recipientId\]/);
+  assert.match(body, /JSON\.stringify\(previousItems\) === JSON\.stringify\(requestedMenu\)/);
+  assert.match(body, /const effectiveMenuItems = effectiveMenuByRecipient\[recipientId\]/);
+});
