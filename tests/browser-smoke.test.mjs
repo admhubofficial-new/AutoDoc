@@ -253,6 +253,8 @@ test("AI assistant can read and map multiple source files in one review", async 
     assert.ok(request);
     assert.equal(request.body.files.length, 2);
     assert.deepEqual(request.body.files.map(file => file.name), ["menu-harian.csv", "catatan-penerima.txt"]);
+    await page.locator("#aiSourceText").fill("Sumber berubah setelah analisis.");
+    assert.equal(await page.locator(".ai-result-content").isVisible(), false, "old AI proposals must disappear when source changes");
     assert.deepEqual(app.errors, []);
   } finally {
     await app.context.close();
