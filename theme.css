@@ -423,6 +423,8 @@ button,input,select,textarea{font-family:inherit}
 
 
 /* P2/P3 · detailed administration and responsive visual audit */
+/* The Data Master dialog can be opened from the document workspace; it must sit above the document preview iframe. */
+.dm-overlay{z-index:10001}
 .docs-danger-zone{display:grid;gap:11px;padding:16px;border:1px solid #efc9c4;border-radius:10px;background:#fffafa}
 .docs-danger-zone-title{margin:0;color:#812c25;font-size:14px;font-weight:750}
 .docs-danger-zone-description{margin:0;color:#8b514b;font-size:11px;line-height:1.55}

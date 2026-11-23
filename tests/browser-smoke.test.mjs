@@ -696,7 +696,7 @@ test("P3 responsive and keyboard audit covers the five required viewports and ca
       await page.keyboard.press("Shift+Tab");
       assert.ok(await page.locator(".dm-dialog").evaluate(dialog => dialog.contains(document.activeElement)), "keyboard focus must remain in Data Master dialog");
       await page.keyboard.press("Escape");
-      await page.locator(".dm-overlay[hidden]").waitFor();
+      await page.locator(".dm-overlay").waitFor({ state: "hidden" });
       if (viewport.width > 720) assert.equal(await page.evaluate(() => document.activeElement?.dataset?.homeNav), "master", "Escape should restore focus to the navigation trigger");
       if (viewport.width <= 720) await page.locator("#homeMenuToggle").click();
 

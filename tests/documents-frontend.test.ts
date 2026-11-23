@@ -598,5 +598,6 @@ test("P3 visual audit styles cover vertical desktop navigation, mobile dropdown,
   assert.match(stylesSource, /\.dm-table\[data-mobile-cards=true\] tr\.dm-data-row/);
   assert.match(stylesSource, /\.docs-portion-comparison\{display:grid;grid-template-columns:repeat\(2/);
   assert.match(stylesSource, /\.docs-danger-zone\{display:grid/);
+  assert.match(stylesSource, /\.dm-overlay\{z-index:10001\}/);
   assert.match(stylesSource, /\.ai-review-queue\{display:grid/);
 });
