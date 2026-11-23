@@ -476,7 +476,7 @@ test("AI menu plans map one recipient to one unique menu and block unmapped reci
 test("organoleptic archive and creation printing use recipient-specific snapshot menu items", () => {
   assert.match(source, /function getArchiveRecipientMenus/);
   assert.match(source, /function printOrganolepticForms\(recipients,menuByRecipient=\{\}\)/);
-  assert.match(source, /menuByRecipient\?\[recipientId\]/);
+  assert.match(source, /menuByRecipient\?\.\[recipientId\]/);
   assert.match(source, /pendingOrganolepticPrint\.menuByRecipient/);
   assert.match(source, /printOrganolepticForms\(getArchiveRecipients\(\),getArchiveRecipientMenus\(\)\)/);
 });
