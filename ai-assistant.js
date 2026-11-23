@@ -10,7 +10,7 @@ const RECIPIENT_FIELDS = [
 const COUNT_FIELDS = new Set(["siswa_kecil","siswa_besar","tendik","ibu_hamil","ibu_menyusui","balita","putus_sekolah","kader"]);
 const ALLOWED_EXTENSIONS = new Set(["pdf","doc","docx","xls","xlsx","csv","tsv","txt","md","rtf","odt","ppt","pptx","json","png","jpg","jpeg","webp"]);
 function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMessage}) {
- let host=null, analysis=null, selectedFile=null, mode="both", dateValue="";
+ let host=null, selectedFiles=[], mode="both", dateValue="";
  function text(parent,tag,cls,value){const element=el(tag,cls,value);parent.append(element);return element;}
  function button(parent,label,kind,handler){const item=text(parent,"button","dm-btn"+(kind?" "+kind:""),label);item.type="button";item.addEventListener("click",handler);return item;}
  function field(parent,label,control){const wrap=text(parent,"label","ai-field");text(wrap,"span","ai-field-label",label);wrap.append(control);return wrap;}
@@ -49,40 +49,59 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
   field(grid,"Tanggal distribusi untuk menu",date);
   const source=el("textarea");source.id="aiSourceText";source.placeholder="Tempel pesan WhatsApp, daftar menu, tabel penerima, atau keterangan perubahan di sini...";
   field(grid,"Teks / salinan data",source).classList.add("wide");
-  const fileInput=el("input");fileInput.type="file";fileInput.accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.tsv,.txt,.md,.rtf,.odt,.ppt,.pptx,.json,.png,.jpg,.jpeg,.webp";
-  field(grid,"Atau unggah satu file (maksimal 6 MB)",fileInput).classList.add("wide");
-  const fileHint=text(grid,"small","ai-helper","Format didukung: PDF, Word, Excel, CSV, TXT, PowerPoint, JSON, JPG, PNG, dan WebP. File dan daftar penerima yang relevan akan dikirim ke OpenAI untuk dianalisis; belum ada data yang disimpan.");
+  const fileInput=el("input");fileInput.type="file";fileInput.id="aiSourceFiles";fileInput.multiple=true;fileInput.accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.tsv,.txt,.md,.rtf,.odt,.ppt,.pptx,.json,.html,.xml,.iif,.png,.jpg,.jpeg,.webp";
+  field(grid,"Atau unggah hingga 5 file (total maksimal 6 MB)",fileInput).classList.add("wide");
+  const fileHint=text(grid,"small","ai-helper","Format: PDF, Word, Excel, CSV/TSV, TXT/Markdown, HTML/XML, PowerPoint, JSON, dan gambar JPG/PNG/WebP. Semua file terpilih dianalisis bersama; belum ada data yang disimpan.");
   fileHint.classList.add("wide");
   const actions=text(inputPanel,"div","ai-action-row");
   const analyze=button(actions,"Baca dan klasifikasikan","primary",analyzeInput);
   const status=text(shell,"p","ai-status","Tempel teks atau pilih file, kemudian mulai analisis.");
   const results=text(shell,"section","ai-panel");results.hidden=true;
   const resultContent=text(results,"div","ai-result-content");
-  let attached=null;
+  const defaultFileHint=fileHint.textContent;
+  function clearAnalysis(){
+   results.hidden=true;
+   resultContent.innerHTML="";
+  }
+  source.addEventListener("input",clearAnalysis);
+  modeSelect.addEventListener("change",clearAnalysis);
+  date.addEventListener("change",clearAnalysis);
   fileInput.addEventListener("change",()=>{
-   attached=fileInput.files?.[0]||null;
-   if(!attached){selectedFile=null;return}
-   const ext=attached.name.toLowerCase().split(".").pop();
-   if(!ALLOWED_EXTENSIONS.has(ext)||attached.size>6*1024*1024){
-    attached=null;selectedFile=null;fileInput.value="";
-    setMessageSafe("File harus berformat didukung dan berukuran maksimal 6 MB.",true);return;
+   const files=Array.from(fileInput.files||[]);
+   clearAnalysis();
+   if(!files.length){
+    selectedFiles=[];
+    fileHint.textContent=defaultFileHint;
+    return;
    }
-   selectedFile=attached;setMessageSafe("File siap dianalisis: "+attached.name);
+   const totalBytes=files.reduce((total,file)=>total+file.size,0);
+   const valid=files.length<=5&&totalBytes<=6*1024*1024&&files.every(file=>{
+    const ext=file.name.toLowerCase().split(".").pop();
+    return ALLOWED_EXTENSIONS.has(ext);
+   });
+   if(!valid){
+    selectedFiles=[];fileInput.value="";fileHint.textContent=defaultFileHint;
+    setMessageSafe("Pilih maksimal 5 file dengan format didukung dan ukuran gabungan maksimal 6 MB.",true);
+    return;
+   }
+   selectedFiles=files;
+   fileHint.textContent=files.length+" file dipilih ("+(totalBytes/1024/1024).toFixed(2)+" MB): "+files.map(file=>file.name).join(", ");
+   setMessageSafe(files.length+" file siap dianalisis bersama.");
   });
   async function analyzeInput(){
-   const sourceText=source.value.trim(),file=selectedFile;
-   if(!sourceText&&!file){setMessageSafe("Tempel teks atau pilih satu file terlebih dahulu.",true);return}
+   const sourceText=source.value.trim(),files=selectedFiles.slice();
+   if(!sourceText&&!files.length){setMessageSafe("Tempel teks atau pilih setidaknya satu file terlebih dahulu.",true);return}
+   clearAnalysis();
    if(!date.value&&modeSelect.value!=="recipients"){setMessageSafe("Tanggal distribusi perlu dipilih untuk mengelompokkan menu.",true);date.focus();return}
    analyze.disabled=true;analyze.textContent="AI sedang membaca...";
    setMessageSafe("Menganalisis isi dan mencocokkan data penerima. Ini belum mengubah Data Master.");
    try{
-    let filePayload=null;
-    if(file){
+    const filePayloads=[];
+    for(const file of files){
      const mime=file.type||"application/octet-stream";
-     filePayload={name:file.name,mime,data:await readFile(file)};
+     filePayloads.push({name:file.name,mime,data:await readFile(file)});
     }
-    const result=await api("ai/analyze",{mode:modeSelect.value,tanggal:date.value,text:sourceText,file:filePayload});
-    analysis=result.analysis;
+    const result=await api("ai/analyze",{mode:modeSelect.value,tanggal:date.value,text:sourceText,files:filePayloads});
     mode=modeSelect.value;dateValue=date.value;
     renderAnalysis(resultContent,analysis);
     results.hidden=false;
@@ -117,7 +136,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     const card=text(section,"article","ai-card");card.dataset.menuGroup=String(index);
     const head=text(card,"div","ai-card-head");
     text(head,"strong","",group.label||"Kelompok menu "+(index+1));
-    const badge=text(head,"span","ai-confidence "+(group.confidence==="tinggi"?"high":group.confidence==="rendah"?"low":""),group.confidence||"rendah");
+    text(head,"span","ai-confidence "+(group.confidence==="tinggi"?"high":group.confidence==="rendah"?"low":""),group.confidence||"rendah");
     const body=text(card,"div","ai-card-body");
     text(body,"small","ai-helper",group.reason||"Alasan klasifikasi tidak tersedia.");
     if(group.source_reference)text(body,"small","ai-helper","Sumber: "+group.source_reference);
@@ -170,8 +189,8 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     const check=el("input");check.type="checkbox";check.dataset.includeRecipient="";check.checked=false;check.disabled=!selectable;
     head.append(check);
     const title=(row.proposed?.nama||"Penerima baru")+(row.current?" · data lama":" · data baru");
-    const titleBox=text(head,"div","",title);
-    const badge=text(head,"span","ai-confidence "+(row.confidence==="tinggi"?"high":row.confidence==="rendah"?"low":""),row.confidence||"rendah");
+    text(head,"div","",title);
+    text(head,"span","ai-confidence "+(row.confidence==="tinggi"?"high":row.confidence==="rendah"?"low":""),row.confidence||"rendah");
     const body=text(card,"div","ai-card-body");
     text(body,"small","ai-helper",row.reason||"Tidak ada alasan yang diberikan.");
     if(row.source_quote)text(body,"small","ai-helper","Sumber: “"+row.source_quote+"” · "+(row.source_reference||"lokasi sumber tidak disebut"));
