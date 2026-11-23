@@ -1616,7 +1616,7 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
     throw new AppError(503, "Secret API OPEN AI AutoDoc belum tersedia di Supabase Edge Function.");
   }
 
-  const currentRecipients = await supabaseRequest<Array<Record<string, unknown>>>(
+  const currentRecipients = mode === "menus" ? [] : await supabaseRequest<Array<Record<string, unknown>>>(
     "recipients?" + new URLSearchParams({
       select: "id,kelompok,nama,jenjang,alamat,siswa_kecil,siswa_besar,tendik,ibu_hamil,ibu_menyusui,balita,putus_sekolah,kader,porsi_kecil,porsi_besar,total_porsi,aktif,urutan,keterangan,perlu_verifikasi,catatan_verifikasi",
       order: "urutan.asc,nama.asc",
