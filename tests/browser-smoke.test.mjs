@@ -266,7 +266,7 @@ test("Google Sheets shows a read-only preview and requires explicit confirmation
     await page.locator(".gs-status.ok").getByText("Google Sheets berhasil terhubung.").waitFor();
 
     await page.getByRole("button", { name: "Baca & bandingkan" }).click();
-    await page.getByText("SDN UJI BROWSER", { exact: true }).waitFor();
+    await page.locator(".gs-table").getByText("SDN UJI BROWSER", { exact: true }).waitFor();
     const rowCheckbox = page.locator(".gs-table tbody input[type='checkbox']").first();
     assert.equal(await rowCheckbox.isChecked(), false);
     assert.equal(app.writes.some(item => item.route === "sheets/apply"), false);
