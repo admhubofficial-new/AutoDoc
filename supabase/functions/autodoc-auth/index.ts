@@ -526,6 +526,20 @@ function normalizedMasterIdentity(value: unknown): string {
   return String(value ?? "").normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("id-ID");
 }
 
+function masterSnapshotFilters(
+  expected: Record<string, unknown>,
+  columns: string,
+): Record<string, string> {
+  const filters: Record<string, string> = {};
+  for (const field of columns.split(",").map((value) => value.trim()).filter(Boolean)) {
+    const value = expected[field];
+    filters[field] = value === null || value === undefined
+      ? "is.null"
+      : "eq." + String(value);
+  }
+  return filters;
+}
+
 async function handleAiMasterApply(request: Request): Promise<Response> {
   if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
@@ -572,7 +586,10 @@ async function handleAiMasterApply(request: Request): Promise<Response> {
 
   let saved: unknown;
   if (id) {
-    const query = new URLSearchParams({ id: "eq." + id, select: config.columns });
+    const query = new URLSearchParams({
+      ...(expected ? masterSnapshotFilters(expected as Record<string, unknown>, config.columns) : { id: "eq." + id }),
+      select: config.columns,
+    });
     saved = await supabaseRequest<unknown[]>(config.table + "?" + query.toString(), {
       method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(data),
     });
@@ -631,7 +648,10 @@ async function handleAiRecipientApply(request: Request): Promise<Response> {
 
   let saved: unknown;
   if (id) {
-    const query = new URLSearchParams({ id: "eq." + id, select: config.columns });
+    const query = new URLSearchParams({
+      ...(expected ? masterSnapshotFilters(expected as Record<string, unknown>, config.columns) : { id: "eq." + id }),
+      select: config.columns,
+    });
     saved = await supabaseRequest<unknown[]>(config.table + "?" + query.toString(), {
       method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(data),
     });
