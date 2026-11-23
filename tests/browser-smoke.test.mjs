@@ -186,7 +186,7 @@ test("AI assistant analyzes pasted menu text and applies a per-school plan witho
     await page.locator("input[name='recipient']").check();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("Nasi Putih", { exact: false }).waitFor();
-    assert.equal(page.locator("#docsAiMenuPlanNotice").isVisible(), true);
+    assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
     assert.equal(app.writes.some(item => item.route === "docs/create"), false);
     assert.equal(app.writes.some(item => item.route === "master/import"), false);
     assert.deepEqual(app.errors, []);
