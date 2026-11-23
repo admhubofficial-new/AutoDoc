@@ -449,7 +449,7 @@ test("Data Master exposes the AI assistant as an internal tab without adding a n
   assert.match(masterSource, /const aiTab=el\("button",null,"Asisten AI"\)/);
   assert.match(masterSource, /entity==="ai"/);
   assert.match(masterSource, /window\.AutoDocAiAssistant\?\.create/);
-  assert.match(htmlSource, /ai-assistant\.js\?v=ai-multi-source-mapping-20261124/);
+  assert.match(htmlSource, /ai-assistant\.js\?v=ai-master-data-mapping-20261124/);
   assert.doesNotMatch(htmlSource, /data-home-nav="ai"/);
 });
 
@@ -459,7 +459,7 @@ test("AI assistant always previews proposed changes and requires explicit confir
   assert.match(aiSource, /Perlu konfirmasi:/);
   assert.match(aiSource, /Konfirmasi & simpan penerima/);
   assert.match(aiSource, /if\(!confirm\("Konfirmasi penyimpanan/);
-  assert.match(aiSource, /api\("master\/import",\{rows:payload\}\)/);
+  assert.match(aiSource, /api\("ai\/recipient-apply"/);
   assert.match(aiSource, /action==="review"/);
 });
 

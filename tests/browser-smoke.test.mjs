@@ -60,19 +60,37 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
       payload = {
         success: true, requires_confirmation: true,
         analysis: {
-          summary: aiBody.mode === "recipients" ? "Ditemukan perubahan jumlah siswa kecil pada penerima." : "Ditemukan satu kelompok menu untuk sekolah uji.",
+          summary: aiBody.mode === "recipients" ? "Ditemukan perubahan jumlah siswa kecil pada penerima." : aiBody.mode === "master" ? "Ditemukan satu data pengemudi untuk Data Master." : "Ditemukan satu kelompok menu untuk sekolah uji.",
           questions: [], warnings: [],
-          menu_groups: aiBody.mode === "recipients" ? [] : [{
+          menu_groups: aiBody.mode === "recipients" || aiBody.mode === "master" ? [] : [{
             id: "ai-menu-1", label: "Menu SDN Uji Browser", target_names: ["SDN UJI BROWSER"],
             target_ids: [recipientId], menu_items: ["Nasi Putih", "Ayam Kecap"], confidence: "tinggi",
             reason: "Nama sekolah disebut eksplisit dalam teks.", source_reference: "Paragraf 1"
           }],
-          recipient_updates: aiBody.mode === "recipients" ? [{
-            id: "ai-recipient-1", action: "update", matched_recipient_id: recipientId,
-            current: { id: recipientId, kelompok: "Sekolah/Lembaga", nama: "SDN UJI BROWSER", jenjang: "SD", alamat: "Alamat Uji", siswa_kecil: 16, siswa_besar: 0, tendik: 0, ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0, urutan: 10, aktif: true },
-            proposed: { kelompok: "Sekolah/Lembaga", nama: "SDN UJI BROWSER", jenjang: "SD", alamat: "Alamat Uji", siswa_kecil: 18, siswa_besar: 0, tendik: 0, ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0, urutan: 10, aktif: true },
-            changed_fields: ["siswa_kecil"], fields_present: ["siswa_kecil"], confidence: "tinggi",
-            reason: "Jumlah pada file berbeda dari data master.", source_quote: "Siswa kecil: 18", source_reference: "Sheet 1, baris 2"
+          recipient_updates: aiBody.mode === "recipients"
+            ? (aiBody.text.includes("UJI_PENERIMA_BARU") ? [{
+              id: "ai-recipient-new", action: "review", matched_recipient_id: null,
+              current: null,
+              proposed: { kelompok: "Sekolah/Lembaga", nama: "TK UJI BARU", jenjang: "TK", alamat: "", siswa_kecil: null, siswa_besar: null, tendik: null, ibu_hamil: null, ibu_menyusui: null, balita: null, putus_sekolah: null, kader: null, urutan: 20, aktif: true, keterangan: "", perlu_verifikasi: false, catatan_verifikasi: "" },
+              changed_fields: ["kelompok", "nama", "jenjang"], fields_present: ["kelompok", "nama", "jenjang"],
+              missing_count_fields: ["siswa_kecil", "siswa_besar", "tendik", "ibu_hamil", "ibu_menyusui", "balita", "putus_sekolah", "kader"],
+              can_complete_manually: true, confidence: "sedang",
+              reason: "Identitas penerima terlihat tetapi jumlah belum lengkap.",
+              source_quote: "TK UJI BARU", source_reference: "Sheet penerima, baris 2"
+            }] : [{
+              id: "ai-recipient-1", action: "update", matched_recipient_id: recipientId,
+              current: { id: recipientId, kelompok: "Sekolah/Lembaga", nama: "SDN UJI BROWSER", jenjang: "SD", alamat: "Alamat Uji", siswa_kecil: 16, siswa_besar: 0, tendik: 0, ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0, porsi_kecil: 16, porsi_besar: 0, total_porsi: 16, urutan: 10, aktif: true, keterangan: null, perlu_verifikasi: false, catatan_verifikasi: null },
+              proposed: { kelompok: "Sekolah/Lembaga", nama: "SDN UJI BROWSER", jenjang: "SD", alamat: "Alamat Uji", siswa_kecil: 18, siswa_besar: 0, tendik: 0, ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0, urutan: 10, aktif: true },
+              changed_fields: ["siswa_kecil"], fields_present: ["siswa_kecil"], confidence: "tinggi",
+              reason: "Jumlah pada file berbeda dari data master.", source_quote: "Siswa kecil: 18", source_reference: "Sheet 1, baris 2"
+            }])
+            : [],
+          master_updates: aiBody.mode === "master" ? [{
+            id: "ai-master-1", entity: "drivers", action: "new", matched_record_id: null,
+            current: null, proposed: { nama: "Budi Santoso", aktif: true, urutan: 100 },
+            changed_fields: ["nama"], fields_present: ["nama"], confidence: "tinggi",
+            reason: "Nama pengemudi disebut eksplisit.", source_quote: "Pengemudi: Budi Santoso",
+            source_reference: "Sheet Data Pengemudi, baris 2"
           }] : [],
           current_recipient_count: 1
         },
@@ -227,9 +245,12 @@ test("AI beneficiary update is only imported after the user selects the row and 
     await page.once("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: "Konfirmasi & simpan penerima" }).click();
     await page.locator(".ai-status").getByText(/baris penerima berhasil disimpan/).waitFor();
-    const importRequest = app.writes.find(item => item.route === "master/import");
+    const importRequest = app.writes.find(item => item.route === "ai/recipient-apply");
     assert.ok(importRequest);
-    assert.equal(importRequest.body.rows[0].siswa_kecil, 18);
+    assert.equal(importRequest.body.confirm, true);
+    assert.equal(importRequest.body.expected.id, recipientId);
+    assert.equal(importRequest.body.data.siswa_kecil, 18);
+    assert.equal(app.writes.some(item => item.route === "master/import"), false);
     assert.equal(app.writes.some(item => item.route === "docs/create"), false);
     assert.deepEqual(app.errors, []);
   } finally {
@@ -255,6 +276,76 @@ test("AI assistant can read and map multiple source files in one review", async 
     assert.deepEqual(request.body.files.map(file => file.name), ["menu-harian.csv", "catatan-penerima.txt"]);
     await page.locator("#aiSourceText").fill("Sumber berubah setelah analisis.");
     assert.equal(await page.locator(".ai-result-content").isVisible(), false, "old AI proposals must disappear when source changes");
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+test("AI maps new driver records to Data Master and saves only after selection and confirmation", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.getByRole("button", { name: "Asisten AI" }).click();
+    await page.locator("#aiMode").selectOption("master");
+    await page.locator("#aiSourceText").fill("Daftar pengemudi:\nPengemudi: Budi Santoso");
+    await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
+    await page.getByText("Pengemudi · Budi Santoso", { exact: true }).waitFor();
+
+    assert.equal(app.writes.some(item => item.route === "ai/master-apply"), false, "analysis must not save data");
+    const row = page.locator("[data-master-row='0']");
+    const check = row.locator("[data-include-master]");
+    assert.equal(await check.isChecked(), false);
+    await check.check();
+    await page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: "Konfirmasi & simpan Data Master" }).click();
+    await page.locator(".ai-status").getByText("1 data master berhasil disimpan.").waitFor();
+
+    const save = app.writes.find(item => item.route === "ai/master-apply");
+    assert.ok(save);
+    assert.equal(save.body.confirm, true);
+    assert.equal(save.body.expected, null);
+    assert.equal(save.body.entity, "drivers");
+    assert.equal(save.body.data.nama, "Budi Santoso");
+    assert.equal(app.writes.some(item => item.route === "master/save"), false);
+    assert.equal(app.writes.some(item => item.route === "master/import"), false);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+test("AI new beneficiary with incomplete source counts can be completed manually before save", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.getByRole("button", { name: "Asisten AI" }).click();
+    await page.locator("#aiMode").selectOption("recipients");
+    await page.locator("#aiSourceText").fill("UJI_PENERIMA_BARU\nTK UJI BARU");
+    await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
+
+    const row = page.locator("[data-recipient-row='0']");
+    const checkbox = row.locator("[data-include-recipient]");
+    assert.equal(await checkbox.isEnabled(), true, "manual completion should allow a review row to be selected");
+    for (const field of ["siswa_kecil", "siswa_besar", "tendik", "ibu_hamil", "ibu_menyusui", "balita", "putus_sekolah", "kader"]) {
+      const input = row.locator('[data-recipient-field="' + field + '"]');
+      assert.equal(await input.inputValue(), "", field + " should remain blank until the user fills it");
+      await input.fill("0");
+    }
+    assert.equal(app.writes.some(item => item.route === "ai/recipient-apply"), false);
+    await checkbox.check();
+    await page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: "Konfirmasi & simpan penerima" }).click();
+    await page.locator(".ai-status").getByText(/1 baris penerima berhasil disimpan/).waitFor();
+
+    const save = app.writes.find(item => item.route === "ai/recipient-apply");
+    assert.ok(save);
+    assert.equal(save.body.expected, null);
+    for (const field of ["siswa_kecil", "siswa_besar", "tendik", "ibu_hamil", "ibu_menyusui", "balita", "putus_sekolah", "kader"]) {
+      assert.equal(save.body.data[field], 0, field + " should only become zero after explicit manual entry");
+    }
     assert.deepEqual(app.errors, []);
   } finally {
     await app.context.close();
