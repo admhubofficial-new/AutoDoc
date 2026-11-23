@@ -39,7 +39,7 @@ test("login, setup, logout and session routes remain unchanged", () => {
 });
 
 test("workspace styles load from one versioned stylesheet", () => {
-  assert.match(page, /<link rel="stylesheet" href="\.\/styles\.css\?v=p1-operator-workspace-20261124">[\s\S]*?<link rel="stylesheet" href="\.\/theme\.css\?v=p1-operator-workspace-20261124">/);
+  assert.match(page, /<link rel="stylesheet" href="\.\/styles\.css\?v=p2-operational-modules-20261124">[\s\S]*?<link rel="stylesheet" href="\.\/theme\.css\?v=p2-operational-modules-20261124">/);
   assert.doesNotMatch(page, /<style>/);
   assert.match(css, /\.home-page\.sidebar-collapsed\{grid-template-columns:76px minmax\(0,1fr\)\}/);
   assert.match(theme, /Penyegaran visual/);

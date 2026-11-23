@@ -109,12 +109,23 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         ibu_hamil: 0, ibu_menyusui: 0, putus_sekolah: 0, kader: 0
       }] };
     } else if (routeName === "docs/days") {
-      payload = { distributions: [{
-        id: distributionId, tanggal: "2026-11-23", menu: "Nasi, ayam", nama_petugas: "Petugas Uji",
-        nama_pengemudi: "Pengemudi Uji", no_kendaraan: "BE 1234 XX"
-      }], offset: 0, has_more: false };
+      const query = url.searchParams.get("q") || "";
+      payload = {
+        distributions: query ? [] : [{
+          id: distributionId, tanggal: "2026-11-23", menu: "Nasi, ayam", nama_petugas: "Petugas Uji",
+          nama_pengemudi: "Pengemudi Uji", no_kendaraan: "BE 1234 XX"
+        }],
+        offset: 0, has_more: false
+      };
     } else if (routeName.startsWith("docs/list")) {
-      payload = { distribution: { id: distributionId, tanggal: "2026-11-23", menu: "Nasi, ayam", menu_items: [] }, documents: [] };
+      payload = {
+        distribution: { id: distributionId, tanggal: "2026-11-23", menu: "Nasi, ayam", waktu_makan: "siang", nama_petugas: "Petugas Uji", nama_pengemudi: "Pengemudi Uji", no_kendaraan: "BE 1234 XX", menu_items: [] },
+        documents: [{
+          id: "44444444-4444-4444-8444-444444444444", recipient_id: recipientId, jenis: "BAST",
+          nomor_lengkap: "BAST-2026-001", status: "ditandatangani", realisasi: null,
+          snapshot_json: { penerima: { id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga", jenjang: "SD", total_porsi: 16, porsi_kecil: 10, porsi_besar: 6 } }
+        }]
+      };
     } else if (request.method() === "POST") {
       writes.push({ route: routeName, body: request.postDataJSON() });
       payload = { message: "Mock response", berhasil: 0, requested: 0, errors: [] };
@@ -280,6 +291,82 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     assert.deepEqual(mobile.errors, []);
   } finally {
     await mobile.context.close();
+  }
+});
+
+
+test("P2 archive search has a recoverable empty state and returns to the full list", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="archive"]').click();
+    await page.locator("#docsDaysList .docs-day-card").waitFor();
+    assert.equal(await page.locator("#docsDaysList").getAttribute("data-state"), "success");
+    await page.locator("#docsDaysSearch").fill("ARSIP_TIDAK_ADA");
+    await page.locator(".docs-archive-empty").waitFor();
+    assert.equal(await page.locator("#docsDaysList").getAttribute("data-state"), "empty");
+    assert.equal(await page.getByRole("button", { name: "Bersihkan pencarian" }).isVisible(), true);
+    await page.getByRole("button", { name: "Bersihkan pencarian" }).click();
+    await page.locator("#docsDaysList .docs-day-card").waitFor();
+    assert.equal(await page.locator("#docsDaysList").getAttribute("data-state"), "success");
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+test("P2 Data Master shows search empty state, retry-ready status, and connected field labels", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.locator(".dm-table-wrap .dm-data-row").waitFor();
+    assert.equal(await page.locator(".dm-msg").getAttribute("role"), "status");
+    await page.locator(".dm-search").fill("DATA_TIDAK_ADA");
+    await page.locator(".dm-filter-empty").waitFor({ state: "visible" });
+    assert.equal(await page.locator(".dm-table-wrap").getAttribute("data-state"), "empty");
+    await page.locator(".dm-search").fill("");
+    assert.equal(await page.locator(".dm-table-wrap").getAttribute("data-state"), "success");
+    await page.getByRole("button", { name: "+ Tambah" }).click();
+    const nameInput = page.getByLabel("Nama penerima");
+    assert.equal(await nameInput.getAttribute("id"), "dmField_nama");
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+test("P2 BAST realization keeps labels connected and sends the existing transactional payload", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="archive"]').click();
+    await page.locator("#docsDaysList .docs-day-card").waitFor();
+    await page.locator("#docsDaysList .docs-day-card .docs-btn.primary").click();
+    await page.locator("#docsList").waitFor();
+    await page.getByRole("button", { name: "Input realisasi" }).click();
+
+    const small = page.getByLabel("Porsi kecil diterima *");
+    const large = page.getByLabel("Porsi besar diterima *");
+    assert.equal(await small.getAttribute("max"), "10");
+    assert.equal(await large.getAttribute("max"), "6");
+    await page.getByLabel("Kondisi makanan *").selectOption("baik");
+    await page.getByLabel("Jam diterima *").fill("12:30");
+    await page.getByLabel("Nama penerima *").fill("Penerima Uji");
+    await page.getByLabel("PIN akses untuk konfirmasi *").fill("123456");
+    await page.getByRole("button", { name: "Simpan realisasi" }).click();
+
+    const request = app.writes.find(item => item.route === "docs/realization");
+    assert.ok(request);
+    assert.equal(request.body.document_id, "44444444-4444-4444-8444-444444444444");
+    assert.equal(request.body.kondisi, "baik");
+    assert.equal(request.body.diterima_kecil, "10");
+    assert.equal(request.body.diterima_besar, "6");
+    assert.equal(request.body.token, "123456");
+    await page.locator(".docs-realization").waitFor({ state: "detached" });
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
   }
 });
 
