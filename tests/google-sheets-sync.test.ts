@@ -48,6 +48,8 @@ test("Sheets import requires explicit selected row numbers and recalculates the 
   assert.match(body, /validSession\(request\)/);
   assert.match(body, /body\.row_numbers/);
   assert.match(body, /buildSheetsPreview\(\)/);
+  assert.match(body, /body\.preview_token/);
+  assert.match(body, /preview\.preview_token !== previewToken/);
   assert.match(body, /row\.can_apply === true/);
   assert.match(body, /on_conflict: "kelompok,nama"/);
 });
@@ -59,6 +61,8 @@ test("Sheets export requires explicit confirmation and never exposes the webhook
   const body = edge.slice(start, end);
   assert.match(body, /validSession\(request\)/);
   assert.match(body, /body\.confirm !== true/);
+  assert.match(body, /buildSheetsPreview\(\)/);
+  assert.match(body, /Masih ada /);
   assert.match(body, /recipient_id: row\.id/);
   assert.match(edge, /getEnv\("GOOGLE_SHEETS_WEBHOOK_SECRET"\)/);
   assert.doesNotMatch(ui + master + index, /GOOGLE_SHEETS_WEBHOOK_SECRET\s*[:=]\s*["'][^"']+["']/);
