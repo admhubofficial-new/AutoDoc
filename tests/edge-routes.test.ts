@@ -331,7 +331,7 @@ test("document creation has a dedicated streaming-safe 1 MiB body limit", () => 
   assert.match(body, /readJson\(request, DOCS_CREATE_MAX_BODY_BYTES\)/);
   assert.match(source, /return await readBoundedJson\(request, maxBytes\)/);
   assert.match(validationSource, /request\.body\.getReader\(\)/);
-  assert.match(validationSource, /totalBytes > maxBytes/);
+  assert.match(validationSource, /nextTotal > maxBytes/);
 });
 
 test("AI analysis has per-session admission control, bounded concurrency, timeout, and Retry-After handling", () => {
