@@ -211,3 +211,12 @@ test("AI menu mappings are restricted to selected recipients and copied into imm
   assert.match(body, /menu_items: effectiveMenuItems\.map/);
   assert.match(body, /distribusi: \{ \.\.\.recipientDistributionPayload, id: distribution\.id \}/);
 });
+
+
+test("menu-only AI analysis does not read or send beneficiary master records", () => {
+  const start = source.indexOf("async function handleAiAnalyze(");
+  const end = source.indexOf("Deno.serve(", start);
+  const body = source.slice(start, end);
+  assert.match(body, /const currentRecipients = mode === "menus" \? \[\] : await supabaseRequest/);
+  assert.match(body, /"Daftar kandidat penerima manfaat saat ini \(JSON\): " \+ JSON\.stringify\(candidates\)/);
+});
