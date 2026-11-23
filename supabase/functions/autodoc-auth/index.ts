@@ -1487,6 +1487,16 @@ function normalizeAiAnalysis(
         const next = item[field];
         if (next !== null && next !== undefined) proposed[field] = next;
       }
+      if (!current && action === "new") {
+        const proposedName = String(proposed.nama ?? "").normalize("NFKC").trim().toLocaleLowerCase("id-ID");
+        const possibleDuplicates = currentRecipients.filter((candidate) =>
+          String(candidate.nama ?? "").normalize("NFKC").trim().toLocaleLowerCase("id-ID") === proposedName
+        );
+        if (proposedName && possibleDuplicates.length) {
+          action = "review";
+          warnings.push("Nama penerima " + String(proposed.nama) + " sudah ada pada Data Master. AI tidak akan membuat duplikat; cocokkan kelompok dan jenjang secara manual.");
+        }
+      }
       if (current && (
         proposed.nama !== current.nama || proposed.kelompok !== current.kelompok
       )) {
