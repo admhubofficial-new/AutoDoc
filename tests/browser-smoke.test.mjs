@@ -178,7 +178,9 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     for (const id of ["docsStaff", "docsDriver", "docsVehicle"]) {
       assert.equal(await page.locator("#" + id).getAttribute("required"), null);
     }
+    await page.locator("#docsShippingDisclosure > summary").click();
     await page.locator("input[name='recipient']").check();
+    await page.locator("#docsPreviewToggle").click();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("PRATINJAU · BELUM DITERBITKAN").waitFor();
     await page.locator("#docsStaff").fill("Petugas Browser Test");
@@ -258,22 +260,34 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     await page.locator('[data-dashboard-action="create"]').click();
     await page.locator("#docsCreateForm").waitFor();
     const headings = await page.locator("#docsCreateForm .docs-form-section-head h4").allTextContents();
-    assert.deepEqual(headings.slice(0, 5), [
-      "1. Jenis & tanggal",
-      "2. Rincian perjalanan",
-      "3. Menu distribusi",
-      "4. Penerima & porsi",
-      "5. Ringkasan sebelum terbit"
+    assert.deepEqual(headings, [
+      "1. Informasi distribusi",
+      "2. Menu & penerima",
+      "3. Informasi pengiriman"
     ]);
-    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
+    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
     const previewPosition = await page.locator("#docsPreviewDisclosure").evaluate(element => getComputedStyle(element).position);
-    assert.equal(previewPosition, "sticky");
+    assert.equal(previewPosition, "static");
+    assert.equal(await page.locator("#docsShippingDisclosure").evaluate(element => element.open), false);
+    assert.equal(await page.locator("#docsCreateButton").isDisabled(), true);
+    assert.match(await page.locator("#docsPreflightSummary").textContent(), /minimal satu penerima/);
+
+    await page.locator("#docsPreviewToggle").click();
+    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
+    const emptyPreview = page.frameLocator("#docsPreviewFrame").locator("body");
+    await emptyPreview.getByText("Pratinjau belum tersedia").waitFor();
 
     await page.locator("input[name='recipient']").check();
     const summary = await page.locator("#docsPreflightSummary").innerText();
-    assert.match(summary, /1 penerima/);
-    assert.match(summary, /16 porsi/);
-    assert.match(summary, /Siap diperiksa sebelum terbit/);
+    assert.match(summary, /Siap diterbitkan/);
+    assert.match(await page.locator("#docsSubmitCount").textContent(), /1 penerima/);
+    assert.match(await page.locator("#docsSubmitCount").textContent(), /16 porsi/);
+    assert.equal(await page.locator("#docsCreateButton").isDisabled(), false);
+    await page.locator("#docsRecipientGroup").selectOption("Sekolah/Lembaga");
+    assert.equal(await page.locator(".docs-recipient:visible").count(), 1);
+    await page.locator("#docsPreviewDisclosure").evaluate(element => { element.open = true; });
+    const preview = page.frameLocator("#docsPreviewFrame").locator("body");
+    await preview.getByText("SDN UJI BROWSER", { exact: false }).waitFor();
     const recipientOverflow = await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY);
     assert.equal(recipientOverflow, "visible");
     assert.equal(desktop.writes.some(item => item.route === "docs/create"), false);
@@ -288,13 +302,15 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     await page.locator('[data-dashboard-action="create"]').click();
     await page.locator("#docsCreateForm").waitFor();
     assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
-    const recipientHead = page.locator(".docs-recipient-head");
-    assert.equal(await recipientHead.evaluate(element => getComputedStyle(element).position), "sticky");
+    const recipientTools = page.locator(".docs-recipient-tools");
+    assert.equal(await recipientTools.evaluate(element => getComputedStyle(element).position), "static");
     assert.equal(await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY), "visible");
     await page.locator("input[name='recipient']").check();
-    assert.match(await page.locator("#docsSelectedPortion").textContent(), /16 porsi/);
-    await page.locator("#docsPreviewDisclosure > summary").click();
+    assert.match(await page.locator("#docsSubmitCount").textContent(), /16 porsi/);
+    await page.locator("#docsPreviewToggle").click();
     assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
+    const noOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+    assert.equal(noOverflow, true);
     assert.deepEqual(mobile.errors, []);
   } finally {
     await mobile.context.close();
@@ -414,6 +430,7 @@ test("AI assistant applies school menu and preselects mapped recipients before i
     await recipientCheckbox.waitFor();
     assert.equal(await recipientCheckbox.isChecked(), true, "AI should preselect the mapped recipient");
     assert.equal(await page.locator("#docsSelectedCount").textContent(), "(1 dipilih)");
+    await page.locator("#docsPreviewToggle").click();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("Nasi Putih", { exact: false }).waitFor();
     assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
@@ -611,7 +628,7 @@ test("P2 Menu section quick action opens AI directly in menu mode and shows a re
     const page = app.page;
     await page.locator('[data-home-nav="print"]').click();
     await page.locator("#docsCreateForm").waitFor();
-    await page.getByRole("button", { name: "Bantu isi dari teks atau file" }).click();
+    await page.getByRole("button", { name: "Bantu isi dengan AI" }).click();
     await page.locator(".dm-dialog").waitFor();
     assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), true, "the underlying document workspace should be inert while the AI dialog is open");
     assert.equal(await page.locator("#aiMode").inputValue(), "menus");
