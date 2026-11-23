@@ -93,7 +93,7 @@ test("document creation is a single-page flow with explicit recipient selection"
 });
 
 test("archive provides global search, page selection, and PIN-confirmed bulk deletion controls", () => {
-  assert.match(archiveUi, /api\("docs\/days"\+query\)/);
+  assert.match(archiveUi, /api\("docs\/days"\s*\+\s*query\)/);
   assert.match(archiveUi, /docsDaysSearch/);
   assert.match(archiveUi, /docsDaysSelectAll/);
   assert.match(archiveUi, /Pilih semua pada halaman ini/);
@@ -117,7 +117,7 @@ test("navigation opens document and master modules through public module APIs, n
   assert.doesNotMatch(indexHtml, /id="docsLauncher"/);
   assert.match(documentsUi, /window\.AutoDocDocuments=Object\.freeze/);
   assert.match(masterUi, /window\.AutoDocMaster=Object\.freeze/);
-  assert.match(masterUi, /placeholder="Cari data pada bagian ini/);
+  assert.match(masterUi, /placeholder="Cari nama, lokasi, status, atau informasi/);
 });
 
 test("dashboard completion shortcuts open the matching Data Master section", () => {

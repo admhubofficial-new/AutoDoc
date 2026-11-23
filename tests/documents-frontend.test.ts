@@ -182,32 +182,32 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
 });
 
 test("BAST realization form is isolated in its module and preserves validation and PIN confirmation", () => {
-  assert.match(realizationSource, /function showRealization\(card,doc\)/);
+  assert.match(realizationSource, /function showRealization\(card,\s*doc\)/);
   assert.match(realizationSource, /Porsi kecil diterima \*/);
   assert.match(realizationSource, /Porsi besar diterima \*/);
   assert.match(realizationSource, /deliveredSmall/);
   assert.match(realizationSource, /deliveredLarge/);
-  assert.match(realizationSource, /name='token' type='password' required minlength='6' maxlength='128'/);
-  assert.match(realizationSource, /api\("docs\/realization",data\)/);
-  assert.match(realizationSource, /data\.document_id=doc\.id/);
+  assert.match(realizationSource, /addField\("PIN akses untuk konfirmasi \*", "token", "password"/);
+  assert.match(realizationSource, /api\("docs\/realization",\s*data\)/);
+  assert.match(realizationSource, /data\.document_id\s*=\s*doc\.id/);
   assert.match(source, /realizationController\.showRealization/);
   assert.match(source, /window\.AutoDocBastRealization\.create/);
 });
 
 test("archive module owns global search, page selection, and PIN-protected bulk deletion", () => {
   assert.match(archiveSource, /async function loadDistributions/);
-  assert.match(archiveSource, /api\("docs\/days"\+query\)/);
+  assert.match(archiveSource, /api\("docs\/days"\s*\+\s*query\)/);
   assert.match(archiveSource, /requestSequence\+\+|\+\+requestSequence/);
-  assert.match(archiveSource, /if\(requestId!==requestSequence\)return/);
+  assert.match(archiveSource, /if\s*\(requestId\s*!==\s*requestSequence\)\s*return/);
   assert.match(archiveSource, /docsDaysSelectAll/);
   assert.match(archiveSource, /Pilih semua pada halaman ini/);
   assert.match(archiveSource, /selectedIds\.add/);
-  assert.match(archiveSource, /selectedIds\.size<60/);
+  assert.match(archiveSource, /selectedIds\.size\s*<\s*60/);
   assert.match(archiveSource, /docsDaysDelete/);
   assert.match(archiveSource, /docsDeletePin/);
   assert.match(archiveSource, /api\("docs\/delete-history"/);
-  assert.match(archiveSource, /distribution_ids:ids/);
-  assert.match(archiveSource, /const token=pin\.value/);
+  assert.match(archiveSource, /distribution_ids:\s*ids/);
+  assert.match(archiveSource, /const token\s*=\s*pin\.value/);
   assert.match(source, /archiveController\.loadDistributions/);
 });
 
