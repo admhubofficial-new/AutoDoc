@@ -5,6 +5,7 @@
  * Set Script Property AUTODOC_WEBHOOK_SECRET to the same long random value
  * stored in Supabase as GOOGLE_SHEETS_WEBHOOK_SECRET.
  */
+const SPREADSHEET_ID = "1Jx5FQHpxAWsedooQRhb9in9XRQA9WTdF5rzD7N0mX8Y";
 const SOURCE_SHEET_GID = 585084563; // gid from the spreadsheet link supplied for AutoDoc setup
 const MANAGED_SHEET_NAME = "AutoDoc_Penerima";
 const MANAGED_MARKER = "AUTODOC_MANAGED_RECIPIENTS_V1";
@@ -42,7 +43,7 @@ function doPost(event) {
 }
 
 function health_() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   const source = spreadsheet.getSheets().find(sheet => sheet.getSheetId() === SOURCE_SHEET_GID);
   const managed = spreadsheet.getSheetByName(MANAGED_SHEET_NAME);
   return {
