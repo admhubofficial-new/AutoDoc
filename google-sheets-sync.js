@@ -34,6 +34,9 @@ function render(container,message,api){
  const setup=node("section","gs-panel");
  setup.append(node("h4","","Aktifkan koneksi satu kali"));
  setup.append(node("p","gs-muted","1. Buka spreadsheet, pilih Ekstensi → Apps Script, lalu salin isi file Code.gs dari repository AutoDoc."));
+ const setupLink=node("a","gs-code","Panduan lengkap aktivasi Google Sheets");
+ setupLink.href="https://github.com/admhubofficial-new/AutoDoc/blob/main/google-apps-script/README.md";setupLink.target="_blank";setupLink.rel="noopener noreferrer";
+ setup.append(setupLink);
  const scriptLink=node("a","gs-code","Buka google-apps-script/Code.gs di GitHub");
  scriptLink.href="https://github.com/admhubofficial-new/AutoDoc/blob/main/google-apps-script/Code.gs";
  scriptLink.target="_blank";scriptLink.rel="noopener noreferrer";
@@ -92,7 +95,8 @@ function render(container,message,api){
    const action=node("td");const pill=node("span","gs-pill "+(row.action==="update"?"update":row.action==="new"?"new":row.action==="review"?"review":""));
    pill.textContent=row.action==="update"?"Perbarui":row.action==="new"?"Baru":row.action==="review"?"Tinjau":"Sama";
    action.append(pill);tr.append(action);
-   const detail=node("td","",row.changed_fields?.length?row.changed_fields.join(", "):(row.review_reason||"Tidak ada perubahan"));
+   const fieldLabels={kelompok:"Kelompok",nama:"Nama",jenjang:"Jenjang",alamat:"Alamat",siswa_kecil:"Siswa kecil",siswa_besar:"Siswa besar",tendik:"Tendik",ibu_hamil:"Ibu hamil",ibu_menyusui:"Ibu menyusui",balita:"Balita",putus_sekolah:"Putus sekolah",kader:"Kader",urutan:"Urutan",aktif:"Status aktif",keterangan:"Keterangan",perlu_verifikasi:"Verifikasi",catatan_verifikasi:"Catatan verifikasi"};
+   const detail=node("td","",row.changed_fields?.length?row.changed_fields.map(field=>fieldLabels[field]||field).join(", "):(row.review_reason||"Tidak ada perubahan"));
    if(row.review_reason)detail.append(node("small","",row.review_reason));
    tr.append(detail);tbody.append(tr);
   });
