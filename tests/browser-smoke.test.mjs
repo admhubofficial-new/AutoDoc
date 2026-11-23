@@ -178,7 +178,7 @@ test("archive selection opens PIN confirmation without performing a delete", asy
 });
 
 
-test("AI assistant analyzes pasted menu text and applies a per-school plan without issuing documents", async () => {
+test("AI assistant applies school menu and preselects mapped recipients before issuance", async () => {
   const app = await openApp();
   try {
     const page = app.page;
@@ -191,11 +191,18 @@ test("AI assistant analyzes pasted menu text and applies a per-school plan witho
     await page.once("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: "Terapkan menu ke Buat Dokumen" }).click();
     await page.locator("#docsCreateForm").waitFor();
-    await page.locator("input[name='recipient']").check();
+    const recipientCheckbox = page.locator("input[name='recipient']");
+    await recipientCheckbox.waitFor();
+    assert.equal(await recipientCheckbox.isChecked(), true, "AI should preselect the mapped recipient");
+    assert.equal(await page.locator("#docsSelectedCount").textContent(), "(1 dipilih)");
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("Nasi Putih", { exact: false }).waitFor();
     assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
-    assert.equal(app.writes.some(item => item.route === "docs/create"), false);
+    await page.getByRole("button", { name: "Terbitkan dokumen" }).click();
+    const createRequest = app.writes.find(item => item.route === "docs/create");
+    assert.ok(createRequest, "document creation should use the mocked local API");
+    assert.deepEqual(createRequest.body.recipient_menu_items[recipientId], ["Nasi Putih", "Ayam Kecap"]);
+    assert.equal(createRequest.body.recipient_ids.includes(recipientId), true);
     assert.equal(app.writes.some(item => item.route === "master/import"), false);
     assert.deepEqual(app.errors, []);
   } finally {

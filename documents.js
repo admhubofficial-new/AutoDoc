@@ -228,9 +228,15 @@ function applyAiMenuPlan(plan){
   if(!$("#docsCreateForm",modal)){renderCreate()}
   const date=$("#docsDate",modal);
   if(date)date.value=activeAiMenuPlan.tanggal;
+  const activeRecipients=new Set((master.recipients||[]).filter(item=>item&&item.aktif!==false).map(item=>String(item.id)));
+  const unknownIds=[...used].filter(id=>!activeRecipients.has(id));
+  if(unknownIds.length)throw new Error(unknownIds.length+" tujuan AI tidak lagi ada atau sudah nonaktif. Ulangi pemuatan Data Master dan periksa pemetaan.");
   const first=activeAiMenuPlan.groups[0]?.menu_items||[];
-  menuController?.set(first);renderMenuComponents();renderAiMenuPlanNotice();previewController?.updateLivePreview();
-  status("Menu AI diterapkan untuk "+used.size+" penerima. Periksa kembali setiap kelompok sebelum menerbitkan.");
+  menuController?.set(first);
+  const plannedRecipients=new Set([...used].map(String));
+  modal.querySelectorAll("input[name='recipient']").forEach(input=>{input.checked=plannedRecipients.has(String(input.value))});
+  renderMenuComponents();renderAiMenuPlanNotice();updateSelectedCount();
+  status("Menu AI diterapkan dan "+used.size+" penerima sudah dipilih otomatis. Periksa kembali setiap kelompok sebelum menerbitkan.");
  };
  if(masterLoaded)applyToForm();
  else loadMaster().then(applyToForm).catch(error=>status(error.message,true));
