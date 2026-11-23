@@ -1407,9 +1407,20 @@ function normalizeAiFile(file: unknown): { name: string; mime: string; data: str
     throw new AppError(400, "Format file belum didukung. Gunakan PDF, Word, Excel, CSV, TXT, PowerPoint, atau gambar JPG/PNG.");
   }
   const image = ["png", "jpg", "jpeg", "webp"].includes(extension);
+  const mimeByExtension: Record<string, string> = {
+    pdf: "application/pdf", doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    csv: "text/csv", tsv: "text/tab-separated-values", txt: "text/plain",
+    md: "text/markdown", rtf: "application/rtf", odt: "application/vnd.oasis.opendocument.text",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    json: "application/json",
+  };
   const safeMime = image
     ? (extension === "png" ? "image/png" : extension === "webp" ? "image/webp" : "image/jpeg")
-    : mime;
+    : mimeByExtension[extension] ?? "application/octet-stream";
   if (image && !safeMime.startsWith("image/")) throw new AppError(400, "Tipe gambar tidak cocok dengan ekstensi file.");
   return { name, mime: safeMime, data, dataUrl: "data:" + safeMime + ";base64," + data, image };
 }
