@@ -88,13 +88,11 @@ export async function readBoundedJson(
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
-  let completed = false;
 
   try {
     while (true) {
       const { value, done } = await reader.read();
       if (done) {
-        completed = true;
         break;
       }
       if (!value?.byteLength) continue;
