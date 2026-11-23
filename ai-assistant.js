@@ -5,11 +5,28 @@ const RECIPIENT_FIELDS = [
  ["alamat","Alamat","text"],["siswa_kecil","Siswa kecil","number"],["siswa_besar","Siswa besar","number"],
  ["tendik","Tenaga pendidik","number"],["ibu_hamil","Ibu hamil","number"],
  ["ibu_menyusui","Ibu menyusui","number"],["balita","Balita","number"],
- ["putus_sekolah","Anak putus sekolah","number"],["kader","Kader","number"]
+ ["putus_sekolah","Anak putus sekolah","number"],["kader","Kader","number"],
+ ["urutan","Urutan","number"],["aktif","Aktif","boolean"],["keterangan","Keterangan","text"],
+ ["perlu_verifikasi","Perlu verifikasi","boolean"],["catatan_verifikasi","Catatan verifikasi","text"]
 ];
+const MASTER_FIELDS = {
+ settings:[
+  ["nama_sppg","Nama SPPG","text"],["kode_sppg","Kode SPPG","text"],["alamat","Alamat SPPG","text"],
+  ["kecamatan","Kecamatan","text"],["kabupaten","Kabupaten","text"],
+  ["nama_kepala_sppg","Kepala SPPG","text"],["nama_kepala_sppi","Kepala SPPI","text"],
+  ["nama_ahli_gizi","Ahli Gizi Dapur","text"],["kabupaten_perlu_verifikasi","Kabupaten perlu diverifikasi","boolean"],
+  ["kabupaten_catatan_verifikasi","Catatan verifikasi kabupaten","text"]
+ ],
+ drivers:[["nama","Nama pengemudi","text"],["urutan","Urutan","number"],["aktif","Aktif","boolean"]],
+ vehicles:[["no_kendaraan","Nomor kendaraan","text"],["urutan","Urutan","number"],["aktif","Aktif","boolean"]],
+ staff:[["nama","Nama petugas","text"],["jabatan","Jabatan","text"],["urutan","Urutan","number"],["aktif","Aktif","boolean"]],
+ menus:[["teks_menu","Nama/menu makanan","text"],["urutan","Urutan","number"],["aktif","Aktif","boolean"]]
+};
+const MASTER_TITLES={settings:"Identitas SPPG",drivers:"Pengemudi",vehicles:"Kendaraan",staff:"Petugas",menus:"Daftar menu master"};
+
 const COUNT_FIELDS = new Set(["siswa_kecil","siswa_besar","tendik","ibu_hamil","ibu_menyusui","balita","putus_sekolah","kader"]);
 const ALLOWED_EXTENSIONS = new Set(["pdf","doc","docx","xls","xlsx","csv","tsv","txt","md","rtf","odt","ppt","pptx","json","html","xml","iif","png","jpg","jpeg","webp"]);
-function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMessage}) {
+function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage}) {
  let host=null, selectedFiles=[], mode="both", dateValue="";
  function text(parent,tag,cls,value){const element=el(tag,cls,value);parent.append(element);return element;}
  function button(parent,label,kind,handler){const item=text(parent,"button","dm-btn"+(kind?" "+kind:""),label);item.type="button";item.addEventListener("click",handler);return item;}
@@ -43,7 +60,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
   text(inputPanel,"p","ai-lead","Tempel teks menu atau unggah file daftar menu/perubahan penerima. AI akan membaca isi, mencocokkan nama dengan Data Master, lalu menyiapkan usulan yang dapat diperiksa sebelum disimpan.");
   const grid=text(inputPanel,"div","ai-form-grid");
   const modeSelect=el("select");modeSelect.id="aiMode";
-  [["both","Menu dan penerima manfaat"],["menus","Klasifikasi menu harian"],["recipients","Perubahan penerima manfaat"]].forEach(([value,label])=>{const opt=el("option");opt.value=value;opt.textContent=label;modeSelect.append(opt)});
+  [["both","Menu, penerima & Data Master"],["menus","Klasifikasi menu harian"],["recipients","Perubahan penerima manfaat"],["master","Data Master lainnya"]].forEach(([value,label])=>{const opt=el("option");opt.value=value;opt.textContent=label;modeSelect.append(opt)});
   field(grid,"Apa yang ingin dianalisis?",modeSelect);
   const date=el("input");date.type="date";date.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta"}).format(new Date());date.id="aiDate";
   field(grid,"Tanggal distribusi untuk menu",date);
@@ -125,9 +142,11 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     data.warnings.forEach(item=>text(w,"div","ai-flag",item));
    }
    if(data.menu_groups?.length)renderMenuGroups(target,data.menu_groups);
-   else if(mode!=="recipients")text(target,"p","ai-helper","Belum ditemukan kelompok menu yang bisa dipetakan. Periksa kembali sumber atau isi nama sekolah/tujuan.");
+   else if(mode!=="recipients"&&mode!=="master")text(target,"p","ai-helper","Belum ditemukan kelompok menu harian yang bisa dipetakan.");
    if(data.recipient_updates?.length)renderRecipientUpdates(target,data.recipient_updates);
-   else if(mode!=="menus")text(target,"p","ai-helper","Tidak ada perubahan penerima manfaat yang berhasil diekstrak dari sumber.");
+   else if(mode!=="menus"&&mode!=="master")text(target,"p","ai-helper","Tidak ada perubahan penerima manfaat yang berhasil diekstrak dari sumber.");
+   if(data.master_updates?.length)renderMasterUpdates(target,data.master_updates);
+   else if(mode==="master"||mode==="both")text(target,"p","ai-helper","Tidak ditemukan perubahan Pengemudi, Kendaraan, Petugas, Daftar Menu Master, atau Identitas SPPG pada sumber.");
   }
   function renderMenuGroups(target,groups){
    const section=text(target,"section","ai-list");
@@ -185,7 +204,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
    rows.forEach((row,index)=>{
     const card=text(section,"article","ai-card");card.dataset.recipientRow=String(index);
     const head=text(card,"div","ai-card-head");
-    const selectable=row.action!=="review"&&row.changed_fields?.length>0;
+    const selectable=(row.action!=="review"&&row.changed_fields?.length>0)||row.can_complete_manually===true;
     const check=el("input");check.type="checkbox";check.dataset.includeRecipient="";check.checked=false;check.disabled=!selectable;
     head.append(check);
     const title=(row.proposed?.nama||"Penerima baru")+(row.current?" · data lama":" · data baru");
@@ -194,16 +213,17 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     const body=text(card,"div","ai-card-body");
     text(body,"small","ai-helper",row.reason||"Tidak ada alasan yang diberikan.");
     if(row.source_quote)text(body,"small","ai-helper","Sumber: “"+row.source_quote+"” · "+(row.source_reference||"lokasi sumber tidak disebut"));
-    if(row.action==="review")text(body,"div","ai-flag","Perlu pemeriksaan manual. Tidak dipilih otomatis.");
+    if(row.can_complete_manually){text(body,"div","ai-flag","Data baru belum lengkap. Lengkapi semua kategori jumlah yang kosong di bawah, lalu centang baris untuk menyimpan.");text(body,"small","ai-helper","Kategori yang perlu dilengkapi: "+(row.missing_count_fields||[]).map(key=>key.replace(/_/g," ")).join(", "));}else if(row.action==="review")text(body,"div","ai-flag","Perlu pemeriksaan manual. Tidak dipilih otomatis.");
     if(!row.changed_fields?.length)text(body,"small","ai-helper","Tidak ditemukan perbedaan nilai yang perlu disimpan.");
-    (row.changed_fields||[]).forEach(key=>{
+    const recipientFieldsToRender=row.can_complete_manually?[...new Set([...(row.changed_fields||[]),...COUNT_FIELDS])]:row.changed_fields||[];
+    recipientFieldsToRender.forEach(key=>{
      const def=RECIPIENT_FIELDS.find(item=>item[0]===key);if(!def)return;
      const wrap=text(body,"div","ai-change");
      const lab=text(wrap,"label",""," "+def[1]);
      const current=row.current?.[key]??"";
-     const input=el("input");input.type=def[2]==="number"?"number":"text";input.dataset.recipientField=key;
-     input.value=row.proposed?.[key]??"";
-     if(def[2]==="number"){input.min="0";input.step="1";input.inputMode="numeric";}
+     const input=el("input");input.type=def[2]==="number"?"number":def[2]==="boolean"?"checkbox":"text";input.dataset.recipientField=key;
+     if(def[2]==="boolean")input.checked=row.proposed?.[key]===true;else input.value=row.proposed?.[key]??"";
+     if(def[2]==="number"){input.min=key==="urutan"?"1":"0";input.step="1";input.inputMode="numeric";}
      lab.append(text(lab,"small","","Sebelumnya: "+(current===""?"(kosong)":current)));
      wrap.append(lab,input);
     });
@@ -234,7 +254,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     save.disabled=true;save.textContent="Menyimpan...";
     try{
      const result=await api("master/import",{rows:payload});
-     await onRecipientsChanged();
+     await onMasterChanged();
      setMessageSafe((result.imported||payload.length)+" baris penerima berhasil disimpan. Periksa kembali Data Master.");
      checkboxesAfterSave(selected);
     }catch(error){setMessageSafe(error.message||"Data penerima gagal disimpan.",true)}
