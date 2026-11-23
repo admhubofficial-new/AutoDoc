@@ -206,7 +206,7 @@ test("AI menu mappings are restricted to selected recipients and copied into imm
   const body = functionBody("handleDocsCreate", "handleDocsDays");
   assert.match(body, /recipient_menu_items/);
   assert.match(body, /ids\.some\(id => !recipientIds\.includes\(id\)\)/);
-  assert.match(body, /const effectiveMenuItems = recipientMenuItems\[recipientId\] \?\? menuItems/);
+  assert.match(body, /const effectiveMenuByRecipient: Record<string, string\[\]>/);\n  assert.match(body, /const requestedMenu = effectiveMenuByRecipient\[recipientId\]/);\n  assert.match(body, /const effectiveMenuItems = effectiveMenuByRecipient\[recipientId\]/);
   assert.match(body, /recipientDistributionPayload/);
   assert.match(body, /menu_items: effectiveMenuItems\.map/);
   assert.match(body, /distribusi: \{ \.\.\.recipientDistributionPayload, id: distribution\.id \}/);
