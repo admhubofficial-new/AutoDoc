@@ -197,19 +197,22 @@ test("P0 shared design system and active navigation context work without runtime
     await page.locator("#docsCreateForm").waitFor();
     assert.equal((await context.textContent()).trim(), "Buat Dokumen");
     assert.equal(await page.locator("style").count(), 0);
+    await page.locator(".docs-close").click();
+    await page.locator(".docs-overlay[hidden]").waitFor();
     await page.locator('[data-home-nav="master"]').click();
     await page.locator(".dm-overlay:not([hidden])").waitFor();
-    await page.locator(".docs-overlay[hidden]").waitFor();
     assert.equal((await context.textContent()).trim(), "Data Master");
     await page.getByRole("button", { name: "Asisten AI" }).click();
     assert.equal(await page.locator("style").count(), 0);
+    await page.locator(".dm-close").click();
+    await page.locator(".dm-overlay[hidden]").waitFor();
     await page.locator('[data-home-nav="archive"]').click();
     await page.locator("#docsDaysList").waitFor();
-    await page.locator(".dm-overlay[hidden]").waitFor();
     assert.equal((await context.textContent()).trim(), "Arsip");
+    await page.locator(".docs-close").click();
+    await page.locator(".docs-overlay[hidden]").waitFor();
     await page.locator('[data-home-nav="home"]').click();
     await page.locator("#opsDashboard").waitFor();
-    await page.locator(".docs-overlay[hidden]").waitFor();
     assert.equal((await context.textContent()).trim(), "Beranda");
     assert.deepEqual(app.errors, []);
   } finally {
