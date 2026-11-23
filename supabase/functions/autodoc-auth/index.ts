@@ -1904,7 +1904,7 @@ async function buildSheetsPreview(): Promise<Record<string, unknown>> {
     if (seen.has(key)) {
       changes.push({
         row_number: rowNumber, action: "review", can_apply: false,
-        proposed: { kelompok: group, nama, jenjang: get("jenjang") },
+        proposed: { kelompok: group, nama: name, jenjang: get("jenjang") },
         changed_fields: [], review_reason: "Baris duplikat untuk kelompok dan nama yang sama.",
       });
       continue;
@@ -1915,7 +1915,7 @@ async function buildSheetsPreview(): Promise<Record<string, unknown>> {
     const reviewReasons: string[] = [];
     if (!current && !jenjang) reviewReasons.push("Jenjang wajib diisi untuk penerima baru.");
     const proposed: Record<string, unknown> = current ? { ...current } : {
-      kelompok: group, nama, jenjang, alamat: null,
+      kelompok: group, nama: name, jenjang, alamat: null,
       siswa_kecil: 0, siswa_besar: 0, tendik: 0, ibu_hamil: 0,
       ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0,
       urutan: Math.max(1, rowNumber * 10), aktif: true,
