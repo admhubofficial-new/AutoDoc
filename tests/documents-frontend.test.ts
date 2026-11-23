@@ -449,7 +449,7 @@ test("Data Master exposes the AI assistant as an internal tab without adding a n
   assert.match(masterSource, /const aiTab=el\("button",null,"Asisten AI"\)/);
   assert.match(masterSource, /entity==="ai"/);
   assert.match(masterSource, /window\.AutoDocAiAssistant\?\.create/);
-  assert.match(htmlSource, /ai-assistant\.js\\?v=p0-css-consolidation-20261124/);
+  assert.match(htmlSource, /ai-assistant\.js\?v=p0-css-consolidation-20261124/);
   assert.doesNotMatch(htmlSource, /data-home-nav="ai"/);
 });
 
