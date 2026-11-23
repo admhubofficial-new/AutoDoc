@@ -59,7 +59,7 @@ function health_() {
 }
 
 function readRecipients_() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   const managed = spreadsheet.getSheetByName(MANAGED_SHEET_NAME);
   let sheet = managed;
   let sourceKind = "managed";
@@ -93,7 +93,7 @@ function writeRecipients_(payload) {
   const rows = Array.isArray(payload.rows) ? payload.rows : null;
   if (!rows || rows.length > MAX_ROWS) throw new Error("Jumlah penerima tidak valid (maksimal " + MAX_ROWS + ").");
 
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = spreadsheet.getSheetByName(MANAGED_SHEET_NAME);
   if (sheet) {
     const marker = sheet.getRange(1, 1).getNote();
