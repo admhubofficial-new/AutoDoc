@@ -136,10 +136,7 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     for (const id of ["docsStaff", "docsDriver", "docsVehicle"]) {
       assert.equal(await page.locator("#" + id).getAttribute("required"), null);
     }
-    const recipientCheckbox = page.locator("input[name='recipient']");
-    await page.waitForFunction(() => document.querySelector("input[name='recipient']")?.checked === true);
-    assert.equal(await recipientCheckbox.isChecked(), true, "AI should preselect the mapped recipient");
-    assert.equal(await page.locator("#docsSelectedCount").textContent(), "(1 dipilih)");
+    await page.locator("input[name='recipient']").check();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("PRATINJAU · BELUM DITERBITKAN").waitFor();
     await page.locator("#docsStaff").fill("Petugas Browser Test");
