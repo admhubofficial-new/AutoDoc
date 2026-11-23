@@ -260,12 +260,13 @@ test("document print renderer formats SJ and BAST snapshots and escapes user con
 });
 
 
-test("distribution date and departure time default to the current WIB date and time", () => {
+test("distribution date defaults to today in WIB and departure time starts empty", () => {
   assert.match(source, /function nowInJakarta\(\)/);
   assert.ok(source.includes('timeZone:"Asia/Jakarta"'));
-  assert.match(source, /const today=\(\)=>nowInJakarta\(\)\.date/);
-  assert.match(source, /value='"\+currentTime\.time\+"'/);
-  assert.match(source, /Terisi otomatis mengikuti waktu WIB saat formulir dibuka/);
+  assert.match(source, /const today=\(\)=>nowInJakarta\(\)/);
+  assert.match(source, /const todayVal=today\(\)/);
+  assert.match(source, /<input id='docsTime' type='time'>/);
+  assert.doesNotMatch(source, /currentTime\.time|Terisi otomatis mengikuti waktu WIB/);
 });
 
 
@@ -393,4 +394,12 @@ test("archive history supports selecting individual or all documents for batch p
   assert.match(source, /renderDocumentGroup\(group,selectedPrintIds,updatePrintSelection\)/);
   assert.match(source, /\.batch-page-break\{break-before:page/);
   assert.match(source, /docs\/mark-printed/);
+});
+
+
+test("optional distribution details print as blank fields rather than dash placeholders", () => {
+  for (const field of ["dist.jam_berangkat", "dist.nama_petugas", "dist.nama_pengemudi", "dist.no_kendaraan", "dist.menu", "rec.nama", "rec.kelompok", "rec.alamat"]) {
+    assert.ok(printRendererSource.includes(field + '||"'), field + " should be blank when absent");
+    assert.ok(!printRendererSource.includes(field + '||"—"'), field + " must not show a dash");
+  }
 });
