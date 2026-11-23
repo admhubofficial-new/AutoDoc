@@ -311,3 +311,38 @@ test("AI updates include every original column in the PATCH filter to prevent a 
   assert.equal((source.match(/masterSnapshotFilters\(expected as Record<string, unknown>, config\.columns\)/g) || []).length, 2);
   assert.match(source, /value === null \|\| value === undefined\s*\? "is\.null"/);
 });
+
+
+test("login lockout uses a signed per-browser identity and never trusts spoofable IP headers", () => {
+  assert.match(source, /THROTTLE_COOKIE_NAME = "__Host-autodoc_login"/);
+  assert.match(source, /async function throttleKey\(request: Request\)/);
+  assert.match(source, /verifyThrottleIdentityToken\(existingCookie/);
+  assert.match(source, /createThrottleIdentityToken\(key, now\)/);
+  assert.match(source, /throttleKey\(request\)/);
+  assert.doesNotMatch(source, /x-forwarded-for|x-real-ip|cf-connecting-ip/i);
+  assert.doesNotMatch(source, /hmacHex\("autodoc-global-login-throttle-v1"\);\s*const row/);
+  assert.match(source, /appendCookie\(\s*respond\(request, \{ message: "PIN MASUK tidak sesuai\." \}, 401\)/);
+});
+
+test("document creation has a dedicated streaming-safe 1 MiB body limit", () => {
+  const body = functionBody("handleDocsCreate", "handleDocsDays");
+  assert.match(source, /DOCS_CREATE_MAX_BODY_BYTES = 1024 \* 1024/);
+  assert.match(body, /readJson\(request, DOCS_CREATE_MAX_BODY_BYTES\)/);
+  assert.match(source, /return await readBoundedJson\(request, maxBytes\)/);
+  assert.match(source, /request\.body\.getReader\(\)/);
+  assert.match(source, /totalBytes > maxBytes/);
+});
+
+test("AI analysis has per-session admission control, bounded concurrency, timeout, and Retry-After handling", () => {
+  const start = source.indexOf("async function handleAiAnalyze(");
+  const end = source.indexOf("Deno.serve(", start);
+  const body = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(source, /new AiRequestGate\(2, 6, 10 \* 60 \* 1000, 2000\)/);
+  assert.match(body, /AI_REQUEST_GATE\.acquire\(sessionKey\)/);
+  assert.match(body, /fetchResponseTextWithTimeout\(/);
+  assert.match(body, /AI_REQUEST_TIMEOUT_MS/);
+  assert.match(body, /admission\.release\(\)/);
+  assert.match(body, /parseRetryAfterSeconds\(openAiResponse\.headers\.get\("retry-after"\)\)/);
+  assert.match(body, /status === 429 \|\| status === 503/);
+});
