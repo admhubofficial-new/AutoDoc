@@ -43,6 +43,6 @@ test("CSV booleans normalize Indonesian/English labels and use explicit defaults
 test("Data Master maps CSV status fields using normalized defaults", () => {
   const source = readFileSync(new URL("../master.js", import.meta.url), "utf8");
   assert.match(source, /Impor CSV/);
-  assert.match(source, /parseCsvBoolean\(g\("aktif"\),true\)/);
-  assert.match(source, /parseCsvBoolean\(g\("perlu_verifikasi"\),false\)/);
+  assert.match(source, /parseCsvBoolean\(get\("aktif"\),true\)/);
+  assert.match(source, /parseCsvBoolean\(get\("perlu_verifikasi"\),false\)/);
 });

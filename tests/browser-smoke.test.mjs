@@ -1,6 +1,7 @@
 import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const origin = "http://127.0.0.1:4173/";
@@ -31,7 +32,7 @@ after(async () => {
   server?.kill("SIGTERM");
 });
 
-async function openApp({ authenticated = true, viewport = { width: 1365, height: 900 } } = {}) {
+async function openApp({ authenticated = true, viewport = { width: 1365, height: 900 }, apiFailures = {}, apiDelays = {} } = {}) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const writes = [];
@@ -42,6 +43,12 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     const request = route.request();
     const url = new URL(request.url());
     const routeName = url.pathname.split("/autodoc-auth/")[1] || "";
+    if (apiDelays[routeName]) await new Promise(resolve => setTimeout(resolve, apiDelays[routeName]));
+    if (apiFailures[routeName] > 0) {
+      apiFailures[routeName] -= 1;
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Simulasi gangguan layanan." }) });
+      return;
+    }
     let payload = {};
 
     if (routeName === "setup/status") payload = { setupRequired: false };
@@ -346,6 +353,8 @@ test("P2 BAST realization keeps labels connected and sends the existing transact
     await page.locator("#docsList").waitFor();
     await page.getByRole("button", { name: "Input realisasi" }).click();
 
+    assert.equal(await page.locator(".docs-portion-comparison").isVisible(), true);
+    assert.equal(await page.locator(".docs-realization-confirmation").isVisible(), true);
     const small = page.getByLabel("Porsi kecil diterima *");
     const large = page.getByLabel("Porsi besar diterima *");
     assert.equal(await small.getAttribute("max"), "10");
@@ -538,6 +547,223 @@ test("AI new beneficiary with incomplete source counts can be completed manually
     for (const field of ["siswa_kecil", "siswa_besar", "tendik", "ibu_hamil", "ibu_menyusui", "balita", "putus_sekolah", "kader"]) {
       assert.equal(save.body.data[field], 0, field + " should only become zero after explicit manual entry");
     }
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+
+test("P2 archive separates list, detail, print actions, and dangerous bulk deletion", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="archive"]').click();
+    await page.locator("#docsDaysList .docs-day-card").waitFor();
+    const danger = page.locator(".docs-danger-zone");
+    await danger.getByText("Area berbahaya · Penghapusan riwayat").waitFor();
+    assert.equal(await danger.locator("#docsDaysDelete").isVisible(), true);
+    await page.locator("#docsDaysList .docs-day-card .docs-btn.primary").click();
+    await page.locator(".docs-distribution-detail").waitFor();
+    await page.getByRole("heading", { name: "Detail Distribusi" }).waitFor();
+    assert.equal(await page.locator(".docs-print-area").isVisible(), true);
+    assert.equal(await page.locator(".docs-danger-zone").count(), 0, "destructive actions should not appear in a distribution detail context");
+    await page.getByRole("button", { name: "Kembali ke daftar distribusi" }).click();
+    await page.locator("#docsDaysList .docs-day-card").waitFor();
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+test("P2 Data Master CSV preview requires a separate explicit import confirmation", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.locator(".dm-data-row").waitFor();
+    const chooserPromise = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Impor CSV" }).click();
+    const chooser = await chooserPromise;
+    await chooser.setFiles({
+      name: "penerima-uji.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from("kelompok,nama,jenjang,siswa kecil,siswa besar\nSekolah/Lembaga,SDN CSV UJI,SD,10,6")
+    });
+    await page.locator(".dm-import-preview").waitFor();
+    assert.equal(await page.getByText("SDN CSV UJI", { exact: true }).isVisible(), true);
+    assert.equal(app.writes.some(item => item.route === "master/import"), false, "parsing and preview must not write");
+    await page.getByRole("button", { name: "Konfirmasi impor 1 baris" }).click();
+    await page.locator(".dm-msg").getByText(/baris penerima berhasil diimpor/).waitFor();
+    const request = app.writes.find(item => item.route === "master/import");
+    assert.ok(request);
+    assert.equal(request.body.rows.length, 1);
+    assert.equal(request.body.rows[0].nama, "SDN CSV UJI");
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+test("P2 Menu section quick action opens AI directly in menu mode and shows a review queue", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="print"]').click();
+    await page.locator("#docsCreateForm").waitFor();
+    await page.getByRole("button", { name: "Bantu isi dari teks atau file" }).click();
+    await page.locator(".dm-dialog").waitFor();
+    assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), true, "the underlying document workspace should be inert while the AI dialog is open");
+    assert.equal(await page.locator("#aiMode").inputValue(), "menus");
+    await page.locator("#aiSourceText").fill("SDN UJI BROWSER: Nasi Putih, Ayam Kecap");
+    await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
+    await page.getByRole("heading", { name: "Antrean pemeriksaan" }).waitFor();
+    await page.getByText("Menunggu pemeriksaan", { exact: true }).waitFor();
+    assert.equal(await page.locator(".ai-review-queue-count").textContent(), "1 usulan");
+    assert.equal(app.writes.some(item => item.route === "docs/create"), false);
+    await page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: "Terapkan menu ke Buat Dokumen" }).click();
+    await page.locator("#docsCreateForm").waitFor();
+    assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), false, "the document workspace should be restored after applying the AI plan");
+    assert.equal(await page.locator("input[name='recipient']").isChecked(), true);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+test("P2 archive and Data Master expose loading and recoverable error states", async () => {
+  const delayed = await openApp({ apiDelays: { "docs/days": 300 } });
+  try {
+    const page = delayed.page;
+    await page.locator('[data-home-nav="archive"]').click();
+    await page.locator("#docsDaysList[data-state='loading']").waitFor();
+    await page.locator("#docsDaysList .docs-day-card").waitFor();
+    assert.equal(await page.locator("#docsDaysList").getAttribute("data-state"), "success");
+  } finally {
+    await delayed.context.close();
+  }
+
+  const failed = await openApp({ apiFailures: { "docs/days": 1 } });
+  try {
+    const page = failed.page;
+    await page.locator('[data-home-nav="archive"]').click();
+    await page.locator(".docs-archive-error").waitFor();
+    await page.getByRole("button", { name: "Coba lagi" }).click();
+    await page.locator("#docsDaysList .docs-day-card").waitFor();
+    assert.equal(await page.locator("#docsDaysList").getAttribute("data-state"), "success");
+    assert.deepEqual(failed.errors, []);
+  } finally {
+    await failed.context.close();
+  }
+});
+
+test("P3 responsive and keyboard audit covers the five required viewports and captures evidence", async () => {
+  const viewports = [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1366, height: 768 },
+    { width: 1920, height: 1080 }
+  ];
+  await mkdir("test-results/p2-p3", { recursive: true });
+
+  for (const viewport of viewports) {
+    const app = await openApp({ viewport });
+    try {
+      const page = app.page;
+      if (viewport.width <= 720) await page.locator("#homeMenuToggle").click();
+      const masterTrigger = page.locator('[data-home-nav="master"]');
+      await masterTrigger.click();
+      await page.locator(".dm-data-row").waitFor();
+
+      const mobile = viewport.width <= 820;
+      assert.equal(await page.locator("#dmCategorySelect").isVisible(), mobile, "category selector visibility at " + viewport.width);
+      if (mobile) {
+        assert.equal(await page.locator(".dm-tabs button").first().isVisible().catch(() => false), false);
+        assert.equal(await page.locator(".dm-table[data-mobile-cards='true'] tr.dm-data-row").evaluate(row => getComputedStyle(row).display), "grid");
+      } else {
+        assert.equal(await page.locator(".dm-tabs button").first().isVisible(), true);
+        assert.equal(await page.locator(".dm-tabs").evaluate(nav => getComputedStyle(nav).flexDirection), "column");
+      }
+
+      await page.getByRole("button", { name: "+ Tambah" }).click();
+      assert.equal(await page.locator(".dm-form-group").count(), 3, "recipient form should be grouped into identity, quantities and verification");
+      await page.getByRole("button", { name: "Batal" }).click();
+
+      const masterScroll = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
+      assert.ok(masterScroll.width <= masterScroll.viewport + 1, "Data Master must not overflow horizontally at " + viewport.width);
+      await page.screenshot({ path: "test-results/p2-p3/master-" + viewport.width + "x" + viewport.height + ".png", fullPage: true });
+
+      await page.keyboard.press("Shift+Tab");
+      assert.ok(await page.locator(".dm-dialog").evaluate(dialog => dialog.contains(document.activeElement)), "keyboard focus must remain in Data Master dialog");
+      await page.keyboard.press("Escape");
+      await page.locator(".dm-overlay").waitFor({ state: "hidden" });
+      if (viewport.width > 720) assert.equal(await page.evaluate(() => document.activeElement?.dataset?.homeNav), "master", "Escape should restore focus to the navigation trigger");
+      if (viewport.width <= 720) await page.locator("#homeMenuToggle").click();
+
+      await page.locator('[data-home-nav="archive"]').click();
+      await page.locator("#docsDaysList .docs-day-card").waitFor();
+      await page.locator("#docsDaysList .docs-day-card .docs-btn.primary").click();
+      await page.locator("#docsList").waitFor();
+      await page.getByRole("button", { name: "Input realisasi" }).click();
+      await page.locator(".docs-portion-comparison").waitFor();
+      await page.locator(".docs-realization-confirmation").waitFor();
+      const pageScroll = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
+      assert.ok(pageScroll.width <= pageScroll.viewport + 1, "BAST realization must not overflow horizontally at " + viewport.width);
+      const portionColumns = await page.locator(".docs-portion-comparison").evaluate(element => getComputedStyle(element).gridTemplateColumns);
+      assert.ok(portionColumns.split(" ").length >= 1);
+      await page.screenshot({ path: "test-results/p2-p3/bast-" + viewport.width + "x" + viewport.height + ".png", fullPage: true });
+
+      assert.deepEqual(app.errors, [], "no browser runtime errors at " + viewport.width);
+    } finally {
+      await app.context.close();
+    }
+  }
+});
+
+
+test("P3 Data Master loading and error states recover without losing the selected category", async () => {
+  const delayed = await openApp({ apiDelays: { "master/list": 300 } });
+  try {
+    const page = delayed.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.locator(".dm-table-wrap[data-state='loading']").waitFor();
+    await page.locator(".dm-data-row").waitFor();
+    assert.equal(await page.locator(".dm-table-wrap").getAttribute("data-state"), "success");
+  } finally {
+    await delayed.context.close();
+  }
+
+  const failed = await openApp({ apiFailures: { "master/list": 1 } });
+  try {
+    const page = failed.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.locator(".dm-load-error").waitFor();
+    await page.getByRole("button", { name: "Coba lagi" }).click();
+    await page.locator(".dm-data-row").waitFor();
+    assert.equal(await page.locator(".dm-table-wrap").getAttribute("data-state"), "success");
+    assert.equal(await page.locator("#dmCategorySelect").inputValue(), "recipients");
+    assert.deepEqual(failed.errors, []);
+  } finally {
+    await failed.context.close();
+  }
+});
+
+test("P3 AI loading and error states preserve the source and support retry into the review queue", async () => {
+  const app = await openApp({ apiFailures: { "ai/analyze": 1 }, apiDelays: { "ai/analyze": 250 } });
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.getByRole("button", { name: "Asisten AI" }).click();
+    await page.locator("#aiSourceText").fill("SDN UJI BROWSER: Nasi Putih, Ayam Kecap");
+    await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
+    await page.locator(".ai-status[data-state='loading']").waitFor();
+    await page.locator(".ai-status[data-state='error']").waitFor();
+    assert.equal(await page.locator("#aiSourceText").inputValue(), "SDN UJI BROWSER: Nasi Putih, Ayam Kecap");
+    await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
+    await page.getByRole("heading", { name: "Antrean pemeriksaan" }).waitFor();
+    assert.equal(await page.locator(".ai-review-queue").getAttribute("aria-labelledby"), "aiReviewQueueTitle");
     assert.deepEqual(app.errors, []);
   } finally {
     await app.context.close();
