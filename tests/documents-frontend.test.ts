@@ -447,6 +447,9 @@ test("organoleptic meal options remain normal text for manual marking", () => {
 test("Data Master exposes the AI assistant as an internal tab without adding a new primary navigation item", () => {
   assert.match(masterSource, /\["ai",\{title:"Asisten AI"\}\]/);
   assert.match(masterSource, /const tabButton=el\("button",null,definition\.title\)/);
+  assert.match(masterSource, /function suspendDocumentOverlay\(\)/);
+  assert.match(masterSource, /overlay\.inert=true;overlay\.setAttribute\("aria-hidden","true"\)/);
+  assert.match(masterSource, /restoreDocumentOverlay\(\)/);
   assert.match(masterSource, /entity==="ai"/);
   assert.match(masterSource, /window\.AutoDocAiAssistant\?\.create/);
   assert.match(htmlSource, /ai-assistant\.js\?v=p2-p3-admin-visual-audit-20261124/);

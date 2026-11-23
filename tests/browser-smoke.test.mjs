@@ -613,6 +613,7 @@ test("P2 Menu section quick action opens AI directly in menu mode and shows a re
     await page.locator("#docsCreateForm").waitFor();
     await page.getByRole("button", { name: "Bantu isi dari teks atau file" }).click();
     await page.locator(".dm-dialog").waitFor();
+    assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), true, "the underlying document workspace should be inert while the AI dialog is open");
     assert.equal(await page.locator("#aiMode").inputValue(), "menus");
     await page.locator("#aiSourceText").fill("SDN UJI BROWSER: Nasi Putih, Ayam Kecap");
     await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
@@ -623,6 +624,7 @@ test("P2 Menu section quick action opens AI directly in menu mode and shows a re
     await page.once("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: "Terapkan menu ke Buat Dokumen" }).click();
     await page.locator("#docsCreateForm").waitFor();
+    assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), false, "the document workspace should be restored after applying the AI plan");
     assert.equal(await page.locator("input[name='recipient']").isChecked(), true);
     assert.deepEqual(app.errors, []);
   } finally {

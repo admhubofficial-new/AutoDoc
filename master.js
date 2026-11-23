@@ -11,7 +11,7 @@ const defs={
  menus:{title:"Menu makanan",fields:[["teks_menu","Nama/menu makanan","text",1],["urutan","Urutan","number"],["aktif","Aktif","checkbox"]]}
 };
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null,aiInitialMode="both";
+let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null,aiInitialMode="both",suspendedDocumentOverlay=null;
 async function api(path,body){const h={"apikey":KEY,"Accept":"application/json"};const r=await fetch(API+"/"+path,{method:body?"POST":"GET",headers:body?{...h,"Content-Type":"application/json"}:h,body:body?JSON.stringify(body):undefined,credentials:"include",cache:"no-store"});let d={};try{d=await r.json()}catch(_){}if(!r.ok)throw Error(d.message||"Permintaan gagal.");return d;}
 function msg(text,bad=false,state){
  const output=modal?.querySelector(".dm-msg");
@@ -22,7 +22,20 @@ function msg(text,bad=false,state){
  output.setAttribute("aria-live",bad?"assertive":"polite");
  output.classList.toggle("error",!!bad);
 }
-function close(){if(!modal)return;modal.hidden=true;document.body.style.overflow="";if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}
+function suspendDocumentOverlay(){
+ const overlay=document.querySelector(".docs-overlay");
+ if(!overlay||overlay.hidden||suspendedDocumentOverlay)return;
+ suspendedDocumentOverlay={element:overlay,inert:overlay.inert,ariaHidden:overlay.getAttribute("aria-hidden")};
+ overlay.inert=true;overlay.setAttribute("aria-hidden","true");
+}
+function restoreDocumentOverlay(){
+ if(!suspendedDocumentOverlay)return;
+ const {element,inert,ariaHidden}=suspendedDocumentOverlay;
+ element.inert=inert;
+ if(ariaHidden===null)element.removeAttribute("aria-hidden");else element.setAttribute("aria-hidden",ariaHidden);
+ suspendedDocumentOverlay=null;
+}
+function close(){if(!modal)return;modal.hidden=true;restoreDocumentOverlay();document.body.style.overflow="";if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function init(){
  const home=document.querySelector(".home-content");if(!home)return;
@@ -72,6 +85,7 @@ function init(){
   aiInitialMode=options?.mode==="menus"?"menus":"both";
   const requestedSearch=String(initialSearch||"");
   returnFocusEl=document.activeElement;
+  if(options?.mode==="menus")suspendDocumentOverlay();
   modal.hidden=false;document.body.style.overflow="hidden";search.value="";render();
   document.querySelectorAll("[data-home-nav]").forEach(button=>{
    if(button.dataset.homeNav==="master")button.setAttribute("aria-current","page");
