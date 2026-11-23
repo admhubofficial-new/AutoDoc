@@ -184,9 +184,9 @@ test("AI analysis is session protected, calls OpenAI only server-side, and never
 
 test("AI file analysis enforces allowed extensions and a bounded upload size", () => {
   assert.match(source, /const AI_MAX_REQUEST_BYTES = 10 \* 1024 \* 1024/);
-  assert.match(source, /data\.length > 8_500_000/);
+  assert.match(source, /combinedBase64Length > 8_500_000/);
   assert.match(source, /allowedExtensions/);
-  assert.match(source, /new Set\(\[\s*"pdf", "doc", "docx", "xls"/);
+  assert.match(source, /new Set\(\[\s*"pdf", "doc", "docx", "xls"/);\n  assert.match(source, /function normalizeAiFiles/);\n  assert.match(source, /inputFiles\.length > 5/);\n  assert.match(source, /files\.map\(\(file\) => file\.name\)/);
   assert.match(source, /input_file/);
   assert.match(source, /input_image/);
 });
@@ -231,4 +231,20 @@ test("every previously issued recipient menu is checked before retry, including 
   assert.match(body, /const requestedMenu = effectiveMenuByRecipient\[recipientId\]/);
   assert.match(body, /JSON\.stringify\(previousItems\) === JSON\.stringify\(requestedMenu\)/);
   assert.match(body, /const effectiveMenuItems = effectiveMenuByRecipient\[recipientId\]/);
+});
+
+test("AI file intake supports multiple files and blocks incomplete new beneficiary rows", () => {
+  assert.match(source, /normalizeAiFiles\(body\.files \?\? body\.file\)/);
+  assert.match(source, /for \(const file of files\)/);
+  assert.match(source, /AI_COUNT_FIELDS\.filter/);
+  assert.match(source, /!fieldsPresent\.includes\(field\)/);
+  assert.match(source, /action = "review"/);
+  assert.match(source, /belum memiliki nilai eksplisit untuk semua kategori/);
+  assert.match(source, /"html", "xml", "iif"/);
+});
+
+test("Google Sheets and Apps Script integration is fully removed in favor of the AI assistant", () => {
+  assert.doesNotMatch(source, /GOOGLE_SHEETS|handleSheets|sheets\/(status|preview|apply|push)/);
+  assert.doesNotMatch(masterUi, /Google Sheets|AutoDocSheetsSync/);
+  assert.doesNotMatch(indexHtml, /google-sheets-sync/);
 });
