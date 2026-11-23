@@ -183,8 +183,7 @@ test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () =>
 
 test("BAST realization form is isolated in its module and preserves validation and PIN confirmation", () => {
   assert.match(realizationSource, /function showRealization\(card,\s*doc\)/);
-  assert.match(realizationSource, /Porsi kecil diterima \*/);
-  assert.match(realizationSource, /Porsi besar diterima \*/);
+  assert.match(realizationSource, /labelText \+ " diterima \*"/);
   assert.match(realizationSource, /deliveredSmall/);
   assert.match(realizationSource, /deliveredLarge/);
   assert.match(realizationSource, /addField\("PIN akses untuk konfirmasi \*", "token", "password"/);
@@ -446,7 +445,8 @@ test("organoleptic meal options remain normal text for manual marking", () => {
 
 
 test("Data Master exposes the AI assistant as an internal tab without adding a new primary navigation item", () => {
-  assert.match(masterSource, /const aiTab=el\("button",null,"Asisten AI"\)/);
+  assert.match(masterSource, /\["ai",\{title:"Asisten AI"\}\]/);
+  assert.match(masterSource, /const tabButton=el\("button",null,definition\.title\)/);
   assert.match(masterSource, /entity==="ai"/);
   assert.match(masterSource, /window\.AutoDocAiAssistant\?\.create/);
   assert.match(htmlSource, /ai-assistant\.js\?v=p2-p3-admin-visual-audit-20261124/);
@@ -574,7 +574,7 @@ test("P2 archive separates distribution list, detail context, and destructive co
 test("P2 Data Master provides desktop category navigation, mobile selection, grouped recipient fields, and a CSV preview gate", () => {
   assert.match(masterSource, /dm-category-select/);
   assert.match(masterSource, /tabs\.insertBefore\(tabButton,categorySelect\)/);
-  assert.match(masterSource, /data-mobileCards/);
+  assert.match(masterSource, /dataset\.mobileCards=String\(entity==="recipients"\)/);
   assert.match(masterSource, /recipientGroups/);
   assert.match(masterSource, /Rincian jumlah/);
   assert.match(masterSource, /dm-import-preview/);
@@ -584,7 +584,7 @@ test("P2 Data Master provides desktop category navigation, mobile selection, gro
 
 test("P2 quick AI menu shortcut opens menu mode and analysis results are organized as a review queue", () => {
   assert.match(source, /docsAiMenuAssist/);
-  assert.match(source, /AutoDocMaster\?\.open\("ai","",\{mode:"menus"\}\)/);
+  assert.match(source, /window\.AutoDocMaster\.open\("ai","",\{mode:"menus"\}\)/);
   assert.match(aiSource, /render\(container,options=\{\}\)/);
   assert.match(aiSource, /Antrean pemeriksaan/);
   assert.match(aiSource, /ai-review-status/);
@@ -593,7 +593,7 @@ test("P2 quick AI menu shortcut opens menu mode and analysis results are organiz
 
 test("P3 visual audit styles cover vertical desktop navigation, mobile dropdown, recipient cards, and paired realization", () => {
   const stylesSource = readFileSync(new URL("../theme.css", import.meta.url), "utf8");
-  assert.match(stylesSource, /\.dm-tabs\{grid-column:1;grid-row:2;position:static;display:flex;flex-direction:column/);
+  assert.match(stylesSource, /\.dm-tabs\{grid-column:1;grid-row:2;position:static;top:auto;display:flex;flex-direction:column/);
   assert.match(stylesSource, /\.dm-category-select\{display:block/);
   assert.match(stylesSource, /\.dm-table\[data-mobile-cards=true\] tr\.dm-data-row/);
   assert.match(stylesSource, /\.docs-portion-comparison\{display:grid;grid-template-columns:repeat\(2/);
