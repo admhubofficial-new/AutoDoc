@@ -64,9 +64,9 @@ function organolepticSheet(doc,data,recipient){
  sheet.append(organolepticElement(doc,"div","followup","Tindak Lanjut:"));
  const signs=organolepticElement(doc,"div","signs");
  const left=organolepticElement(doc,"div","sign");
- left.append(organolepticElement(doc,"div","","Mengetahui,"),organolepticElement(doc,"div","","Ahli Gizi Dapur"),organolepticElement(doc,"div","space"),organolepticElement(doc,"div","sign-line"),organolepticElement(doc,"div","sign-person",data.ahliGizi||""));
+ const leftHeading=organolepticElement(doc,"div","sign-heading");leftHeading.append(organolepticElement(doc,"div","","Mengetahui,"),organolepticElement(doc,"div","","Ahli Gizi Dapur"));\n left.append(leftHeading,organolepticElement(doc,"div","space"),organolepticElement(doc,"div","sign-person",data.ahliGizi||""),organolepticElement(doc,"div","sign-line"));
  const right=organolepticElement(doc,"div","sign");
- right.append(organolepticElement(doc,"div","","Petugas Uji Organoleptik"),organolepticElement(doc,"div","space"),organolepticElement(doc,"div","sign-line"),organolepticElement(doc,"div","sign-person",""));
+ const rightHeading=organolepticElement(doc,"div","sign-heading");rightHeading.append(organolepticElement(doc,"div","","Petugas Uji Organoleptik"));\n right.append(rightHeading,organolepticElement(doc,"div","space"),organolepticElement(doc,"div","sign-person",""),organolepticElement(doc,"div","sign-line"));
  signs.append(left,right);sheet.append(signs);
  return sheet;
 }
