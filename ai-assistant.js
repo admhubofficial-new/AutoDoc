@@ -8,7 +8,7 @@ const RECIPIENT_FIELDS = [
  ["putus_sekolah","Anak putus sekolah","number"],["kader","Kader","number"]
 ];
 const COUNT_FIELDS = new Set(["siswa_kecil","siswa_besar","tendik","ibu_hamil","ibu_menyusui","balita","putus_sekolah","kader"]);
-const ALLOWED_EXTENSIONS = new Set(["pdf","doc","docx","xls","xlsx","csv","tsv","txt","md","rtf","odt","ppt","pptx","json","png","jpg","jpeg","webp"]);
+const ALLOWED_EXTENSIONS = new Set(["pdf","doc","docx","xls","xlsx","csv","tsv","txt","md","rtf","odt","ppt","pptx","json","html","xml","iif","png","jpg","jpeg","webp"]);
 function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMessage}) {
  let host=null, selectedFiles=[], mode="both", dateValue="";
  function text(parent,tag,cls,value){const element=el(tag,cls,value);parent.append(element);return element;}
@@ -103,7 +103,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
     }
     const result=await api("ai/analyze",{mode:modeSelect.value,tanggal:date.value,text:sourceText,files:filePayloads});
     mode=modeSelect.value;dateValue=date.value;
-    renderAnalysis(resultContent,analysis);
+    renderAnalysis(resultContent,result.analysis);
     results.hidden=false;
     setMessageSafe(result.message||"Analisis selesai. Periksa seluruh usulan sebelum menyimpan.");
     results.scrollIntoView({behavior:"smooth",block:"start"});
