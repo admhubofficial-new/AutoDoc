@@ -379,3 +379,18 @@ test("organoleptic signature names render above aligned horizontal lines", () =>
   assert.match(source, /sign-heading\{height:10mm/);
   assert.match(source, /sign-person\{height:5mm/);
 });
+
+
+test("archive history supports selecting individual or all documents for batch printing", () => {
+  assert.match(source, /id='docsPrintSelectAll'/);
+  assert.match(source, /Pilih semua dokumen/);
+  assert.match(source, /id='docsPrintSelected'/);
+  assert.match(source, /Cetak dipilih/);
+  assert.match(source, /data-print-doc-id/);
+  assert.match(source, /selectedPrintIds\\.add/);
+  assert.match(source, /selectedPrintIds\\.delete/);
+  assert.match(source, /currentDocs\\.filter\\(doc=>selectedPrintIds\\.has\\(String\\(doc\\.id\\)\\)\\)/);
+  assert.match(source, /renderDocumentGroup\\(group,selectedPrintIds,updatePrintSelection\\)/);
+  assert.match(source, /\\.batch-page-break\\{break-before:page/);
+  assert.match(source, /docs\\/mark-printed/);
+});
