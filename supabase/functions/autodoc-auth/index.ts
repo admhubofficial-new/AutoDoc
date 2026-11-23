@@ -1,4 +1,11 @@
-import { signSessionPayload, toBase64Url, verifySessionPayload } from "./session.ts";
+import {
+  createThrottleIdentityToken,
+  signSessionPayload,
+  toBase64Url,
+  verifySessionPayload,
+  verifyThrottleIdentityToken,
+} from "./session.ts";
+import { AiRequestGate } from "./request-controls.ts";
 import {
   joinMenuComponents,
   normalizeDocumentKinds,
@@ -14,6 +21,11 @@ import {
   normalizeUuidList,
   parseContentRangeTotal,
   parseNonNegativeInteger,
+  parseRetryAfterSeconds,
+  readBoundedJson,
+  RequestBodyError,
+  fetchResponseTextWithTimeout,
+  RequestTimeoutError,
 } from "./validation.ts";
 
 // AutoDoc authentication backend for the GitHub Pages frontend.
@@ -23,15 +35,22 @@ const APP_ORIGIN = "https://admhubofficial-new.github.io";
 const COOKIE_NAME = "__Host-autodoc_session";
 const SESSION_SECONDS = 12 * 60 * 60;
 const MAX_BODY_BYTES = 8 * 1024;
+const DOCS_CREATE_MAX_BODY_BYTES = 1024 * 1024;
+const THROTTLE_COOKIE_NAME = "__Host-autodoc_login";
+const THROTTLE_COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
+const AI_REQUEST_TIMEOUT_MS = 45_000;
+const AI_REQUEST_GATE = new AiRequestGate(2, 6, 10 * 60 * 1000, 2000);
 const encoder = new TextEncoder();
 
 class AppError extends Error {
   status: number;
   code?: string;
-  constructor(status: number, message: string, code?: string) {
+  headers?: HeadersInit;
+  constructor(status: number, message: string, code?: string, headers?: HeadersInit) {
     super(message);
     this.status = status;
     this.code = code;
+    this.headers = headers;
   }
 }
 
@@ -292,25 +311,56 @@ function respond(
 }
 
 async function readJson(request: Request, maxBytes = MAX_BODY_BYTES): Promise<Record<string, unknown>> {
-  const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > maxBytes) throw new AppError(413, "Permintaan terlalu besar.");
-  const raw = await request.text();
-  if (encoder.encode(raw).length > maxBytes) {
-    throw new AppError(413, "Permintaan terlalu besar.");
-  }
   try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("invalid");
+    return await readBoundedJson(request, maxBytes);
+  } catch (error) {
+    if (error instanceof RequestBodyError) {
+      throw new AppError(error.status, error.message);
     }
-    return parsed as Record<string, unknown>;
-  } catch {
     throw new AppError(400, "Format permintaan tidak valid.");
   }
 }
 
-async function throttleKey(): Promise<string> {
-  return hmacHex("autodoc-global-login-throttle-v1");
+function appendCookie(response: Response, cookie: string | null): Response {
+  if (cookie) response.headers.append("Set-Cookie", cookie);
+  return response;
+}
+
+async function throttleKey(request: Request): Promise<{ keyHash: string; cookie: string | null }> {
+  const now = Math.floor(Date.now() / 1000);
+  const key = await hmacKey();
+  const existingCookie = getCookie(request, THROTTLE_COOKIE_NAME);
+  const existingIdentity = existingCookie
+    ? await verifyThrottleIdentityToken(existingCookie, key, now)
+    : null;
+  if (existingIdentity) {
+    return {
+      keyHash: await hmacHex("autodoc-login-throttle-v2:" + existingIdentity),
+      cookie: null,
+    };
+  }
+
+  // An authenticated request can use its verified session nonce if the
+  // browser has not yet received the dedicated anonymous throttle cookie.
+  const sessionToken = getCookie(request, COOKIE_NAME);
+  if (sessionToken) {
+    const session = await verifySessionPayload(sessionToken, key, now, SESSION_SECONDS);
+    if (session) {
+      return {
+        keyHash: await hmacHex("autodoc-login-throttle-session-v2:" + session.nonce),
+        cookie: null,
+      };
+    }
+  }
+
+  const issued = await createThrottleIdentityToken(key, now);
+  const cookie = THROTTLE_COOKIE_NAME + "=" + issued.token +
+    "; Path=/; Max-Age=" + THROTTLE_COOKIE_MAX_AGE +
+    "; HttpOnly; Secure; SameSite=None; Partitioned";
+  return {
+    keyHash: await hmacHex("autodoc-login-throttle-v2:" + issued.identity),
+    cookie,
+  };
 }
 
 type ThrottleState = {
@@ -671,16 +721,30 @@ async function verifyMutationPin(request: Request, rawToken: unknown, purpose: s
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
   const token = normalizeToken(rawToken);
   if (!token) throw new AppError(400, "Masukkan PIN akses untuk mengonfirmasi tindakan ini.");
-  const keyHash = await throttleKey();
-  const locked = await requireUnlocked(request, keyHash);
-  if (locked) throw new AppError(429, "Akses terkunci sementara. Coba kembali setelah masa penguncian berakhir.");
+  const throttle = await throttleKey(request);
+  const stateBefore = await checkThrottle(throttle.keyHash);
+  if (stateBefore.locked) {
+    throw new AppError(
+      429,
+      "Akses pada browser ini terkunci sementara. Coba kembali setelah masa penguncian berakhir.",
+      undefined,
+      { "Retry-After": String(stateBefore.retryAfterSeconds) },
+    );
+  }
   const valid = await rpc<boolean>("verify_access_token", { p_token: token });
   if (!valid) {
-    const state = await recordFailure(keyHash);
-    if (state.locked) throw new AppError(429, "Terlalu banyak percobaan. Akses dikunci selama 15 menit.");
+    const state = await recordFailure(throttle.keyHash);
+    if (state.locked) {
+      throw new AppError(
+        429,
+        "Terlalu banyak percobaan pada browser ini. Akses dikunci selama 15 menit.",
+        undefined,
+        { "Retry-After": String(state.retryAfterSeconds) },
+      );
+    }
     throw new AppError(401, "PIN akses tidak sesuai.");
   }
-  await clearFailures(keyHash);
+  await clearFailures(throttle.keyHash);
   await insertRow("audit_log", {
     aksi: "pin_dikonfirmasi_ulang",
     tabel: "settings",
@@ -844,7 +908,7 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
 
 async function handleDocsCreate(request: Request): Promise<Response> {
   if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
-  const body = await readJson(request);
+  const body = await readJson(request, DOCS_CREATE_MAX_BODY_BYTES);
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
 
   if (!validIsoDate(body.tanggal)) throw new AppError(400, "Tanggal distribusi tidak valid.");
@@ -1282,7 +1346,7 @@ async function handleDocsRealization(request: Request): Promise<Response> {
 function lockResponse(request: Request, seconds: number): Response {
   return respond(
     request,
-    { message: "Terlalu banyak percobaan. Akses dikunci selama 15 menit." },
+    { message: "Terlalu banyak percobaan pada browser ini. Akses dikunci selama 15 menit." },
     429,
     { "Retry-After": String(seconds) },
   );
@@ -1310,9 +1374,7 @@ async function handleSetupComplete(request: Request): Promise<Response> {
   const submittedPin = normalizeToken(body.token);
   const startSj = Number(body.startNumberSj);
   const startBast = Number(body.startNumberBast);
-  if (!submittedPin) {
-    throw new AppError(400, "Masukkan PIN MASUK yang valid (6–128 karakter).");
-  }
+  if (!submittedPin) throw new AppError(400, "Masukkan PIN MASUK yang valid (6–128 karakter).");
   if (
     !Number.isSafeInteger(startSj) || startSj < 1 ||
     !Number.isSafeInteger(startBast) || startBast < 1
@@ -1320,15 +1382,22 @@ async function handleSetupComplete(request: Request): Promise<Response> {
     throw new AppError(400, "Nomor awal SJ dan BAST harus bilangan bulat minimal 1.");
   }
 
-  const keyHash = await throttleKey();
-  const locked = await requireUnlocked(request, keyHash);
-  if (locked) return locked;
+  const throttle = await throttleKey(request);
+  const throttleState = await checkThrottle(throttle.keyHash);
+  if (throttleState.locked) {
+    return appendCookie(lockResponse(request, throttleState.retryAfterSeconds), throttle.cookie);
+  }
 
   const secretPin = getPinSecret();
   if (!secureEqual(submittedPin, secretPin)) {
-    const state = await recordFailure(keyHash);
-    if (state.locked) return lockResponse(request, state.retryAfterSeconds);
-    throw new AppError(401, "PIN MASUK tidak sesuai.");
+    const state = await recordFailure(throttle.keyHash);
+    if (state.locked) {
+      return appendCookie(lockResponse(request, state.retryAfterSeconds), throttle.cookie);
+    }
+    return appendCookie(
+      respond(request, { message: "PIN MASUK tidak sesuai." }, 401),
+      throttle.cookie,
+    );
   }
 
   try {
@@ -1340,13 +1409,15 @@ async function handleSetupComplete(request: Request): Promise<Response> {
         p_start_bast: startBast,
       },
     );
-    await clearFailures(keyHash);
-    return respond(
+    await clearFailures(throttle.keyHash);
+    await clearFailures(await hmacHex("autodoc-global-login-throttle-v1"));
+    const response = respond(
       request,
       { success: true, message: "Setup Awal berhasil. Selamat datang di AutoDoc." },
       200,
       { "Set-Cookie": await createSessionCookie(Number(result.session_version)) },
     );
+    return appendCookie(response, throttle.cookie);
   } catch (error) {
     const code = (error as AppError).code;
     if (code === "55000") throw new AppError(409, "Setup Awal sudah pernah diselesaikan atau tidak tersedia.");
@@ -1374,20 +1445,28 @@ async function handleLogin(request: Request): Promise<Response> {
     );
   }
 
-  const keyHash = await throttleKey();
-  const locked = await requireUnlocked(request, keyHash);
-  if (locked) return locked;
+  const throttle = await throttleKey(request);
+  const throttleState = await checkThrottle(throttle.keyHash);
+  if (throttleState.locked) {
+    return appendCookie(lockResponse(request, throttleState.retryAfterSeconds), throttle.cookie);
+  }
 
   const sessionVersion = await rpc<number | null>("authenticate_access_token", {
     p_token: token,
   });
   if (sessionVersion === null) {
-    const state = await recordFailure(keyHash);
-    if (state.locked) return lockResponse(request, state.retryAfterSeconds);
-    throw new AppError(401, "PIN MASUK tidak sesuai.");
+    const state = await recordFailure(throttle.keyHash);
+    if (state.locked) {
+      return appendCookie(lockResponse(request, state.retryAfterSeconds), throttle.cookie);
+    }
+    return appendCookie(
+      respond(request, { message: "PIN MASUK tidak sesuai." }, 401),
+      throttle.cookie,
+    );
   }
 
-  await clearFailures(keyHash);
+  await clearFailures(throttle.keyHash);
+  await clearFailures(await hmacHex("autodoc-global-login-throttle-v1"));
   await insertRow("audit_log", {
     aksi: "login_berhasil",
     tabel: "settings",
@@ -1397,12 +1476,13 @@ async function handleLogin(request: Request): Promise<Response> {
     nilai_baru: { login: true },
     detail: { metode: "PIN MASUK", hasil: "berhasil" },
   });
-  return respond(
+  const response = respond(
     request,
     { success: true, message: "Berhasil masuk." },
     200,
     { "Set-Cookie": await createSessionCookie(Number(sessionVersion)) },
   );
+  return appendCookie(response, throttle.cookie);
 }
 
 async function handleSession(request: Request): Promise<Response> {
@@ -2016,6 +2096,23 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
     throw new AppError(503, "Secret API OPEN AI AutoDoc belum tersedia di Supabase Edge Function.");
   }
 
+  const sessionToken = getCookie(request, COOKIE_NAME);
+  if (!sessionToken) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const sessionKey = await hmacHex("autodoc-ai-admission-v1:" + sessionToken);
+  const admission = AI_REQUEST_GATE.acquire(sessionKey);
+  if (!admission.allowed) {
+    const message = admission.reason === "concurrency"
+      ? "Asisten AI sedang memproses permintaan lain. Coba kembali sebentar lagi."
+      : "Batas analisis AI untuk sesi ini tercapai. Coba kembali setelah jeda yang ditentukan.";
+    return respond(
+      request,
+      { message, retry_after_seconds: admission.retryAfterSeconds },
+      429,
+      { "Retry-After": String(admission.retryAfterSeconds) },
+    );
+  }
+
+  try {
   const currentRecipients = mode === "menus" || mode === "master" ? [] : await supabaseRequest<Array<Record<string, unknown>>>(
     "recipients?" + new URLSearchParams({
       select: "id,kelompok,nama,jenjang,alamat,siswa_kecil,siswa_besar,tendik,ibu_hamil,ibu_menyusui,balita,putus_sekolah,kader,porsi_kecil,porsi_besar,total_porsi,aktif,urutan,keterangan,perlu_verifikasi,catatan_verifikasi",
@@ -2076,35 +2173,60 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
       ? { type: "input_image", image_url: file.dataUrl }
       : { type: "input_file", filename: file.name, file_data: file.dataUrl });
   }
-  const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { Authorization: "Bearer " + openAiKey.trim(), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "gpt-6.2-astra",
-      reasoning: { effort: "high" },
-      store: false,
-      max_output_tokens: 12000,
-      input: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "autodoc_ai_import",
-          strict: true,
-          schema: aiOutputSchema(),
-        },
+  let openAiResponse: Response;
+  let rawResponse: string;
+  try {
+    const upstream = await fetchResponseTextWithTimeout(
+      "https://api.openai.com/v1/responses",
+      {
+        method: "POST",
+        headers: { Authorization: "Bearer " + openAiKey.trim(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-6.2-astra",
+          reasoning: { effort: "high" },
+          store: false,
+          max_output_tokens: 12000,
+          input: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content },
+          ],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "autodoc_ai_import",
+              strict: true,
+              schema: aiOutputSchema(),
+            },
+          },
+        }),
       },
-    }),
-  });
-  const rawResponse = await openAiResponse.text();
+      AI_REQUEST_TIMEOUT_MS,
+    );
+    openAiResponse = upstream.response;
+    rawResponse = upstream.bodyText;
+  } catch (error) {
+    if (error instanceof RequestTimeoutError) {
+      throw new AppError(504, "Layanan AI tidak merespons dalam 45 detik. Coba kembali.");
+    }
+    throw new AppError(502, "Koneksi ke layanan AI gagal. Coba kembali beberapa saat lagi.");
+  }
   let responsePayload: Record<string, unknown> = {};
   try { responsePayload = JSON.parse(rawResponse) as Record<string, unknown>; } catch { /* handled below */ }
   if (!openAiResponse.ok) {
     const status = openAiResponse.status;
     if (status === 401 || status === 403) throw new AppError(502, "OpenAI menolak API key. Periksa secret API OPEN AI AutoDoc di Supabase.");
-    if (status === 429) throw new AppError(429, "Batas penggunaan OpenAI tercapai. Coba beberapa saat lagi.");
+    if (status === 429 || status === 503) {
+      const retrySeconds = parseRetryAfterSeconds(openAiResponse.headers.get("retry-after"));
+      const headers = retrySeconds === null ? undefined : { "Retry-After": String(retrySeconds) };
+      throw new AppError(
+        status,
+        status === 429
+          ? "Batas penggunaan OpenAI tercapai. Tunggu sesuai petunjuk Retry-After sebelum mencoba lagi."
+          : "Layanan OpenAI sedang padat. Tunggu sebentar sebelum mencoba lagi.",
+        undefined,
+        headers,
+      );
+    }
     if (status === 400) throw new AppError(502, "Format file atau model AI tidak dapat diproses oleh OpenAI.");
     throw new AppError(502, "OpenAI tidak dapat memproses dokumen saat ini. Coba kembali atau gunakan file yang lebih kecil.");
   }
@@ -2141,6 +2263,9 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
     analysis,
     message: "Analisis selesai. Periksa seluruh hasil dan konfirmasi sebelum menyimpan perubahan.",
   });
+  } finally {
+    admission.release();
+  }
 }
 
 Deno.serve(async (request: Request) => {
@@ -2191,7 +2316,7 @@ Deno.serve(async (request: Request) => {
     }
   } catch (error) {
     if (error instanceof AppError) {
-      return respond(request, { message: error.message }, error.status);
+      return respond(request, { message: error.message }, error.status, error.headers);
     }
     // Do not log request bodies, cookies, or environment variables.
     console.error("AutoDoc auth request failed.");
