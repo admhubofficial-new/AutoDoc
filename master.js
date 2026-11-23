@@ -33,7 +33,7 @@ function init(){
    if(window.AutoDocDocuments?.applyAiMenuPlan)window.AutoDocDocuments.applyAiMenuPlan(plan);
    else{modal.hidden=false;document.body.style.overflow="hidden";entity="ai";render();msg("Modul Buat Dokumen belum siap. Muat ulang halaman dan coba kembali.",true)}
   },
-  onRecipientsChanged:async()=>{const updated=await api("master/list");cache=updated.data||{};window.dispatchEvent(new Event("autodoc:data-changed"))},
+  onMasterChanged:async()=>{const updated=await api("master/list");cache=updated.data||{};window.dispatchEvent(new Event("autodoc:data-changed"))},
   setMessage:msg
  })||null;
  modal.addEventListener("click",e=>{if(e.target===modal)close()});document.addEventListener("keydown",e=>{
