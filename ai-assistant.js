@@ -182,7 +182,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onRecipientsChanged,setMes
      const wrap=text(body,"div","ai-change");
      const lab=text(wrap,"label",""," "+def[1]);
      const current=row.current?.[key]??"";
-     const input=el("input");input.type=def[2]==="number"?"number":"text";input.dataset-recipientField=key;
+     const input=el("input");input.type=def[2]==="number"?"number":"text";input.dataset.recipientField=key;
      input.value=row.proposed?.[key]??"";
      if(def[2]==="number"){input.min="0";input.step="1";input.inputMode="numeric";}
      lab.append(text(lab,"small","","Sebelumnya: "+(current===""?"(kosong)":current)));
