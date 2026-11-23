@@ -54,6 +54,26 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         aktif: true, urutan: 10, total_porsi: 16, siswa_kecil: 16, siswa_besar: 0, tendik: 0,
         ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0
       }], staff: [], drivers: [], vehicles: [], menus: [] } };
+    } else if (routeName === "sheets/status") {
+      payload = { configured: true, connected: true, spreadsheet_title: "PENERIMA MANFAAT UPDATE 2026", source_sheet_name: "Sheet2", source_sheet_gid: 585084563, managed_sheet_exists: false };
+    } else if (routeName === "sheets/preview") {
+      payload = {
+        success: true, sheet_name: "Sheet2", source_kind: "original",
+        summary: { source_rows: 1, updated: 1, new: 0, same: 0, review: 0, ready: 1 },
+        warnings: [],
+        changes: [{
+          row_number: 2, action: "update", can_apply: true,
+          current: { id: recipientId, nama: "SDN UJI BROWSER" },
+          proposed: { id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga" },
+          changed_fields: ["siswa_kecil"]
+        }]
+      };
+    } else if (routeName === "sheets/apply") {
+      writes.push({ route: routeName, body: request.postDataJSON() });
+      payload = { success: true, imported: 1 };
+    } else if (routeName === "sheets/push") {
+      writes.push({ route: routeName, body: request.postDataJSON() });
+      payload = { success: true, row_count: 1, sheet_name: "AutoDoc_Penerima" };
     } else if (routeName === "ai/analyze") {
       writes.push({ route: routeName, body: request.postDataJSON() });
       const aiBody = request.postDataJSON();
@@ -231,6 +251,37 @@ test("AI beneficiary update is only imported after the user selects the row and 
     assert.ok(importRequest);
     assert.equal(importRequest.body.rows[0].siswa_kecil, 18);
     assert.equal(app.writes.some(item => item.route === "docs/create"), false);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
+});
+
+test("Google Sheets shows a read-only preview and requires explicit confirmation for both sync directions", async () => {
+  const app = await openApp();
+  try {
+    const page = app.page;
+    await page.locator('[data-home-nav="master"]').click();
+    await page.getByRole("button", { name: "Google Sheets" }).click();
+    await page.locator(".gs-status.ok").getByText("Google Sheets berhasil terhubung.").waitFor();
+
+    await page.getByRole("button", { name: "Baca & bandingkan" }).click();
+    await page.getByText("SDN UJI BROWSER", { exact: true }).waitFor();
+    const rowCheckbox = page.locator(".gs-table tbody input[type='checkbox']").first();
+    assert.equal(await rowCheckbox.isChecked(), false);
+    assert.equal(app.writes.some(item => item.route === "sheets/apply"), false);
+
+    await rowCheckbox.check();
+    await page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: /Terapkan 1 baris terpilih/ }).click();
+    await page.getByText(/1 baris berhasil diterapkan/).waitFor();
+    const apply = app.writes.find(item => item.route === "sheets/apply");
+    assert.deepEqual(apply.body.row_numbers, [2]);
+
+    await page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: "Kirim AutoDoc ke Sheets" }).click();
+    const push = app.writes.find(item => item.route === "sheets/push");
+    assert.equal(push.body.confirm, true);
     assert.deepEqual(app.errors, []);
   } finally {
     await app.context.close();
