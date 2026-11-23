@@ -191,7 +191,7 @@ async function deleteRows(table: string, filters: Record<string, string>): Promi
   });
 }
 
-async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
+function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
   return supabaseRequest<T>("rpc/" + encodeURIComponent(name), {
     method: "POST",
     headers: { Prefer: "return=representation" },
@@ -1491,7 +1491,7 @@ async function handleSession(request: Request): Promise<Response> {
   return respond(request, { authenticated: Boolean(session) });
 }
 
-async function handleLogout(request: Request): Promise<Response> {
+function handleLogout(request: Request): Response {
   if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
   return respond(
     request,
@@ -1746,7 +1746,6 @@ function normalizeAiFile(file: unknown): { name: string; mime: string; data: str
   }
   const input = file as Record<string, unknown>;
   const name = cleanText(input.name, "Nama file", true, 180) ?? "";
-  const mime = cleanText(input.mime, "Tipe file", true, 120)?.toLowerCase() ?? "";
   const data = typeof input.data === "string" ? input.data : "";
   if (!data || data.length > 8_500_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) {
     throw new AppError(413, "Ukuran atau format file tidak valid. Maksimal 6 MB.");
@@ -2301,7 +2300,7 @@ Deno.serve(async (request: Request) => {
       case "setup/complete": return await handleSetupComplete(request);
       case "auth/login": return await handleLogin(request);
       case "auth/session": return await handleSession(request);
-      case "auth/logout": return await handleLogout(request);
+      case "auth/logout": return handleLogout(request);
       case "auth/verify-token": return await handleVerifyToken(request);
       case "auth/change-token": return await handleChangeToken(request);
       case "master/list": return await handleMasterList(request);
