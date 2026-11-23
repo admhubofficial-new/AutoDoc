@@ -234,9 +234,12 @@ test("AI beneficiary update is only imported after the user selects the row and 
     await page.once("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: "Konfirmasi & simpan penerima" }).click();
     await page.locator(".ai-status").getByText(/baris penerima berhasil disimpan/).waitFor();
-    const importRequest = app.writes.find(item => item.route === "master/import");
+    const importRequest = app.writes.find(item => item.route === "ai/recipient-apply");
     assert.ok(importRequest);
-    assert.equal(importRequest.body.rows[0].siswa_kecil, 18);
+    assert.equal(importRequest.body.confirm, true);
+    assert.equal(importRequest.body.expected.id, recipientId);
+    assert.equal(importRequest.body.data.siswa_kecil, 18);
+    assert.equal(app.writes.some(item => item.route === "master/import"), false);
     assert.equal(app.writes.some(item => item.route === "docs/create"), false);
     assert.deepEqual(app.errors, []);
   } finally {
@@ -279,7 +282,7 @@ test("AI maps new driver records to Data Master and saves only after selection a
     await page.getByRole("button", { name: "Baca dan klasifikasikan" }).click();
     await page.getByText("Pengemudi · Budi Santoso", { exact: true }).waitFor();
 
-    assert.equal(app.writes.some(item => item.route === "master/save"), false, "analysis must not save data");
+    assert.equal(app.writes.some(item => item.route === "ai/master-apply"), false, "analysis must not save data");
     const row = page.locator("[data-master-row='0']");
     const check = row.locator("[data-include-master]");
     assert.equal(await check.isChecked(), false);
@@ -288,10 +291,13 @@ test("AI maps new driver records to Data Master and saves only after selection a
     await page.getByRole("button", { name: "Konfirmasi & simpan Data Master" }).click();
     await page.locator(".ai-status").getByText("1 data master berhasil disimpan.").waitFor();
 
-    const save = app.writes.find(item => item.route === "master/save");
+    const save = app.writes.find(item => item.route === "ai/master-apply");
     assert.ok(save);
+    assert.equal(save.body.confirm, true);
+    assert.equal(save.body.expected, null);
     assert.equal(save.body.entity, "drivers");
     assert.equal(save.body.data.nama, "Budi Santoso");
+    assert.equal(app.writes.some(item => item.route === "master/save"), false);
     assert.equal(app.writes.some(item => item.route === "master/import"), false);
     assert.deepEqual(app.errors, []);
   } finally {
