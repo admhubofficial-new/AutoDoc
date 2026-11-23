@@ -86,19 +86,17 @@ export async function readBoundedJson(
   if (!request.body) throw new RequestBodyError(400, "Format permintaan tidak valid.");
 
   const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
+  let buffer = new Uint8Array(Math.min(maxBytes, 16 * 1024));
   let totalBytes = 0;
 
   try {
     while (true) {
       const { value, done } = await reader.read();
-      if (done) {
-        break;
-      }
+      if (done) break;
       if (!value?.byteLength) continue;
 
-      totalBytes += value.byteLength;
-      if (totalBytes > maxBytes) {
+      const nextTotal = totalBytes + value.byteLength;
+      if (nextTotal > maxBytes) {
         try {
           await reader.cancel("Batas ukuran permintaan terlampaui.");
         } catch {
@@ -106,7 +104,18 @@ export async function readBoundedJson(
         }
         throw new RequestBodyError(413, "Permintaan terlalu besar.");
       }
-      chunks.push(value);
+
+      if (nextTotal > buffer.byteLength) {
+        const nextCapacity = Math.min(
+          maxBytes,
+          Math.max(nextTotal, buffer.byteLength * 2),
+        );
+        const nextBuffer = new Uint8Array(nextCapacity);
+        nextBuffer.set(buffer.subarray(0, totalBytes));
+        buffer = nextBuffer;
+      }
+      buffer.set(value, totalBytes);
+      totalBytes = nextTotal;
     }
   } catch (error) {
     if (error instanceof RequestBodyError) throw error;
@@ -119,15 +128,8 @@ export async function readBoundedJson(
     }
   }
 
-  const bytes = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
   try {
-    const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, totalBytes)));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new Error("JSON harus berupa objek.");
     }
