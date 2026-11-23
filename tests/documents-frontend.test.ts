@@ -486,9 +486,9 @@ test("organoleptic archive and creation printing use recipient-specific snapshot
 
 test("P4 creation form groups the operator flow and keeps readiness in one compact status", () => {
   const steps = [
-    "1. Informasi distribusi",
-    "2. Menu &amp; penerima",
-    "3. Informasi pengiriman"
+    "Distribusi",
+    "Menu &amp; penerima",
+    "Pengiriman"
   ];
   const positions = steps.map(step => source.indexOf(step));
   assert.ok(positions.every(position => position >= 0));
@@ -503,6 +503,10 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
   assert.match(source, /Pilih minimal satu penerima untuk melanjutkan/);
   assert.ok(source.includes("button.disabled=!ready"));
   assert.ok(source.includes('status("Memuat daftar penerima dan data pendukung...",false,"loading")'));
+  assert.ok(source.includes("hasAiMenuPlanDateMismatch(dateValue)"));
+  assert.ok(source.includes("Penerbitan diblokir: rencana menu AI dibuat untuk"));
+  assert.ok(source.includes("Samakan tanggal distribusi atau lepaskan rencana sebelum menerbitkan."));
+  assert.ok(source.includes("recipientNames.get(id)"));
 });
 
 test("mobile recipient selection stays in the page flow and offers clear grouped filters", () => {
