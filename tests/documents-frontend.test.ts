@@ -398,7 +398,8 @@ test("archive history supports selecting individual or all documents for batch p
 
 
 test("optional distribution details print as blank fields rather than dash placeholders", () => {
-  for (const field of ["dist.jam_berangkat", "dist.nama_petugas", "dist.nama_pengemudi", "dist.no_kendaraan", "dist.menu", "rec.nama", "rec.kelompok", "rec.alamat"]) {
+  assert.ok(printRendererSource.includes("[rec.kelompok,rec.jenjang].filter(Boolean).join(\" / \")"));
+  for (const field of ["dist.jam_berangkat", "dist.nama_petugas", "dist.nama_pengemudi", "dist.no_kendaraan", "dist.menu", "rec.nama", "rec.alamat"]) {
     assert.ok(printRendererSource.includes(field + '||"'), field + " should be blank when absent");
     assert.ok(!printRendererSource.includes(field + '||"—"'), field + " must not show a dash");
   }
