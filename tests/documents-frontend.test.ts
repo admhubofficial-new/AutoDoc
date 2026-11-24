@@ -524,6 +524,8 @@ test("desktop live preview opens beside the form and stays collapsible on narrow
   assert.ok(source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure'>"));
   assert.ok(source.includes('const desktopPreview=window.matchMedia("(min-width: 1120px)")'));
   assert.ok(source.includes("previewDisclosure.open=desktopPreview.matches"));
+  assert.ok(source.includes('const previewSummaryToggle=$(".docs-preview-toggle",previewDisclosure)'));
+  assert.ok(source.includes('previewSummaryToggle.textContent=expanded?"Tutup":"Buka"'));
   assert.ok(source.includes("if(!desktopPreview.matches)"));
   assert.ok(source.includes("id='docsPreviewToggle'"));
   assert.ok(source.includes("aria-controls='docsPreviewDisclosure'"));
