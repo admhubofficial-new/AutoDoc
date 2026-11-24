@@ -76,6 +76,7 @@ function distributionMeta(snapshot,escapeHtml){
     ["Penerima",recipient.nama,"Kelompok",group],
     ["Alamat",recipient.alamat,"Menu",dist.menu],
     ["Pengemudi",dist.nama_pengemudi,"Kendaraan",dist.no_kendaraan],
+    ["Petugas",dist.nama_petugas,"Total Porsi",formatNumber((snapshot.ringkasan||{}).total_porsi)],
   ];
   return "<table class='meta-table' aria-label='Informasi distribusi'><colgroup><col style='width:14%'><col style='width:33.7%'><col style='width:17.1%'><col style='width:35.2%'></colgroup><tbody>"+
     rows.map(row=>"<tr>"+row.map((value,index)=>index%2===0
@@ -132,7 +133,7 @@ function partyFields(rows,escapeHtml){
     "</tbody></table>";
 }
 
-function bastPortionRows(items,real,escapeHtml){
+function bastPortionRows(items,real,escapeHtml,fallbackTotal=0){
   const types=["Porsi Kecil","Porsi Besar"];
   const realRows=Array.isArray(real.items)?real.items:[];
   const quantityByType=field=>realRows.reduce((map,item)=>{
@@ -161,7 +162,8 @@ function bastPortionRows(items,real,escapeHtml){
       "</td><td>"+type+"</td><td class='number-cell'>"+formatNumber(before)+
       "</td><td class='number-cell'>"+(after===""?"":formatNumber(after))+"</td></tr>";
   }).join("");
-  const totalBefore=types.reduce((sum,type)=>sum+(hasReal?(handedByType[type]||0):(snapshotByType[type]||0)),0);
+  const calculatedBefore=types.reduce((sum,type)=>sum+(hasReal?(handedByType[type]||0):(snapshotByType[type]||0)),0);
+  const totalBefore=calculatedBefore||Number(fallbackTotal||0);
   const totalAfter=hasReal?types.reduce((sum,type)=>sum+(receivedByType[type]||0),0):"";
   return {rows,totalBefore,totalAfter};
 }
@@ -184,7 +186,7 @@ function receiptConditions(real,escapeHtml){
     "</tbody></table>";
 }
 
-function bastSignatures(sppg,dist,recipient,real,escapeHtml){
+function bastSignatures(sppg,dist,real,escapeHtml){
   const signer=sppg.nama_kepala_sppg||sppg.nama_kepala_sppi||"";
   return "<div class='signature-grid bast-signatures'>"+
     signatureBlock("PIHAK PERTAMA,","Yang Menyerahkan",safe(escapeHtml,dist.nama_petugas))+
@@ -197,7 +199,7 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
   const sppg=snapshot.sppg||{},dist=snapshot.distribusi||{},recipient=snapshot.penerima||{};
   const items=Array.isArray(snapshot.rincian_porsi)?snapshot.rincian_porsi:[];
   const real=doc.realisasi||{};
-  const rows=bastPortionRows(items,real,escapeHtml);
+  const rows=bastPortionRows(items,real,escapeHtml,(snapshot.ringkasan||{}).total_porsi||0);
   const date=formatDateParts(dist.tanggal).sentence;
   const groups=[
     ["I. PIHAK PERTAMA (yang menyerahkan)",[
@@ -222,7 +224,7 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
     "<th class='number-cell'>"+formatNumber(rows.totalBefore)+"</th><th class='number-cell'>"+(rows.totalAfter===""?"":formatNumber(rows.totalAfter))+"</th></tr></tfoot></table>"+
     receiptConditions(real,escapeHtml)+
     "<p class='bast-closing'>Demikian Berita Acara Serah Terima ini dibuat dengan sebenarnya dalam rangkap 2 (dua) untuk dipergunakan sebagaimana mestinya, sebagai dasar pencatatan jumlah porsi yang diterima penerima manfaat.</p>"+
-    bastSignatures(sppg,dist,recipient,real,escapeHtml)+"</main>";
+    bastSignatures(sppg,dist,real,escapeHtml)+"</main>";
 }
 
 const PRINT_STYLES=`
@@ -271,7 +273,7 @@ body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-s
 .signature-cell strong{display:block;font-size:10pt;font-weight:700}
 .signature-cell span{display:block;min-height:4mm}
 .signature-space{height:27mm;flex:none}
-.signature-dots{font-size:10pt;white-space:nowrap}
+.signature-person{min-height:4mm;padding-top:1mm;font-size:10pt;overflow-wrap:anywhere}.sign-line{width:82%;height:1px;flex:none;margin:0 auto;border-bottom:1px solid #111}.signature-dots{font-size:10pt;white-space:nowrap}
 .bast-opening{margin:0 0 2mm;text-align:justify;font-size:10pt;line-height:1.25}
 .party-section{margin:0 0 1mm}
 .party-section h3{margin:0 0 1mm;font-size:10pt;line-height:1.2;font-weight:700}
