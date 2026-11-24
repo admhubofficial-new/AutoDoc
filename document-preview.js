@@ -34,7 +34,7 @@ function renderOrganolepticPreview(frame,recipient,date,menu,settings){
   doc.body.classList.add("preview-mode");
   doc.body.style.width="794px";doc.body.style.minHeight="1123px";doc.body.style.margin="0";doc.body.style.padding="0";doc.body.style.background="#fff";
   const root=doc.getElementById("previewRoot");
-  root.append(renderer.organolepticSheet(doc,{tanggalLabel:dateLabel,ahliGizi:String(settings.nama_ahli_gizi||""),menu},recipient));
+  root.append(renderer.organolepticSheet(doc,{tanggalLabel:dateLabel,ahliGizi:String(settings.nama_ahli_gizi||""),menu,nomor:"(ditetapkan setelah terbit)"},recipient));
   fitPreviewFrame();
  };
  frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>"+css+"</style></head><body class='preview-mode' data-preview-type='organoleptic'><main id='previewRoot'></main></body></html>";
