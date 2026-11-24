@@ -265,13 +265,30 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
       "Menu & penerima",
       "Pengiriman"
     ]);
-    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
-    const previewPosition = await page.locator("#docsPreviewDisclosure").evaluate(element => getComputedStyle(element).position);
-    assert.equal(previewPosition, "static");
+    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
+    const previewLayout = await page.evaluate(() => {
+      const layout = document.querySelector(".docs-create-layout");
+      const form = document.querySelector(".docs-create-form-panel");
+      const preview = document.querySelector("#docsPreviewDisclosure");
+      const formRect = form.getBoundingClientRect();
+      const previewRect = preview.getBoundingClientRect();
+      return {
+        display: getComputedStyle(layout).display,
+        columns: getComputedStyle(layout).gridTemplateColumns.trim().split(/\\s+/).length,
+        position: getComputedStyle(preview).position,
+        beside: previewRect.left >= formRect.right - 1
+      };
+    });
+    assert.equal(previewLayout.display, "grid");
+    assert.equal(previewLayout.columns, 2);
+    assert.equal(previewLayout.position, "sticky");
+    assert.equal(previewLayout.beside, true);
     assert.equal(await page.locator("#docsShippingDisclosure").evaluate(element => element.open), false);
     assert.equal(await page.locator("#docsCreateButton").isDisabled(), true);
     assert.match(await page.locator("#docsPreflightSummary").textContent(), /minimal satu penerima/);
 
+    await page.locator("#docsPreviewToggle").click();
+    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
     await page.locator("#docsPreviewToggle").click();
     assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
     const emptyPreview = page.frameLocator("#docsPreviewFrame").locator("body");
@@ -285,7 +302,6 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     assert.equal(await page.locator("#docsCreateButton").isDisabled(), false);
     await page.locator("#docsRecipientGroup").selectOption("Sekolah/Lembaga");
     assert.equal(await page.locator(".docs-recipient:visible").count(), 1);
-    await page.locator("#docsPreviewDisclosure").evaluate(element => { element.open = true; });
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("SDN UJI BROWSER", { exact: false }).waitFor();
     const recipientOverflow = await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY);
