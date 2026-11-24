@@ -77,7 +77,7 @@ function distributionMeta(snapshot,escapeHtml){
     ["Alamat",recipient.alamat,"Menu",dist.menu],
     ["Pengemudi",dist.nama_pengemudi,"Kendaraan",dist.no_kendaraan],
   ];
-  return "<table class='meta-table' aria-label='Informasi distribusi'><colgroup><col class='meta-label-col'><col><col class='meta-label-col-right'><col></colgroup><tbody>"+
+  return "<table class='meta-table' aria-label='Informasi distribusi'><colgroup><col style='width:14%'><col style='width:33.7%'><col style='width:17.1%'><col style='width:35.2%'></colgroup><tbody>"+
     rows.map(row=>"<tr>"+row.map((value,index)=>index%2===0
       ? "<th scope='row'>"+safe(escapeHtml,value)+"</th>"
       : "<td>: "+safe(escapeHtml,value)+"</td>").join("")+"</tr>").join("")+
@@ -157,7 +157,7 @@ function receiptConditions(real,escapeHtml){
   const checks=["baik","kurang baik","tidak layak"].map(value=>
     "["+(condition===value?"✓":"    ")+"] "+(value==="baik"?"Baik":value==="kurang baik"?"Kurang baik":"Tidak layak")
   ).join("        ");
-  const time=real.jam_diterima?String(real.jam_diterima)+" WIB":".................... WIB";
+  const time=real.jam_diterima?String(real.jam_diterima).slice(0,5)+" WIB":".................... WIB";
   const containers=real.ompreng_kembali===null||real.ompreng_kembali===undefined||real.ompreng_kembali===""
     ?".................... buah":formatNumber(real.ompreng_kembali)+" buah";
   const notes=real.catatan||"";
@@ -202,7 +202,7 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
     "<p class='bast-opening'>Pada hari ini, "+safe(escapeHtml,date)+", bertempat di "+safe(escapeHtml,recipient.nama)+", kami yang bertanda tangan di bawah ini:</p>"+
     groups.map(group=>"<section class='party-section'><h3>"+group[0]+"</h3>"+partyFields(group[1],escapeHtml)+"</section>").join("")+
     "<p class='bast-transfer'>PIHAK PERTAMA telah menyerahkan dan PIHAK KEDUA telah menerima paket Makan Bergizi Gratis (MBG) untuk penerima manfaat dengan rincian sebagai berikut:</p>"+
-    "<table class='portion-table bast-portions'><colgroup><col style='width:5.7%'><col style='width:38%'><col style='width:18.7%'><col style='width:18.8%'><col style='width:18.8%'></colgroup>"+
+    "<table class='portion-table bast-portions'><colgroup><col style='width:6.2%'><col style='width:37.8%'><col style='width:18.7%'><col style='width:18.65%'><col style='width:18.65%'></colgroup>"+
     "<thead><tr><th>No.</th><th>Kelompok sasaran</th><th>Jenis porsi</th><th>Jumlah Sebelum</th><th>Jumlah Sesudah</th></tr></thead>"+
     "<tbody>"+rows.rows+"</tbody><tfoot><tr><th colspan='3' class='total-label'>TOTAL PORSI</th>"+
     "<th class='number-cell'>"+formatNumber(rows.totalBefore)+"</th><th class='number-cell'>"+(rows.totalAfter===""?"":formatNumber(rows.totalAfter))+"</th></tr></tfoot></table>"+
@@ -217,7 +217,7 @@ const PRINT_STYLES=`
 html,body{margin:0;padding:0}
 body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:10pt;line-height:1.25;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .sheet{width:210mm;height:297mm;min-height:297mm;margin:18px auto;padding:15mm 20mm;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18);overflow:hidden}
-.letterhead{display:grid;grid-template-columns:22mm minmax(0,1fr) 18mm;align-items:center;min-height:27mm;padding:0 0 4mm;border-bottom:3px double #111}
+.letterhead{display:grid;grid-template-columns:24.65mm minmax(0,1fr) 19.4mm;align-items:center;min-height:27mm;padding:0 0 4mm;border-bottom:3px double #111}
 .letterhead-logo{display:flex;align-items:center;justify-content:flex-start}
 .top-logo{display:block;width:20.6mm;height:20.4mm;object-fit:contain}
 .letterhead-copy{text-align:center;min-width:0}
