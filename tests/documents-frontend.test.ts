@@ -528,7 +528,7 @@ test("desktop live preview opens beside the form and stays collapsible on narrow
   assert.ok(source.includes("id='docsPreviewToggle'"));
   assert.ok(source.includes("aria-controls='docsPreviewDisclosure'"));
   assert.match(stylesSource, /grid-template-columns:\s*minmax\(0, 1\.08fr\) minmax\(400px, \.92fr\)/);
-  assert.match(stylesSource, /\.docs-preview-panel\s*\{[^}]*position:\s*sticky/s);
+  assert.match(stylesSource, /@media \(min-width: 1120px\)[\s\S]*?\.docs-preview-panel\s*\{[^}]*position:\s*sticky/);
   assert.doesNotMatch(stylesSource, /docs-preview-caption|docs-create-intro|docs-section-number/);
   assert.ok(previewSource.includes('disclosure.addEventListener("toggle",fitPreviewFrame)'));
   assert.ok(!previewSource.includes("mobilePreview"));
