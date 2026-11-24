@@ -38,6 +38,7 @@ table.grid tbody td{height:10mm}
 .sign{display:flex;width:72mm;min-width:0;flex-direction:column;text-align:center}
 .sign-heading{height:10mm;display:flex;flex-direction:column;justify-content:flex-start}
 .sign .space{height:22mm;flex:none}
+.sign .sign-line{width:82%;height:1px;flex:none;margin:0 auto;border-bottom:1px solid #000}
 .sign-person{height:5mm;flex:none;padding-top:0;font-size:10.5pt;white-space:nowrap}
 .sign-person.named{text-decoration:underline}
 .sheet[data-menu-count="6"] table.grid tbody tr,
