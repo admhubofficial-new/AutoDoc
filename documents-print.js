@@ -101,15 +101,17 @@ function portionTable(items,total,escapeHtml){
     "<tfoot><tr><th colspan='3' class='total-label'>Total</th><th class='number-cell'>"+formatNumber(total)+"</th></tr></tfoot></table>";
 }
 
-function signatureDots(){
-  return "<div class='signature-dots'>( .............................. )</div>";
+function signatureBlock(title,role,name){
+  return "<div class='signature-cell'><strong>"+title+"</strong><span>"+(role||"&nbsp;")+"</span>"+
+    "<div class='signature-space'></div><div class='signature-person'>"+(name||"&nbsp;")+"</div>"+
+    "<div class='sign-line'></div></div>";
 }
 
-function sjSignatures(recipient,escapeHtml){
+function sjSignatures(dist,recipient,escapeHtml){
   return "<div class='signature-grid sj-signatures'>"+
-    "<div class='signature-cell'><strong>Yang Menyerahkan</strong><span>Petugas Distribusi SPPG</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
-    "<div class='signature-cell'><strong>Pengemudi</strong><span>&nbsp;</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
-    "<div class='signature-cell'><strong>Yang Menerima</strong><span>"+safe(escapeHtml,recipient.nama)+"</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
+    signatureBlock("Yang Menyerahkan","Petugas Distribusi SPPG",safe(escapeHtml,dist.nama_petugas))+
+    signatureBlock("Pengemudi","&nbsp;",safe(escapeHtml,dist.nama_pengemudi))+
+    signatureBlock("Yang Menerima",safe(escapeHtml,recipient.nama),"")+
     "</div>";
 }
 
@@ -121,7 +123,7 @@ function buildSuratJalan(snapshot,doc,logoUrl,escapeHtml){
     documentHeading("SJ",doc.nomor_lengkap,escapeHtml)+
     distributionMeta(snapshot,escapeHtml)+
     portionTable(items,total,escapeHtml)+
-    sjSignatures(recipient,escapeHtml)+"</main>";
+    sjSignatures(dist,recipient,escapeHtml)+"</main>";
 }
 
 function partyFields(rows,escapeHtml){
@@ -131,24 +133,36 @@ function partyFields(rows,escapeHtml){
 }
 
 function bastPortionRows(items,real,escapeHtml){
-  const receivedByType=new Map();
-  (real.items||[]).forEach(item=>{
+  const types=["Porsi Kecil","Porsi Besar"];
+  const realRows=Array.isArray(real.items)?real.items:[];
+  const quantityByType=field=>realRows.reduce((map,item)=>{
     const type=String(item.jenis_porsi||"");
-    receivedByType.set(type,(receivedByType.get(type)||0)+Number(item.jumlah_diterima||0));
-  });
-  const typeCounts=items.reduce((map,item)=>{
-    const type=String(item.jenis_porsi||"");map[type]=(map[type]||0)+1;return map;
+    map[type]=(map[type]||0)+Number(item[field]||0);
+    return map;
   },{});
-  const hasReal=!!real.document_id;
-  const rows=items.length?items.map((item,index)=>{
+  const handedByType=quantityByType("jumlah_diserahkan");
+  const receivedByType=quantityByType("jumlah_diterima");
+  const snapshotByType=items.reduce((map,item)=>{
     const type=String(item.jenis_porsi||"");
-    const received=typeCounts[type]===1&&hasReal?formatNumber(receivedByType.get(type)):"";
-    return "<tr><td class='center'>"+(index+1)+"</td><td>"+safe(escapeHtml,item.kelompok_sasaran)+"</td>"+
-      "<td>"+safe(escapeHtml,type)+"</td><td class='number-cell'>"+formatNumber(item.jumlah)+"</td>"+
-      "<td class='number-cell'>"+received+"</td></tr>";
-  }).join(""):"<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
-  const totalBefore=items.reduce((sum,item)=>sum+Number(item.jumlah||0),0);
-  const totalAfter=hasReal?Array.from(receivedByType.values()).reduce((sum,value)=>sum+value,0):"";
+    map[type]=(map[type]||0)+Number(item.jumlah||0);
+    return map;
+  },{});
+  const hasReal=realRows.length>0;
+  const rows=types.map((type,index)=>{
+    const groups=items.filter(item=>item.jenis_porsi===type)
+      .map(item=>item.kelompok_sasaran).filter(Boolean).join(", ");
+    const before=hasReal
+      ?(realRows.some(item=>item.jenis_porsi===type)?handedByType[type]:0)
+      :(snapshotByType[type]||0);
+    const after=hasReal
+      ?(realRows.some(item=>item.jenis_porsi===type)?receivedByType[type]:0)
+      :"";
+    return "<tr><td class='center'>"+(index+1)+"</td><td>"+safe(escapeHtml,groups)+
+      "</td><td>"+type+"</td><td class='number-cell'>"+formatNumber(before)+
+      "</td><td class='number-cell'>"+(after===""?"":formatNumber(after))+"</td></tr>";
+  }).join("");
+  const totalBefore=types.reduce((sum,type)=>sum+(hasReal?(handedByType[type]||0):(snapshotByType[type]||0)),0);
+  const totalAfter=hasReal?types.reduce((sum,type)=>sum+(receivedByType[type]||0),0):"";
   return {rows,totalBefore,totalAfter};
 }
 
@@ -170,12 +184,12 @@ function receiptConditions(real,escapeHtml){
     "</tbody></table>";
 }
 
-function bastSignatures(sppg,escapeHtml){
-  const signer=sppg.nama_kepala_sppg||"Saepul Abdullah Nasir, S.Ap.";
+function bastSignatures(sppg,dist,recipient,real,escapeHtml){
+  const signer=sppg.nama_kepala_sppg||sppg.nama_kepala_sppi||"";
   return "<div class='signature-grid bast-signatures'>"+
-    "<div class='signature-cell'><strong>PIHAK PERTAMA,</strong><span>Yang Menyerahkan</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
-    "<div class='signature-cell'><strong>Mengetahui,</strong><span>Kepala SPPG Darmaraja</span><div class='signature-space'></div><div class='signature-name'>"+safe(escapeHtml,signer)+"</div></div>"+
-    "<div class='signature-cell'><strong>PIHAK KEDUA,</strong><span>Yang Menerima</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
+    signatureBlock("PIHAK PERTAMA,","Yang Menyerahkan",safe(escapeHtml,dist.nama_petugas))+
+    signatureBlock("Mengetahui,","Kepala SPPG Darmaraja",safe(escapeHtml,signer))+
+    signatureBlock("PIHAK KEDUA,","Yang Menerima",safe(escapeHtml,real.nama_penerima||""))+
     "</div>";
 }
 
@@ -187,13 +201,13 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
   const date=formatDateParts(dist.tanggal).sentence;
   const groups=[
     ["I. PIHAK PERTAMA (yang menyerahkan)",[
-      ["Nama",""],
+      ["Nama",dist.nama_petugas||""],
       ["Jabatan","Petugas Distribusi SPPG Darmaraja"],
       ["Instansi","SPPG Darmaraja (Badan Gizi Nasional)"],
     ]],
     ["II. PIHAK KEDUA (penerima)",[
-      ["Nama",""],
-      ["Jabatan",""],
+      ["Nama",real.nama_penerima||""],
+      ["Jabatan",real.jabatan_penerima||""],
       ["Instansi / Lembaga",recipient.nama||""],
     ]],
   ];
@@ -208,7 +222,7 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
     "<th class='number-cell'>"+formatNumber(rows.totalBefore)+"</th><th class='number-cell'>"+(rows.totalAfter===""?"":formatNumber(rows.totalAfter))+"</th></tr></tfoot></table>"+
     receiptConditions(real,escapeHtml)+
     "<p class='bast-closing'>Demikian Berita Acara Serah Terima ini dibuat dengan sebenarnya dalam rangkap 2 (dua) untuk dipergunakan sebagaimana mestinya, sebagai dasar pencatatan jumlah porsi yang diterima penerima manfaat.</p>"+
-    bastSignatures(sppg,escapeHtml)+"</main>";
+    bastSignatures(sppg,dist,recipient,real,escapeHtml)+"</main>";
 }
 
 const PRINT_STYLES=`
