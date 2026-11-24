@@ -343,10 +343,6 @@
 /* P0 · adaptive navigation shell */
 .home-pagebar-label{min-width:0}.home-pagebar-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.home-topbar{min-height:100vh;min-height:100svh}.home-nav button,.home-page.sidebar-collapsed .home-nav button{min-height:44px}.home-page.sidebar-collapsed .home-topbar{width:76px}@media(max-width:720px){.home-page,.home-page.sidebar-collapsed{min-height:100svh}.home-page .home-topbar,.home-page.sidebar-collapsed .home-topbar{min-height:0;height:100svh;width:min(290px,86vw);max-width:290px}.home-page .home-menu-toggle{min-width:40px;min-height:40px}.home-page .home-workspace{min-width:0}}@media(prefers-reduced-motion:reduce){.home-page,.home-topbar,.home-sidebar-backdrop{transition:none!important}}
 
-.docs-recipient-heading{display:grid;gap:4px;min-width:0}
-.docs-recipient-heading strong{display:block;color:var(--color-ink);font-size:13px}
-.docs-recipient-heading small{color:var(--color-muted);font-size:11px;font-variant-numeric:tabular-nums}
-.docs-recipient-tools input{min-width:190px}
 .docs-preflight-summary{display:grid;gap:12px;padding:14px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface)}
 .docs-preflight-summary.is-ready{border-color:#d3e4d7;background:#fbfdfb}
 .docs-preflight-heading{display:grid;gap:4px}
