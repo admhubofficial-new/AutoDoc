@@ -128,11 +128,7 @@ function organolepticSheet(doc,data,recipient){
  const menu=Array.isArray(data.menu)?data.menu.slice(0,8):[];
  sheet.dataset.menuCount=String(Math.max(5,menu.length));
  sheet.append(organolepticElement(doc,"h1","sheet-title","FORMULIR UJI ORGANOLEPTIK"));
- if(data.nomor){
-  const number=organolepticElement(doc,"p","sheet-number","Nomor: ");
-  number.append(organolepticElement(doc,"strong","",data.nomor));
-  sheet.append(number);
- }
+
  const info=organolepticElement(doc,"div","info");
  organolepticInfoRow(doc,info,recipient.kelompok==="Posyandu"?"Nama Posyandu":"Nama Sekolah",organolepticElement(doc,"span","val",recipient.nama||""));
  organolepticInfoRow(doc,info,"Hari/Tanggal",organolepticElement(doc,"span","val",data.tanggalLabel||""));
@@ -156,12 +152,12 @@ function organolepticSheet(doc,data,recipient){
  const leftHeading=organolepticElement(doc,"div","sign-heading");
  leftHeading.append(organolepticElement(doc,"div","","Mengetahui,"),organolepticElement(doc,"div","","Ahli Gizi Dapur"));
  left.append(leftHeading,organolepticElement(doc,"div","space"),
-  organolepticElement(doc,"div","sign-person named",data.ahliGizi||"Putri Baitissa'diyah, S.Gz"));
+  organolepticElement(doc,"div","sign-person named",data.ahliGizi||"Putri Baitissa'diyah, S.Gz"),organolepticElement(doc,"div","sign-line"));
  const right=organolepticElement(doc,"div","sign");
  const rightHeading=organolepticElement(doc,"div","sign-heading");
  rightHeading.append(organolepticElement(doc,"div","","Petugas Uji Organoleptik"));
  right.append(rightHeading,organolepticElement(doc,"div","space"),
-  organolepticElement(doc,"div","sign-person","........................................."));
+  organolepticElement(doc,"div","sign-person","........................................."),organolepticElement(doc,"div","sign-line"));
  signs.append(left,right);
  sheet.append(signs);
  return sheet;
