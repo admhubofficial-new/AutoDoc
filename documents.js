@@ -723,15 +723,8 @@ function printOrganolepticForms(recipients,menuByRecipient={}){
  const data={tanggalLabel:dateLabel,ahliGizi:String(currentDistribution.nama_ahli_gizi||""),menu};
  root.replaceChildren(...selected.map(recipient=>{
   const recipientId=String(recipient.id||"");
-  const recipientDocs=currentDocs.filter(doc=>{
-   const snapshotRecipient=(doc.snapshot_json||{}).penerima||{};
-   return String(doc.recipient_id||snapshotRecipient.id||"")===recipientId;
-  });
-  const numberDoc=recipientDocs.find(doc=>doc.jenis==="BAST")||recipientDocs.find(doc=>doc.jenis==="SJ");
-  const sourceNumber=String(numberDoc?.nomor_lengkap||"");
-  const organolepticNumber=sourceNumber.replace(/\/(?:BAST|SJ)\//i,"/ORG/");
   const ownMenu=Array.isArray(menuByRecipient?.[recipientId])?menuByRecipient[recipientId].map(item=>typeof item==="string"?item:String(item?.nama_komponen||"").trim()).filter(Boolean).slice(0,8):[];
-  return organolepticSheet(printDoc,{...data,menu:ownMenu.length?ownMenu:menu,nomor:organolepticNumber},recipient);
+  return organolepticSheet(printDoc,{...data,menu:ownMenu.length?ownMenu:menu},recipient);
  }));
  setTimeout(()=>{if(!win.closed){win.focus();win.print()}},250);
 }
