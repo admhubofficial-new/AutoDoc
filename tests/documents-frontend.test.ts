@@ -519,13 +519,18 @@ test("mobile recipient selection stays in the page flow and offers clear grouped
   assert.ok(source.includes("Hapus pilihan"));
 });
 
-test("preview disclosure is collapsed until the operator asks to inspect the document", () => {
+test("desktop live preview opens beside the form and stays collapsible on narrow screens", () => {
+  const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   assert.ok(source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure'>"));
-  assert.ok(!source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure' open>"));
+  assert.ok(source.includes('const desktopPreview=window.matchMedia("(min-width: 1120px)")'));
+  assert.ok(source.includes("previewDisclosure.open=desktopPreview.matches"));
+  assert.ok(source.includes("if(!desktopPreview.matches)"));
   assert.ok(source.includes("id='docsPreviewToggle'"));
   assert.ok(source.includes("aria-controls='docsPreviewDisclosure'"));
+  assert.match(stylesSource, /grid-template-columns:\s*minmax\(0, 1\.08fr\) minmax\(400px, \.92fr\)/);
+  assert.match(stylesSource, /\.docs-preview-panel\s*\{[^}]*position:\s*sticky/s);
+  assert.doesNotMatch(stylesSource, /docs-preview-caption|docs-create-intro|docs-section-number/);
   assert.ok(previewSource.includes('disclosure.addEventListener("toggle",fitPreviewFrame)'));
-  assert.doesNotMatch(previewSource, /disclosure\.open=!mobilePreview\.matches/);
   assert.ok(!previewSource.includes("mobilePreview"));
   assert.match(previewSource, /Pratinjau belum tersedia/);
   assert.match(previewSource, /Pilih penerima pada formulir/);
