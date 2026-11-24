@@ -282,7 +282,7 @@ function renderCreate(){
  const groupOptions=recipientGroups.map(group=>"<option value='"+esc(group)+"'>"+esc(group)+"</option>").join("");
  target.innerHTML="<div class='docs-create-layout'>"+
   "<section class='docs-create-form-panel'>"+
-   "<div class='docs-create-intro'><h3 class='docs-section-title'>Buat dokumen distribusi</h3><p class='docs-note'>Isi informasi distribusi, tentukan menu dan penerima, lalu terbitkan.</p></div>"+
+   ""+
    "<form id='docsCreateForm' autocomplete='off'>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Distribusi</h4></div></div>"+
      "<fieldset class='docs-kind-group'><legend>Jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label></fieldset>"+
@@ -306,7 +306,7 @@ function renderCreate(){
     "<div class='docs-submit-bar'><div class='docs-submit-meta'><strong id='docsSubmitCount' aria-live='polite'>0 penerima · 0 porsi</strong><p id='docsPreflightSummary' data-state='incomplete' role='status' aria-live='polite'>Pilih minimal satu penerima untuk melanjutkan.</p></div><div class='docs-submit-actions'><button type='button' class='docs-btn' id='docsPreviewToggle' aria-controls='docsPreviewDisclosure' aria-expanded='false'>Lihat pratinjau</button><button class='docs-btn primary' id='docsCreateButton' type='submit' disabled>Terbitkan dokumen</button></div></div>"+
    "</form><div id='docsCreateResult'></div>"+
   "</section>"+
-  "<details class='docs-preview-panel' id='docsPreviewDisclosure'><summary class='docs-preview-summary'><div><strong>Pratinjau dokumen</strong><small>Pratinjau memakai data penerima yang dipilih.</small></div><span class='docs-preview-toggle'>Buka / lipat</span></summary><div class='docs-preview-content'><div class='docs-preview-head'><div><strong>Data pratinjau</strong><small id='docsPreviewRecipient'>Pilih penerima untuk melihat dokumen</small></div><div class='docs-preview-selects'><select id='docsPreviewRecipientSelect' aria-label='Penerima pratinjau'><option value=''>Penerima</option></select><select id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><div class='docs-preview-caption'>Nomor resmi muncul setelah dokumen diterbitkan.</div><div class='docs-preview-paper'><iframe id='docsPreviewFrame' title='Pratinjau dokumen cetak' loading='lazy'></iframe></div></div></details>"+
+  "<details class='docs-preview-panel' id='docsPreviewDisclosure'><summary class='docs-preview-summary'><strong>Pratinjau dokumen</strong><span class='docs-preview-toggle'>Buka</span></summary><div class='docs-preview-content'><div class='docs-preview-head'><div><strong>Data pratinjau</strong><small id='docsPreviewRecipient'>Pilih penerima untuk melihat dokumen</small></div><div class='docs-preview-selects'><select id='docsPreviewRecipientSelect' aria-label='Penerima pratinjau'><option value=''>Penerima</option></select><select id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><div class='docs-preview-paper'><iframe id='docsPreviewFrame' title='Pratinjau dokumen cetak' loading='lazy'></iframe></div></div></details>"+
  "</div>";
  renderMenuComponents();
  renderAiMenuPlanNotice();
@@ -327,18 +327,25 @@ function renderCreate(){
  $("#docsPreviewRecipientSelect",target).addEventListener("change",()=>previewController?.updateLivePreview());
  const previewDisclosure=$("#docsPreviewDisclosure",target);
  const previewToggle=$("#docsPreviewToggle",target);
+ const previewSummaryToggle=$(".docs-preview-toggle",previewDisclosure);
+ const desktopPreview=window.matchMedia("(min-width: 1120px)");
+ previewDisclosure.open=desktopPreview.matches;
  const syncPreviewToggle=()=>{
   const expanded=previewDisclosure.open;
   previewToggle.setAttribute("aria-expanded",String(expanded));
   previewToggle.textContent=expanded?"Tutup pratinjau":"Lihat pratinjau";
+  if(previewSummaryToggle)previewSummaryToggle.textContent=expanded?"Tutup":"Buka";
  };
  previewDisclosure.addEventListener("toggle",syncPreviewToggle);
+ syncPreviewToggle();
  previewToggle.addEventListener("click",()=>{
   previewDisclosure.open=!previewDisclosure.open;
   syncPreviewToggle();
   if(previewDisclosure.open){
    previewController?.updateLivePreview();
-   previewDisclosure.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+   if(!desktopPreview.matches){
+    previewDisclosure.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+   }
   }
  });
  form.addEventListener("input",()=>{syncPreflightSummary();previewController?.updateLivePreview()});
