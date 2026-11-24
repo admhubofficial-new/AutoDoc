@@ -717,12 +717,10 @@ function printOrganolepticForms(recipients,menuByRecipient={}){
   const parsed=new Date(date+"T00:00:00");
   if(!Number.isNaN(parsed.getTime()))dateLabel=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(parsed);
  }
- const allowedMeals=["pagi","siang","sore"];
- const meal=allowedMeals.includes(String(currentDistribution.waktu_makan||"").toLowerCase())?String(currentDistribution.waktu_makan).toLowerCase():"siang";
  const storedItems=Array.isArray(currentDistribution.menu_items)?currentDistribution.menu_items.slice().sort((a,b)=>Number(a.urutan||0)-Number(b.urutan||0)):[];
  const menu=storedItems.map(item=>String(item.nama_komponen||"").trim()).filter(Boolean).slice(0,8);
  if(!menu.length&&String(currentDistribution.menu||"").trim())menu.push(String(currentDistribution.menu).trim());
- const data={tanggalLabel:dateLabel,waktuMakan:meal,ahliGizi:String(currentDistribution.nama_ahli_gizi||""),menu};
+ const data={tanggalLabel:dateLabel,ahliGizi:String(currentDistribution.nama_ahli_gizi||""),menu};
  root.replaceChildren(...selected.map(recipient=>{
   const recipientId=String(recipient.id||"");
   const recipientDocs=currentDocs.filter(doc=>{
@@ -734,7 +732,7 @@ function printOrganolepticForms(recipients,menuByRecipient={}){
   const organolepticNumber=sourceNumber.replace(/\/(?:BAST|SJ)\//i,"/ORG/");
   const ownMenu=Array.isArray(menuByRecipient?.[recipientId])?menuByRecipient[recipientId].map(item=>typeof item==="string"?item:String(item?.nama_komponen||"").trim()).filter(Boolean).slice(0,8):[];
   return organolepticSheet(printDoc,{...data,menu:ownMenu.length?ownMenu:menu,nomor:organolepticNumber},recipient);
- }));;
+ }));
  setTimeout(()=>{if(!win.closed){win.focus();win.print()}},250);
 }
 function showRealization(card,doc){
