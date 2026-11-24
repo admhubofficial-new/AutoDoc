@@ -1,50 +1,295 @@
 (() => {
 "use strict";
-function formatOptionalNumber(value){
- if(value===null||value===undefined||value==="")return "";
- const number=Number(value);
- return Number.isFinite(number)?number.toLocaleString("id-ID"):"";
-}
-function buildPrintHtml(doc, escapeHtml, logoUrl){
- const snap=doc.snapshot_json||{},sppg=snap.sppg||{},dist=snap.distribusi||{},rec=snap.penerima||{},items=snap.rincian_porsi||[];
- const isBast=doc.jenis==="BAST",real=doc.realisasi||{};
- const realRows=real.items||[];
- const quantityByType=(field)=>realRows.reduce((map,item)=>{const type=String(item.jenis_porsi||"");map[type]=(map[type]||0)+Number(item[field]||0);return map;},{});
- const handedByType=quantityByType("jumlah_diserahkan"),receivedByType=quantityByType("jumlah_diterima");
- const snapshotByType=items.reduce((map,item)=>{const type=String(item.jenis_porsi||"");map[type]=(map[type]||0)+Number(item.jumlah||0);return map;},{});
- const types=["Porsi Kecil","Porsi Besar"];
- const kelompokText=[rec.kelompok,rec.jenjang].filter(Boolean).join(" / ");
- const sppgLocation=[sppg.kecamatan,sppg.kabupaten].filter(Boolean).join(" · ");
- const bastRows=types.map((type,index)=>{
-  const groups=items.filter(item=>item.jenis_porsi===type).map(item=>item.kelompok_sasaran).filter(Boolean).join(", ");
-  const hasReal=realRows.some(item=>item.jenis_porsi===type);
-  const before=hasReal?handedByType[type]:snapshotByType[type]||0;
-  const after=hasReal?receivedByType[type]:null;
-  return "<tr><td>"+(index+1)+"</td><td>"+escapeHtml(groups)+"</td><td>"+type+"</td><td style='text-align:right'>"+formatOptionalNumber(before)+"</td><td style='text-align:right'>"+formatOptionalNumber(after)+"</td></tr>";
- }).join("");
- const rows=isBast?bastRows:(items.length?items.map((x,i)=>"<tr><td>"+(i+1)+"</td><td>"+escapeHtml(x.kelompok_sasaran)+"</td><td>"+escapeHtml(x.jenis_porsi)+"</td><td style='text-align:right'>"+Number(x.jumlah||0).toLocaleString("id-ID")+"</td></tr>").join(""):"<tr><td colspan='4'>Tidak ada rincian porsi.</td></tr>");
- const suhuText=real.suhu_c===null||real.suhu_c===undefined||real.suhu_c===""?"":escapeHtml(real.suhu_c)+" °C";
- const jabatanText=real.jabatan_penerima?" ("+escapeHtml(real.jabatan_penerima)+")":"";
- const realization=isBast&&real.document_id?"<h3>Realisasi Penerimaan</h3><p>Kondisi: "+escapeHtml(real.kondisi||"")+" · Jam diterima: "+escapeHtml(real.jam_diterima||"")+" · Suhu: "+suhuText+"</p><p>Ompreng kembali: "+escapeHtml(real.ompreng_kembali??"")+" · Penerima: "+escapeHtml(real.nama_penerima||"")+jabatanText+"</p><p>Catatan: "+escapeHtml(real.catatan||"")+"</p>":"";
- const signatureBlock=(title,role,name)=>"<div class='sign-block'><div class='sign-head'><div class='sign-title'>"+title+"</div><div class='sign-role'>"+(role||"&nbsp;")+"</div></div><div class='sign-space'></div><div class='sign-person'>"+(name?escapeHtml(name):"&nbsp;")+"</div><div class='sign-line'></div></div>";
- const signatures=isBast
-  ? signatureBlock("Yang Menyerahkan","Petugas Distribusi SPPG",dist.nama_petugas)+
-    signatureBlock("Mengetahui,","Kepala SPPI",sppg.nama_kepala_sppi)+
-    signatureBlock("Yang Menerima","",real.nama_penerima)
-  : signatureBlock("Yang Menyerahkan","Petugas Distribusi SPPG",dist.nama_petugas)+
-    signatureBlock("Pengemudi","",dist.nama_pengemudi)+
-    signatureBlock("Yang Menerima","","");
- const title=isBast?"BERITA ACARA SERAH TERIMA":"SURAT JALAN";
- const html="<!doctype html><html lang='id'><head><meta charset='utf-8'><title>"+escapeHtml(doc.nomor_lengkap)+"</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:12px;line-height:1.5}.top{display:grid;grid-template-columns:70px minmax(0,1fr);align-items:center;gap:12px;border-bottom:3px double #222;padding-bottom:10px;min-height:82px}.top-logo{display:block;width:68px;height:68px;object-fit:contain}.top-copy{text-align:center}.brand{font-size:15px;font-weight:700}.top-address{font-size:10px;line-height:1.5}center{text-align:center;margin:22px 0 14px}.center h1{font-size:18px;margin:0;letter-spacing:.6px}.center h2{font-size:13px;margin:3px 0;text-decoration:underline}.number{text-align:center;font-size:12px;margin:4px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:7px 22px;margin:17px 0}.meta div{padding:4px 0;border-bottom:1px dotted #bbb}.meta b{display:inline-block;min-width:115px}.data{width:100%;border-collapse:collapse;margin-top:10px}.data th,.data td{padding:7px;border:1px solid #333;text-align:left}.data th{background:#f1f1ed}.sign{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:42px;text-align:center;font-size:11px;align-items:start;break-inside:avoid}.sign-block{min-width:0;display:flex;flex-direction:column;align-items:stretch}.sign-head{height:34px;display:flex;flex-direction:column;justify-content:flex-start}.sign-title{min-height:17px;font-weight:600}.sign-role{height:15px;font-size:10px}.sign-space{height:48px;flex:none}.sign-person{height:18px;flex:none;padding-top:2px;font-size:10px;overflow-wrap:anywhere}.sign-line{width:82%;height:1px;flex:none;margin:0 auto;border-bottom:1px solid #222}h3{font-size:13px;margin:20px 0 5px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>"+
- "<div class='top'><img class='top-logo' src='"+logoUrl+"' alt='Logo BGN'><div class='top-copy'><div class='brand'>"+escapeHtml(sppg.nama_sppg||"SPPG")+"</div><div class='top-address'>"+escapeHtml(sppg.alamat||"")+"</div><div class='top-address'>"+escapeHtml(sppgLocation)+"</div></div></div>"+
- "<div class='center'><h1>"+title+"</h1><h2>"+(isBast?"SERAH TERIMA HASIL DISTRIBUSI MBG":"PENGIRIMAN / DISTRIBUSI MBG")+"</h2><div class='number'>Nomor: <b>"+escapeHtml(doc.nomor_lengkap)+"</b></div></div>"+
- "<div class='meta'><div><b>Tanggal</b>: "+escapeHtml(dist.tanggal||"")+"</div><div><b>Jam berangkat</b>: "+escapeHtml(dist.jam_berangkat||"")+"</div><div><b>Penerima</b>: "+escapeHtml(rec.nama||"")+"</div><div><b>Kelompok</b>: "+escapeHtml(kelompokText)+"</div><div><b>Alamat</b>: "+escapeHtml(rec.alamat||"")+"</div><div><b>Menu</b>: "+escapeHtml(dist.menu||"")+"</div><div><b>Pengemudi</b>: "+escapeHtml(dist.nama_pengemudi||"")+"</div><div><b>Kendaraan</b>: "+escapeHtml(dist.no_kendaraan||"")+"</div><div><b>Petugas</b>: "+escapeHtml(dist.nama_petugas||"")+"</div><div><b>Total porsi</b>: "+formatOptionalNumber((snap.ringkasan||{}).total_porsi)+"</div></div>"+
- "<h3>Rincian Porsi</h3><table class='data'><thead><tr><th style='width:35px'>No.</th><th>Kelompok sasaran</th><th>Jenis porsi</th>"+(isBast?"<th style='text-align:right'>Jumlah Sebelum</th><th style='text-align:right'>Jumlah Sesudah</th>":"<th style='width:100px;text-align:right'>Jumlah</th>")+"</tr></thead><tbody>"+rows+"</tbody><tfoot><tr><th colspan='3' style='text-align:right'>Total</th>"+(isBast?"<th style='text-align:right'>"+formatOptionalNumber(realRows.length?Object.values(handedByType).reduce((a,b)=>a+b,0):(snap.ringkasan||{}).total_porsi)+"</th><th style='text-align:right'>"+(realRows.length?formatOptionalNumber(Object.values(receivedByType).reduce((a,b)=>a+b,0)):"")+"</th>":"<th style='text-align:right'>"+Number((snap.ringkasan||{}).total_porsi||0).toLocaleString("id-ID")+"</th>")+"</tr></tfoot></table>"+
- (isBast?realization:"")+
- "<div class='sign'>"+signatures+"</div>"+
- "</body></html>";
- return html;
+
+function safe(escapeHtml,value){
+  return typeof escapeHtml==="function"
+    ? escapeHtml(value??"")
+    : String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 }
 
-window.AutoDocPrintRenderer = Object.freeze({ buildPrintHtml });
+function formatNumber(value){
+  if(value===null||value===undefined||value==="")return "";
+  const number=Number(value);
+  return Number.isFinite(number)?number.toLocaleString("id-ID"):"";
+}
+
+function formatDateParts(value){
+  const source=String(value??"");
+  const match=source.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!match)return {display:source,sentence:source};
+  const date=new Date(source+"T00:00:00+07:00");
+  if(Number.isNaN(date.getTime()))return {display:source,sentence:source};
+  const parts=new Intl.DateTimeFormat("id-ID",{
+    weekday:"long",day:"2-digit",month:"long",year:"numeric",timeZone:"Asia/Jakarta"
+  }).formatToParts(date);
+  const values=Object.fromEntries(parts.filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));
+  const weekday=values.weekday?values.weekday.charAt(0).toUpperCase()+values.weekday.slice(1):"";
+  const display=[weekday,values.day,values.month,values.year].filter(Boolean).join(" ");
+  return {display,sentence:[weekday,"tanggal",values.day,values.month,values.year].filter(Boolean).join(" ")};
+}
+
+function getHeaderName(sppg){
+  const raw=String(sppg.nama_sppg||"SPPG Darmaraja");
+  const name=raw.replace(/^satuan pelayanan pemenuhan gizi\s*\(sppg\)\s*/i,"")
+    .replace(/^sppg\s*/i,"").replace(/\s+0?1$/,"").trim();
+  return (name||"DARMARAJA").toLocaleUpperCase("id-ID");
+}
+
+function getHeaderAddress(sppg){
+  const address=String(sppg.alamat||"").trim();
+  const kecamatan=String(sppg.kecamatan||"").trim();
+  const kabupaten=String(sppg.kabupaten||"").trim();
+  const parts=[address];
+  if(kecamatan&&!address.toLocaleLowerCase("id-ID").includes(kecamatan.toLocaleLowerCase("id-ID")))parts.push("Kecamatan "+kecamatan);
+  if(kabupaten&&!address.toLocaleLowerCase("id-ID").includes(kabupaten.toLocaleLowerCase("id-ID")))parts.push("Kabupaten "+kabupaten);
+  return parts.filter(Boolean).join(" ");
+}
+
+function letterhead(sppg,logoUrl,escapeHtml){
+  const name=getHeaderName(sppg);
+  const address=getHeaderAddress(sppg);
+  return "<header class='letterhead'>"+
+    "<div class='letterhead-logo'><img class='top-logo' src='"+safe(escapeHtml,logoUrl)+"' alt='Logo BGN'></div>"+
+    "<div class='letterhead-copy'><div class='letterhead-main'>SATUAN PELAYANAN PEMENUHAN GIZI (SPPG)</div>"+
+    "<div class='letterhead-place'>"+safe(escapeHtml,name)+"</div>"+
+    "<div class='letterhead-address'>Alamat: "+safe(escapeHtml,address)+"</div></div><div class='letterhead-spacer' aria-hidden='true'></div></header>";
+}
+
+function documentHeading(kind,number,escapeHtml){
+  if(kind==="BAST"){
+    return "<div class='document-heading bast-heading'><h1>BERITA ACARA SERAH TERIMA (BAST)</h1>"+
+      "<h2>PAKET MAKAN BERGIZI GRATIS (MBG)</h2>"+
+      "<p class='document-number'>Nomor: <strong>"+safe(escapeHtml,number)+"</strong></p></div>";
+  }
+  return "<div class='document-heading sj-heading'><h1>SURAT JALAN</h1>"+
+    "<h2>PENGIRIMAN / DISTRIBUSI MBG</h2>"+
+    "<p class='document-number'>Nomor: <strong>"+safe(escapeHtml,number)+"</strong></p></div>";
+}
+
+function distributionMeta(snapshot,escapeHtml){
+  const dist=snapshot.distribusi||{};
+  const recipient=snapshot.penerima||{};
+  const date=formatDateParts(dist.tanggal).display;
+  const group=[recipient.kelompok,recipient.jenjang].filter(Boolean).join(" / ");
+  const rows=[
+    ["Tanggal",date,"Jam berangkat",dist.jam_berangkat],
+    ["Penerima",recipient.nama,"Kelompok",group],
+    ["Alamat",recipient.alamat,"Menu",dist.menu],
+    ["Pengemudi",dist.nama_pengemudi,"Kendaraan",dist.no_kendaraan],
+  ];
+  return "<table class='meta-table' aria-label='Informasi distribusi'><colgroup><col class='meta-label-col'><col><col class='meta-label-col-right'><col></colgroup><tbody>"+
+    rows.map(row=>"<tr>"+row.map((value,index)=>index%2===0
+      ? "<th scope='row'>"+safe(escapeHtml,value)+"</th>"
+      : "<td>: "+safe(escapeHtml,value)+"</td>").join("")+"</tr>").join("")+
+    "</tbody></table>";
+}
+
+function portionRows(items,escapeHtml){
+  return items.length?items.map((item,index)=>"<tr>"+
+    "<td class='center'>"+(index+1)+"</td>"+
+    "<td>"+safe(escapeHtml,item.kelompok_sasaran)+"</td>"+
+    "<td>"+safe(escapeHtml,item.jenis_porsi)+"</td>"+
+    "<td class='number-cell'>"+formatNumber(item.jumlah)+"</td></tr>").join("")
+    :"<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+}
+
+function portionTable(items,total,escapeHtml){
+  return "<h3 class='section-label'>Rincian Porsi</h3>"+
+    "<table class='portion-table sj-portions'><colgroup><col style='width:7.3%'><col style='width:45%'><col style='width:24.9%'><col style='width:22.8%'></colgroup>"+
+    "<thead><tr><th>No.</th><th>Kelompok sasaran</th><th>Jenis porsi</th><th class='number-cell'>Jumlah</th></tr></thead>"+
+    "<tbody>"+portionRows(items,escapeHtml)+"</tbody>"+
+    "<tfoot><tr><th colspan='3' class='total-label'>Total</th><th class='number-cell'>"+formatNumber(total)+"</th></tr></tfoot></table>";
+}
+
+function signatureDots(){
+  return "<div class='signature-dots'>( .............................. )</div>";
+}
+
+function sjSignatures(recipient,escapeHtml){
+  return "<div class='signature-grid sj-signatures'>"+
+    "<div class='signature-cell'><strong>Yang Menyerahkan</strong><span>Petugas Distribusi SPPG</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
+    "<div class='signature-cell'><strong>Pengemudi</strong><span>&nbsp;</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
+    "<div class='signature-cell'><strong>Yang Menerima</strong><span>"+safe(escapeHtml,recipient.nama)+"</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
+    "</div>";
+}
+
+function buildSuratJalan(snapshot,doc,logoUrl,escapeHtml){
+  const dist=snapshot.distribusi||{},recipient=snapshot.penerima||{};
+  const items=Array.isArray(snapshot.rincian_porsi)?snapshot.rincian_porsi:[];
+  const total=(snapshot.ringkasan||{}).total_porsi??items.reduce((sum,item)=>sum+Number(item.jumlah||0),0);
+  return "<main class='sheet surat-jalan'>"+letterhead(snapshot.sppg||{},logoUrl,escapeHtml)+
+    documentHeading("SJ",doc.nomor_lengkap,escapeHtml)+
+    distributionMeta(snapshot,escapeHtml)+
+    portionTable(items,total,escapeHtml)+
+    sjSignatures(recipient,escapeHtml)+"</main>";
+}
+
+function partyFields(rows,escapeHtml){
+  return "<table class='party-fields'><colgroup><col style='width:31.1%'><col></colgroup><tbody>"+
+    rows.map(row=>"<tr><td>"+safe(escapeHtml,row[0])+"</td><td>: "+safe(escapeHtml,row[1])+"</td></tr>").join("")+
+    "</tbody></table>";
+}
+
+function bastPortionRows(items,real,escapeHtml){
+  const receivedByType=new Map();
+  (real.items||[]).forEach(item=>{
+    const type=String(item.jenis_porsi||"");
+    receivedByType.set(type,(receivedByType.get(type)||0)+Number(item.jumlah_diterima||0));
+  });
+  const typeCounts=items.reduce((map,item)=>{
+    const type=String(item.jenis_porsi||"");map[type]=(map[type]||0)+1;return map;
+  },{});
+  const hasReal=!!real.document_id;
+  const rows=items.length?items.map((item,index)=>{
+    const type=String(item.jenis_porsi||"");
+    const received=typeCounts[type]===1&&hasReal?formatNumber(receivedByType.get(type)):"";
+    return "<tr><td class='center'>"+(index+1)+"</td><td>"+safe(escapeHtml,item.kelompok_sasaran)+"</td>"+
+      "<td>"+safe(escapeHtml,type)+"</td><td class='number-cell'>"+formatNumber(item.jumlah)+"</td>"+
+      "<td class='number-cell'>"+received+"</td></tr>";
+  }).join(""):"<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+  const totalBefore=items.reduce((sum,item)=>sum+Number(item.jumlah||0),0);
+  const totalAfter=hasReal?Array.from(receivedByType.values()).reduce((sum,value)=>sum+value,0):"";
+  return {rows,totalBefore,totalAfter};
+}
+
+function receiptConditions(real,escapeHtml){
+  const condition=String(real.kondisi||"").toLowerCase();
+  const checks=["baik","kurang baik","tidak layak"].map(value=>
+    "["+(condition===value?"✓":"    ")+"] "+(value==="baik"?"Baik":value==="kurang baik"?"Kurang baik":"Tidak layak")
+  ).join("        ");
+  const time=real.jam_diterima?String(real.jam_diterima)+" WIB":".................... WIB";
+  const containers=real.ompreng_kembali===null||real.ompreng_kembali===undefined||real.ompreng_kembali===""
+    ?".................... buah":formatNumber(real.ompreng_kembali)+" buah";
+  const notes=real.catatan||"";
+  return "<h3 class='section-label condition-heading'>Kondisi makanan saat diterima:</h3>"+
+    "<table class='condition-table'><colgroup><col style='width:31.1%'><col></colgroup><tbody>"+
+    "<tr><td>Kondisi makanan</td><td>: "+safe(escapeHtml,checks)+"</td></tr>"+
+    "<tr><td>Jam diterima</td><td>: "+safe(escapeHtml,time)+"</td></tr>"+
+    "<tr><td>Wadah (ompreng) dikembalikan</td><td>: "+safe(escapeHtml,containers)+"</td></tr>"+
+    "<tr><td>Catatan</td><td>: "+safe(escapeHtml,notes)+"</td></tr>"+
+    "</tbody></table>";
+}
+
+function bastSignatures(sppg,escapeHtml){
+  const signer=sppg.nama_kepala_sppg||"Saepul Abdullah Nasir, S.Ap.";
+  return "<div class='signature-grid bast-signatures'>"+
+    "<div class='signature-cell'><strong>PIHAK PERTAMA,</strong><span>Yang Menyerahkan</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
+    "<div class='signature-cell'><strong>Mengetahui,</strong><span>Kepala SPPG Darmaraja</span><div class='signature-space'></div><div class='signature-name'>"+safe(escapeHtml,signer)+"</div></div>"+
+    "<div class='signature-cell'><strong>PIHAK KEDUA,</strong><span>Yang Menerima</span><div class='signature-space'></div>"+signatureDots()+"</div>"+
+    "</div>";
+}
+
+function buildBast(snapshot,doc,logoUrl,escapeHtml){
+  const sppg=snapshot.sppg||{},dist=snapshot.distribusi||{},recipient=snapshot.penerima||{};
+  const items=Array.isArray(snapshot.rincian_porsi)?snapshot.rincian_porsi:[];
+  const real=doc.realisasi||{};
+  const rows=bastPortionRows(items,real,escapeHtml);
+  const date=formatDateParts(dist.tanggal).sentence;
+  const groups=[
+    ["I. PIHAK PERTAMA (yang menyerahkan)",[
+      ["Nama",""],
+      ["Jabatan","Petugas Distribusi SPPG Darmaraja"],
+      ["Instansi","SPPG Darmaraja (Badan Gizi Nasional)"],
+    ]],
+    ["II. PIHAK KEDUA (penerima)",[
+      ["Nama",""],
+      ["Jabatan",""],
+      ["Instansi / Lembaga",recipient.nama||""],
+    ]],
+  ];
+  return "<main class='sheet bast-page'>"+letterhead(sppg,logoUrl,escapeHtml)+
+    documentHeading("BAST",doc.nomor_lengkap,escapeHtml)+
+    "<p class='bast-opening'>Pada hari ini, "+safe(escapeHtml,date)+", bertempat di "+safe(escapeHtml,recipient.nama)+", kami yang bertanda tangan di bawah ini:</p>"+
+    groups.map(group=>"<section class='party-section'><h3>"+group[0]+"</h3>"+partyFields(group[1],escapeHtml)+"</section>").join("")+
+    "<p class='bast-transfer'>PIHAK PERTAMA telah menyerahkan dan PIHAK KEDUA telah menerima paket Makan Bergizi Gratis (MBG) untuk penerima manfaat dengan rincian sebagai berikut:</p>"+
+    "<table class='portion-table bast-portions'><colgroup><col style='width:5.7%'><col style='width:38%'><col style='width:18.7%'><col style='width:18.8%'><col style='width:18.8%'></colgroup>"+
+    "<thead><tr><th>No.</th><th>Kelompok sasaran</th><th>Jenis porsi</th><th>Jumlah Sebelum</th><th>Jumlah Sesudah</th></tr></thead>"+
+    "<tbody>"+rows.rows+"</tbody><tfoot><tr><th colspan='3' class='total-label'>TOTAL PORSI</th>"+
+    "<th class='number-cell'>"+formatNumber(rows.totalBefore)+"</th><th class='number-cell'>"+(rows.totalAfter===""?"":formatNumber(rows.totalAfter))+"</th></tr></tfoot></table>"+
+    receiptConditions(real,escapeHtml)+
+    "<p class='bast-closing'>Demikian Berita Acara Serah Terima ini dibuat dengan sebenarnya dalam rangkap 2 (dua) untuk dipergunakan sebagaimana mestinya, sebagai dasar pencatatan jumlah porsi yang diterima penerima manfaat.</p>"+
+    bastSignatures(sppg,escapeHtml)+"</main>";
+}
+
+const PRINT_STYLES=`
+@page{size:A4 portrait;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:10pt;line-height:1.25;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet{width:210mm;height:297mm;min-height:297mm;margin:18px auto;padding:15mm 20mm;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18);overflow:hidden}
+.letterhead{display:grid;grid-template-columns:22mm minmax(0,1fr) 18mm;align-items:center;min-height:27mm;padding:0 0 4mm;border-bottom:3px double #111}
+.letterhead-logo{display:flex;align-items:center;justify-content:flex-start}
+.top-logo{display:block;width:20.6mm;height:20.4mm;object-fit:contain}
+.letterhead-copy{text-align:center;min-width:0}
+.letterhead-main{font-size:14pt;font-weight:700;line-height:1.15}
+.letterhead-place{font-size:15pt;font-weight:700;line-height:1.2}
+.letterhead-address{margin-top:1mm;font-size:9pt;line-height:1.25}
+.document-heading{text-align:center}
+.document-heading h1,.document-heading h2,.document-heading p{margin:0}
+.sj-heading{margin:3mm 0 4mm}
+.sj-heading h1{font-size:15pt;line-height:1.15;font-weight:700}
+.sj-heading h2{margin-top:1mm;font-size:10pt;line-height:1.2;text-decoration:underline;font-weight:700}
+.document-number{margin-top:2mm!important;font-size:10pt}
+.document-number strong{font-weight:700}
+.bast-heading{margin:3mm 0 3mm}
+.bast-heading h1{font-size:13pt;line-height:1.2;font-weight:700}
+.bast-heading h2{margin-top:1mm;font-size:11pt;line-height:1.2;font-weight:700}
+.bast-heading .document-number{margin-top:2mm!important;font-size:10pt}
+.meta-table,.party-fields,.condition-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:10pt;line-height:1.25}
+.meta-table col.meta-label-col{width:14%}
+.meta-table col.meta-label-col-right{width:17.1%}
+.meta-table th,.meta-table td,.party-fields td,.condition-table td{padding:1mm 1.5mm;vertical-align:middle}
+.meta-table th{font-weight:700;text-align:left;white-space:nowrap}
+.meta-table td{border-bottom:1px dotted #777;overflow-wrap:anywhere}
+.meta-table th{border-bottom:1px dotted #777}
+.section-label{margin:7mm 0 1.5mm;font-size:10pt;line-height:1.2;font-weight:700}
+.portion-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:10pt;line-height:1.2;break-inside:avoid}
+.portion-table th,.portion-table td{border:1px solid #000;padding:1mm 1.5mm;vertical-align:middle}
+.portion-table thead th,.portion-table tfoot th{background:#f0f0f0;font-weight:700}
+.portion-table thead th{text-align:left}
+.portion-table .center{text-align:center}
+.portion-table .number-cell{text-align:right}
+.portion-table .total-label{text-align:right}
+.sj-portions thead th:first-child{text-align:center}
+.sj-portions tfoot th{background:#f0f0f0}
+.signature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:9mm;text-align:center;break-inside:avoid}
+.signature-cell{display:flex;min-width:0;flex-direction:column;align-items:center;font-size:10pt;line-height:1.25}
+.signature-cell strong{display:block;font-size:10pt;font-weight:700}
+.signature-cell span{display:block;min-height:4mm}
+.signature-space{height:27mm;flex:none}
+.signature-dots{font-size:10pt;white-space:nowrap}
+.bast-opening{margin:0 0 2mm;text-align:justify;font-size:10pt;line-height:1.25}
+.party-section{margin:0 0 1mm}
+.party-section h3{margin:0 0 1mm;font-size:10pt;line-height:1.2;font-weight:700}
+.party-fields td:first-child{padding-left:1.5mm}
+.party-fields td:last-child,.condition-table td:last-child{border-bottom:1px dotted #777;overflow-wrap:anywhere}
+.party-section+.party-section{margin-top:1mm}
+.bast-transfer{margin:3mm 0 2mm;text-align:justify;font-size:10pt;line-height:1.25}
+.bast-portions{margin:0}
+.bast-portions thead th{text-align:left}
+.bast-portions thead th:first-child{text-align:center}
+.bast-portions tfoot th{background:#f0f0f0}
+.condition-heading{margin:2.5mm 0 1mm}
+.condition-table td{padding:1mm 1.5mm}
+.bast-closing{margin:2.5mm 0 0;text-align:justify;font-size:10pt;line-height:1.25}
+.bast-signatures{margin-top:4mm}
+.bast-signatures .signature-space{height:25mm}
+.signature-name{font-size:10pt;font-weight:700;text-decoration:underline;white-space:nowrap}
+@media print{
+  body{background:#fff}
+  .sheet{margin:0;box-shadow:none}
+}
+`;
+
+function buildPrintHtml(doc,escapeHtml,logoUrl){
+  const snapshot=doc.snapshot_json||{};
+  const kind=doc.jenis==="BAST"?"BAST":"SJ";
+  const body=kind==="BAST"
+    ?buildBast(snapshot,doc,logoUrl,escapeHtml)
+    :buildSuratJalan(snapshot,doc,logoUrl,escapeHtml);
+  return "<!doctype html><html lang='id'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+
+    safe(escapeHtml,doc.nomor_lengkap)+"</title><style>"+PRINT_STYLES+"</style></head><body>"+body+"</body></html>";
+}
+
+window.AutoDocPrintRenderer=Object.freeze({buildPrintHtml,formatDateParts});
 })();
