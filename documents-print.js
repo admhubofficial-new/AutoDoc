@@ -76,7 +76,6 @@ function distributionMeta(snapshot,escapeHtml){
     ["Penerima",recipient.nama,"Kelompok",group],
     ["Alamat",recipient.alamat,"Menu",dist.menu],
     ["Pengemudi",dist.nama_pengemudi,"Kendaraan",dist.no_kendaraan],
-    ["Petugas",dist.nama_petugas,"Total Porsi",formatNumber((snapshot.ringkasan||{}).total_porsi)],
   ];
   return "<table class='meta-table' aria-label='Informasi distribusi'><colgroup><col style='width:14%'><col style='width:33.7%'><col style='width:17.1%'><col style='width:35.2%'></colgroup><tbody>"+
     rows.map(row=>"<tr>"+row.map((value,index)=>index%2===0
@@ -96,23 +95,23 @@ function portionRows(items,escapeHtml){
 
 function portionTable(items,total,escapeHtml){
   return "<h3 class='section-label'>Rincian Porsi</h3>"+
-    "<table class='portion-table sj-portions'><colgroup><col style='width:7.3%'><col style='width:45%'><col style='width:24.9%'><col style='width:22.8%'></colgroup>"+
+    "<table class='portion-table sj-portions'><colgroup><col style='width:7.2%'><col style='width:50%'><col style='width:28%'><col style='width:14.8%'></colgroup>"+
     "<thead><tr><th>No.</th><th>Kelompok sasaran</th><th>Jenis porsi</th><th class='number-cell'>Jumlah</th></tr></thead>"+
     "<tbody>"+portionRows(items,escapeHtml)+"</tbody>"+
     "<tfoot><tr><th colspan='3' class='total-label'>Total</th><th class='number-cell'>"+formatNumber(total)+"</th></tr></tfoot></table>";
 }
 
-function signatureBlock(title,role,name){
+function signatureBlock(title,role,personText,named=false){
   return "<div class='signature-cell'><strong>"+title+"</strong><span>"+(role||"&nbsp;")+"</span>"+
-    "<div class='signature-space'></div><div class='signature-person'>"+(name||"&nbsp;")+"</div>"+
-    "<div class='sign-line'></div></div>";
+    "<div class='signature-space'></div><div class='signature-person"+(named?" signature-name":"")+"'>"+personText+"</div></div>";
 }
 
 function sjSignatures(dist,recipient,escapeHtml){
+  const blank="( .............................. )";
   return "<div class='signature-grid sj-signatures'>"+
-    signatureBlock("Yang Menyerahkan","Petugas Distribusi SPPG",safe(escapeHtml,dist.nama_petugas))+
-    signatureBlock("Pengemudi","&nbsp;",safe(escapeHtml,dist.nama_pengemudi))+
-    signatureBlock("Yang Menerima",safe(escapeHtml,recipient.nama),"")+
+    signatureBlock("Yang Menyerahkan","Petugas Distribusi SPPG",blank)+
+    signatureBlock("Pengemudi","&nbsp;",blank)+
+    signatureBlock("Yang Menerima",safe(escapeHtml,recipient.nama),blank)+
     "</div>";
 }
 
@@ -134,37 +133,16 @@ function partyFields(rows,escapeHtml){
 }
 
 function bastPortionRows(items,real,escapeHtml,fallbackTotal=0){
-  const types=["Porsi Kecil","Porsi Besar"];
   const realRows=Array.isArray(real.items)?real.items:[];
-  const quantityByType=field=>realRows.reduce((map,item)=>{
-    const type=String(item.jenis_porsi||"");
-    map[type]=(map[type]||0)+Number(item[field]||0);
-    return map;
-  },{});
-  const handedByType=quantityByType("jumlah_diserahkan");
-  const receivedByType=quantityByType("jumlah_diterima");
-  const snapshotByType=items.reduce((map,item)=>{
-    const type=String(item.jenis_porsi||"");
-    map[type]=(map[type]||0)+Number(item.jumlah||0);
-    return map;
-  },{});
-  const hasReal=realRows.length>0;
-  const rows=types.map((type,index)=>{
-    const groups=items.filter(item=>item.jenis_porsi===type)
-      .map(item=>item.kelompok_sasaran).filter(Boolean).join(", ");
-    const before=hasReal
-      ?(realRows.some(item=>item.jenis_porsi===type)?handedByType[type]:0)
-      :(snapshotByType[type]||0);
-    const after=hasReal
-      ?(realRows.some(item=>item.jenis_porsi===type)?receivedByType[type]:0)
-      :"";
-    return "<tr><td class='center'>"+(index+1)+"</td><td>"+safe(escapeHtml,groups)+
-      "</td><td>"+type+"</td><td class='number-cell'>"+formatNumber(before)+
-      "</td><td class='number-cell'>"+(after===""?"":formatNumber(after))+"</td></tr>";
-  }).join("");
-  const calculatedBefore=types.reduce((sum,type)=>sum+(hasReal?(handedByType[type]||0):(snapshotByType[type]||0)),0);
-  const totalBefore=calculatedBefore||Number(fallbackTotal||0);
-  const totalAfter=hasReal?types.reduce((sum,type)=>sum+(receivedByType[type]||0),0):"";
+  const rows=items.length?items.map((item,index)=>
+    "<tr><td class='center'>"+(index+1)+"</td><td>"+safe(escapeHtml,item.kelompok_sasaran)+
+    "</td><td>"+safe(escapeHtml,item.jenis_porsi)+"</td><td class='number-cell'>"+
+    formatNumber(item.jumlah)+"</td><td class='number-cell'></td></tr>"
+  ).join(""):"<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td></td><td></td></tr>";
+  const totalBefore=items.reduce((sum,item)=>sum+Number(item.jumlah||0),0)||Number(fallbackTotal||0);
+  const totalAfter=realRows.length
+    ?realRows.reduce((sum,item)=>sum+Number(item.jumlah_diterima||0),0)
+    :"";
   return {rows,totalBefore,totalAfter};
 }
 
@@ -186,12 +164,13 @@ function receiptConditions(real,escapeHtml){
     "</tbody></table>";
 }
 
-function bastSignatures(sppg,dist,real,escapeHtml){
-  const signer=sppg.nama_kepala_sppg||sppg.nama_kepala_sppi||"";
+function bastSignatures(sppg,escapeHtml){
+  const blank="( .............................. )";
+  const signer=sppg.nama_kepala_sppg||"Saepul Abdullah Nasir, S.Ap.";
   return "<div class='signature-grid bast-signatures'>"+
-    signatureBlock("PIHAK PERTAMA,","Yang Menyerahkan",safe(escapeHtml,dist.nama_petugas))+
-    signatureBlock("Mengetahui,","Kepala SPPG Darmaraja",safe(escapeHtml,signer))+
-    signatureBlock("PIHAK KEDUA,","Yang Menerima",safe(escapeHtml,real.nama_penerima||""))+
+    signatureBlock("PIHAK PERTAMA,","Yang Menyerahkan",blank)+
+    signatureBlock("Mengetahui,","Kepala SPPG Darmaraja",safe(escapeHtml,signer),true)+
+    signatureBlock("PIHAK KEDUA,","Yang Menerima",blank)+
     "</div>";
 }
 
@@ -203,13 +182,13 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
   const date=formatDateParts(dist.tanggal).sentence;
   const groups=[
     ["I. PIHAK PERTAMA (yang menyerahkan)",[
-      ["Nama",dist.nama_petugas||""],
+      ["Nama",""],
       ["Jabatan","Petugas Distribusi SPPG Darmaraja"],
       ["Instansi","SPPG Darmaraja (Badan Gizi Nasional)"],
     ]],
     ["II. PIHAK KEDUA (penerima)",[
-      ["Nama",real.nama_penerima||""],
-      ["Jabatan",real.jabatan_penerima||""],
+      ["Nama",""],
+      ["Jabatan",""],
       ["Instansi / Lembaga",recipient.nama||""],
     ]],
   ];
@@ -224,7 +203,7 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
     "<th class='number-cell'>"+formatNumber(rows.totalBefore)+"</th><th class='number-cell'>"+(rows.totalAfter===""?"":formatNumber(rows.totalAfter))+"</th></tr></tfoot></table>"+
     receiptConditions(real,escapeHtml)+
     "<p class='bast-closing'>Demikian Berita Acara Serah Terima ini dibuat dengan sebenarnya dalam rangkap 2 (dua) untuk dipergunakan sebagaimana mestinya, sebagai dasar pencatatan jumlah porsi yang diterima penerima manfaat.</p>"+
-    bastSignatures(sppg,dist,real,escapeHtml)+"</main>";
+    bastSignatures(sppg,escapeHtml)+"</main>";
 }
 
 const PRINT_STYLES=`
@@ -242,7 +221,7 @@ body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-s
 .letterhead-address{margin-top:1mm;font-size:9pt;line-height:1.25}
 .document-heading{text-align:center}
 .document-heading h1,.document-heading h2,.document-heading p{margin:0}
-.sj-heading{margin:3mm 0 4mm}
+.sj-heading{margin:7mm 0 4mm}
 .sj-heading h1{font-size:15pt;line-height:1.15;font-weight:700}
 .sj-heading h2{margin-top:1mm;font-size:10pt;line-height:1.2;text-decoration:underline;font-weight:700}
 .document-number{margin-top:2mm!important;font-size:10pt}
@@ -273,7 +252,7 @@ body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-s
 .signature-cell strong{display:block;font-size:10pt;font-weight:700}
 .signature-cell span{display:block;min-height:4mm}
 .signature-space{height:27mm;flex:none}
-.signature-person{min-height:4mm;padding-top:1mm;font-size:10pt;overflow-wrap:anywhere}.sign-line{width:82%;height:1px;flex:none;margin:0 auto;border-bottom:1px solid #111}.signature-dots{font-size:10pt;white-space:nowrap}
+.signature-person{min-height:4mm;padding-top:1mm;font-size:10pt;overflow-wrap:anywhere}.signature-name{text-decoration:underline;font-weight:700}.signature-dots{font-size:10pt;white-space:nowrap}
 .bast-opening{margin:0 0 2mm;text-align:justify;font-size:10pt;line-height:1.25}
 .party-section{margin:0 0 1mm}
 .party-section h3{margin:0 0 1mm;font-size:10pt;line-height:1.2;font-weight:700}
