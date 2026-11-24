@@ -83,7 +83,7 @@ function updateLivePreview(){
  const doc={jenis:kind,nomor_lengkap:"PRATINJAU",snapshot_json:snapshot,created_at:"Pratinjau langsung"};
  const renderer=window.AutoDocPrintRenderer;if(!renderer?.buildPrintHtml)return;
  let html=renderer.buildPrintHtml(doc,esc,logoUrl());
- html=html.replace("</style>","body.preview-mode{background:#fff!important}.preview-ribbon{position:absolute;top:12px;right:16px;padding:4px 8px;border:1px solid #d6dfd6;border-radius:4px;color:#56705e;background:#f4f8f3;font:700 9px Arial;letter-spacing:.7px;z-index:2}</style>");
+ html=html.replace("</style>","body.preview-mode{background:#fff!important}.preview-mode .sheet{margin:0!important;box-shadow:none!important}.preview-ribbon{position:absolute;top:12px;right:16px;padding:4px 8px;border:1px solid #d6dfd6;border-radius:4px;color:#56705e;background:#f4f8f3;font:700 9px Arial;letter-spacing:.7px;z-index:2}</style>");
  html=html.replace("<body>","<body class='preview-mode'><div class='preview-ribbon'>PRATINJAU · BELUM DITERBITKAN</div>");
  frame.onload=()=>fitPreviewFrame();frame.srcdoc=html;
 }
