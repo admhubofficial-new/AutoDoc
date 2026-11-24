@@ -274,7 +274,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
       const previewRect = preview.getBoundingClientRect();
       return {
         display: getComputedStyle(layout).display,
-        columns: getComputedStyle(layout).gridTemplateColumns.trim().split(/\\s+/).length,
+        columns: getComputedStyle(layout).gridTemplateColumns.trim().split(/\s+/).length,
         position: getComputedStyle(preview).position,
         beside: previewRect.left >= formRect.right - 1
       };
