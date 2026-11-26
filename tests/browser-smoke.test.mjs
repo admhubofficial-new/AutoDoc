@@ -44,7 +44,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     const url = new URL(request.url());
     const routeName = url.pathname.split("/autodoc-auth/")[1] || "";
     if (apiDelays[routeName]) await new Promise(resolve => setTimeout(resolve, apiDelays[routeName]));
-    const failureKey = routeName === "master/list" && url.searchParams.has("include_recipients")
+    const failureKey = url.searchParams.has("preview") ? routeName + "?preview=true" : routeName === "master/list" && url.searchParams.has("include_recipients")
       ? "master/list?include_recipients=false"
       : routeName;
     if (apiFailures[failureKey] > 0) {
@@ -65,7 +65,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         ]
       };
     } else if (routeName === "master/list") {
-      payload = { data: { settings: [{ nama_kepala_sppg: "Kepala SPPG", nama_kepala_sppi: "Kepala SPPI", nama_ahli_gizi: "Ahli Gizi" }], recipients: [{
+      payload = { data: { settings: [{ kode_sppg:"SPPG-UJI", nama_kepala_sppg: "Kepala SPPG", nama_kepala_sppi: "Kepala SPPI", nama_ahli_gizi: "Ahli Gizi" }], recipients: [{
         id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga", jenjang: "SD", alamat: "Alamat Uji",
         aktif: true, urutan: 10, total_porsi: 16, siswa_kecil: 16, siswa_besar: 0, tendik: 0,
         ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0
@@ -141,7 +141,7 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     await page.locator("#docsShippingDisclosure > summary").click();
     await page.locator("input[name='recipient']").check();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
-    await preview.getByText("PRATINJAU · BELUM DITERBITKAN").waitFor();
+    await preview.getByText(/1053\/SJ\/SPPG-UJI\//).waitFor();
     await page.locator("#docsDriver").fill("Pengemudi Browser Test");
     await preview.getByText("Pengemudi Browser Test", { exact: false }).waitFor();
     assert.equal(app.writes.some(item => item.route === "docs/create"), false);

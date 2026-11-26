@@ -67,7 +67,7 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /frame\.srcdoc=html/);
   assert.match(source, /form\.addEventListener\("input",\(\)=>\{formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
   assert.match(source, /form\.addEventListener\("change",\(\)=>\{formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
-  assert.match(previewSource, /PRATINJAU · BELUM DITERBITKAN/);
+  assert.match(previewSource, /Nomor baru mengikuti urutan saat diterbitkan/);
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
   assert.match(source, /value='ORGANOLEPTIC'/);
