@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2-phase2-phase3-phase4">
-  <link rel="stylesheet" href="./theme.css?v=p2-p3-admin-visual-audit-20261124-workspace-v2-phase2-phase3-phase4">
+  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2-phase2-phase3-phase4-cleanup">
+  <link rel="stylesheet" href="./theme.css?v=p2-p3-admin-visual-audit-20261124-workspace-v2-phase2-phase3-phase4-cleanup">
 </head>
 <body class="auth-pending">
   <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
@@ -388,9 +388,11 @@
         else window.AutoDocDocuments.open();
       }
       function canNavigate() {
-        if (!window.AutoDocDocuments?.isBusy?.()) return true;
-        window.AutoDocDocuments?.notifyBusy?.();
-        return false;
+        if (window.AutoDocDocuments?.isBusy?.()) {
+          window.AutoDocDocuments.notifyBusy();
+          return false;
+        }
+        return window.AutoDocDocuments?.leaveHistory?.() !== false;
       }
       window.AutoDocOpenDocs = (tabName) => {
         if (!canNavigate()) return;
@@ -487,11 +489,11 @@
   <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2-phase4-r2" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123" defer></script>
-  <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
+  <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124-cleanup" defer></script>
   <script src="./document-preview.js?v=p4-simplified-document-flow-20261124" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
   <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
-  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3-r2-phase4" defer></script>
-  <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2-stability2-phase2-phase3" defer></script>
+  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3-r2-phase4-cleanup" defer></script>
+  <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2-stability2-phase2-phase3-cleanup" defer></script>
 </body>
 </html>
