@@ -32,7 +32,7 @@ after(async () => {
   server?.kill("SIGTERM");
 });
 
-async function openApp({ authenticated = true, viewport = { width: 1365, height: 900 }, apiFailures = {}, apiDelays = {} } = {}) {
+async function openApp({ authenticated = true, viewport = { width: 1365, height: 900 }, apiFailures = {}, apiDelays = {}, recipientCount = 1 } = {}) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const writes = [];
@@ -101,6 +101,12 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
       payload = { message: "Mock response", berhasil: 0, requested: 0, errors: [] };
     }
 
+    const recipients = payload.data?.recipients || payload.recipients;
+    if (recipients?.length && recipientCount > 1) {
+      for (let index = 1; index < recipientCount; index++) {
+        recipients.push({ ...recipients[0], id: recipientId.slice(0, -2) + String(index).padStart(2, "0"), nama: "Tujuan " + (index + 1) });
+      }
+    }
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
   });
 
@@ -733,4 +739,30 @@ test("v3 number configuration requires explicit PIN and confirmation", async () 
   assert.deepEqual(app.writes.find(item=>item.route==="master/numbering").body,{jenis:"SJ",next_number:1100,token:"123456"});
   assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
+});
+
+test("desktop paper accepts wheel input and reflows into scrollable rows on zoom", async () => {
+  const app = await openApp({ viewport: { width: 1440, height: 900 }, recipientCount: 7 });
+  try {
+    const page = app.page;
+    const host = page.locator("#docsPreviewPages");
+    await host.locator("iframe").nth(6).waitFor({ state: "attached" });
+    await page.waitForFunction(() => document.querySelector("#docsPreviewPages")?.getAttribute("aria-busy") === "false");
+    const paper = host.locator(".docs-preview-paper").first();
+    const box = await paper.boundingBox();
+    await page.mouse.move(box.x + 80, box.y + 80);
+    await page.mouse.wheel(0, 520);
+    await page.waitForFunction(() => document.querySelector("#docsPreviewPages").scrollTop > 100);
+    const zoom = page.locator("#docsZoom");
+    await zoom.press("Home");
+    for (let step = 0; step < 5; step++) await zoom.press("ArrowRight");
+    await page.waitForFunction(() => {
+      const pages = document.querySelector("#docsPreviewPages");
+      const [a, b] = pages.children;
+      return a.offsetTop === b.offsetTop && b.offsetLeft > a.offsetLeft && pages.scrollHeight > pages.clientHeight;
+    });
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.context.close();
+  }
 });

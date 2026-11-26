@@ -305,7 +305,7 @@ test("mobile recipient selection stays in the page flow and offers clear grouped
 
 test("preview stays open beside the desktop form and has a mobile view switch", () => {
   const theme = readFileSync(new URL("../theme.css", import.meta.url), "utf8");
-  assert.match(source, /id='docsPreviewDisclosure' open/);
+  assert.match(source, /id='docsPreviewDisclosure' aria-label='Pratinjau dokumen'/);
   assert.match(source, /id='docsEditToggle'[^>]*aria-pressed='true'/);
   assert.match(source, /id='docsPreviewToggle'[^>]*aria-pressed='false'/);
   assert.match(theme, /grid-template-columns:minmax\(288px,1fr\) minmax\(0,2fr\)/);
