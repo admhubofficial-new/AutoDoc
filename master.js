@@ -110,7 +110,9 @@ function init(){
   }
   modal.hidden=false;search.value="";render();
   closeBtn.focus();
-  load().then(()=>{if(!modal.hidden&&entity===nextEntity){search.value=requestedSearch;applySearch()}});
+  const selectedEntity=entity;
+  const pendingLoad=load(),request=loadSequence;
+  pendingLoad.then(()=>{if(request===loadSequence&&!modal.hidden&&entity===selectedEntity){search.value=requestedSearch;applySearch()}});
  }
  function resetSession(){
   close(false);cache={};entity="recipients";aiInitialMode="both";
