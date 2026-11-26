@@ -778,6 +778,7 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{
 .workspace-page .docs-preview-pages .docs-document-sheet {
  position: relative;
  aspect-ratio: 794 / 1123;
+ contain: paint;
  overflow: hidden;
 }
 .workspace-page .docs-preview-pages .docs-document-sheet iframe {
