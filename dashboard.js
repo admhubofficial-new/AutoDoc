@@ -8,6 +8,8 @@
 
   let loading = false;
   let loaded = false;
+  let generation = 0;
+  let refreshPending = false;
 
   function el(tag, className, value) {
     const item = document.createElement(tag);
@@ -246,7 +248,9 @@
   }
 
   async function load() {
-    if (loading) return;
+    if (home.hidden) return;
+    if (loading) {refreshPending = true;return;}
+    const request = ++generation;
     loading = true;
     renderLoading();
     try {
@@ -260,9 +264,11 @@
       try { payload = await response.json(); } catch (_) {}
       if (!response.ok) throw new Error(payload.message || "Ringkasan dashboard gagal dimuat.");
       if (!payload || typeof payload !== "object") throw new Error("Respons ringkasan dashboard tidak valid.");
+      if(request!==generation||home.hidden)return;
       render(payload);
       loaded = true;
     } catch (error) {
+      if(request!==generation||home.hidden)return;
       setState("error");
       const panel = el("div", "ui-error-banner home-dashboard-error");
       panel.setAttribute("role", "alert");
@@ -274,7 +280,7 @@
       panel.append(content, action("Coba lagi", false, load));
       host.replaceChildren(panel);
     } finally {
-      loading = false;
+      if(request===generation){loading=false;if(refreshPending&&!home.hidden){refreshPending=false;load()}}
     }
   }
 
@@ -282,7 +288,8 @@
     if (!home.hidden) load();
   });
   const observer = new MutationObserver(() => {
-    if (!home.hidden && !loaded) load();
+    if(home.hidden){generation++;loading=false;loaded=false;refreshPending=false;host.replaceChildren();setState("");}
+    else if(!loaded)load();
   });
   observer.observe(home, { attributes: true, attributeFilter: ["hidden"] });
   if (!home.hidden) load();

@@ -925,3 +925,55 @@ test("phase 4 groups administration categories and keeps identity editing access
   assert.deepEqual(mobile.errors,[]);
  }finally{await mobile.context.close()}
 });
+
+
+test("audit: history print controls stay disabled until the selected date has loaded", async () => {
+ const app=await openApp({apiDelays:{"docs/list":400}});
+ try{
+  const page=app.page;
+  await page.evaluate(()=>window.AutoDocOpenArchive("2026-11-23"));
+  await page.locator("#docsPrintBast:not([disabled])").waitFor();
+  await page.locator("#docsHistoryDate").fill("2026-11-24");
+  await page.locator("#docsLoadHistory").click();
+  assert.equal(await page.locator("#docsPrintBast").isDisabled(),true);
+  assert.equal(await page.locator("#docsPrintOrganoleptic").isDisabled(),true);
+  await page.locator("#docsPrintBast:not([disabled])").waitFor();
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});
+test("audit: leaving archive clears PIN confirmation and pending requests cannot replace the current page", async () => {
+ const app=await openApp({apiDelays:{"docs/days":250}});
+ try{
+  const page=app.page;
+  await page.locator('[data-home-nav="archive"]').click();
+  await page.locator("#docsDaysList .docs-day-card").waitFor();
+  await page.locator("#docsDaysSelectAll").check();
+  await page.locator("#docsDaysDelete").click();
+  await page.locator("#docsDeletePin").fill("pin-test-only");
+  page.once("dialog",dialog=>dialog.accept());
+  await page.locator('[data-home-nav="print"]').click();
+  assert.equal(await page.locator("#docsDeletePin").count(),0);
+  await page.locator("input[name='recipient']").waitFor();
+  assert.equal(app.writes.some(item=>item.route==="docs/delete-history"),false);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});
+
+
+test("audit: stale AI response cannot show a proposal for changed input", async () => {
+ const app=await openApp({apiDelays:{"ai/analyze":500}});
+ try{
+  const page=app.page;
+  await page.locator('[data-home-nav="master"]').click();
+  await page.getByRole("button",{name:"Asisten AI",exact:true}).click();
+  await page.locator("#aiSourceText").fill("Menu awal");
+  await page.getByRole("button",{name:"Baca dan klasifikasikan"}).click();
+  await page.locator("#aiSourceText").fill("Menu baru");
+  await page.getByRole("button",{name:"Baca dan klasifikasikan"}).waitFor();
+  assert.equal(await page.locator(".ai-review-panel").isVisible(),false);
+  await page.getByRole("button",{name:"Baca dan klasifikasikan"}).click();
+  await page.locator(".ai-review-panel:not([hidden])").waitFor();
+  assert.equal(app.writes.filter(item=>item.route==="ai/analyze").length,2);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});

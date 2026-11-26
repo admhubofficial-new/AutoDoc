@@ -26,8 +26,7 @@ const MASTER_TITLES={settings:"Identitas SPPG",drivers:"Pengemudi",vehicles:"Ken
 
 const COUNT_FIELDS = new Set(["siswa_kecil","siswa_besar","tendik","ibu_hamil","ibu_menyusui","balita","putus_sekolah","kader"]);
 const ALLOWED_EXTENSIONS = new Set(["pdf","doc","docx","xls","xlsx","csv","tsv","txt","md","rtf","odt","ppt","pptx","json","html","xml","iif","png","jpg","jpeg","webp"]);
-function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage}) {
- let host=null, selectedFiles=[], mode="both", dateValue="";
+function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage,isActive=()=>true,onBusyChange=()=>{}}) {
  function text(parent,tag,cls,value){const element=el(tag,cls,value);parent.append(element);return element;}
  function button(parent,label,kind,handler){const item=text(parent,"button","dm-btn"+(kind?" "+kind:""),label);item.type="button";item.addEventListener("click",handler);return item;}
  function field(parent,label,control){const wrap=text(parent,"label","ai-field");text(wrap,"span","ai-field-label",label);wrap.append(control);return wrap;}
@@ -44,8 +43,15 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    reader.readAsDataURL(file);
   });
  }
- function setMessageSafe(message,bad=false,state){
-  const output=host?.querySelector(".ai-status");
+ function render(container,options={}){
+  const host=container;
+  let selectedFiles=[],mode="both",dateValue="",revision=0,saving=false;
+  host.replaceChildren();
+  const shell=text(host,"div","ai-assistant");
+  const active=()=>shell.isConnected&&isActive();
+  function setMessageSafe(message,bad=false,state){
+  if(!active())return;
+  const output=shell.querySelector(".ai-status");
   if(output){
    output.textContent=message||"";
    output.dataset.state=state||(bad?"error":message?"success":"");
@@ -56,10 +62,6 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
   }
   if(typeof setMessage==="function")setMessage(message,bad,state);
  }
- function render(container,options={}){
-  host=container;
-  host.innerHTML="";
-  const shell=text(host,"div","ai-assistant");
   const inputPanel=text(shell,"section","ai-panel");
   text(inputPanel,"h4","","Asisten AI AutoDoc");
   text(inputPanel,"p","ai-lead","Tempel teks atau unggah dokumen untuk dipetakan ke menu distribusi, penerima manfaat, serta Data Master seperti identitas SPPG, pengemudi, kendaraan, petugas, dan daftar menu master.");
@@ -85,6 +87,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
   const resultContent=text(results,"div","ai-result-content");
   const defaultFileHint=fileHint.textContent;
   function clearAnalysis(){
+   revision++;
    results.hidden=true;
    resultContent.innerHTML="";
   }
@@ -114,10 +117,13 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    setMessageSafe(files.length+" file siap dianalisis bersama.",false,"success");
   });
   async function analyzeInput(){
+   if(!active()||saving||analyze.disabled)return;
    const sourceText=source.value.trim(),files=selectedFiles.slice();
    if(!sourceText&&!files.length){setMessageSafe("Tempel teks atau pilih setidaknya satu file terlebih dahulu.",true);return}
    clearAnalysis();
    if(!date.value&&(modeSelect.value==="both"||modeSelect.value==="menus")){setMessageSafe("Tanggal distribusi perlu dipilih untuk mengelompokkan menu.",true);date.focus();return}
+   const requestRevision=revision,requestMode=modeSelect.value,requestDate=date.value;
+   const current=()=>active()&&requestRevision===revision;
    analyze.disabled=true;analyze.setAttribute("aria-busy","true");analyze.textContent="AI sedang membaca...";
    results.dataset.state="loading";
    setMessageSafe("Menganalisis isi dan mencocokkan data penerima. Ini belum mengubah Data Master.",false,"loading");
@@ -127,15 +133,17 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
      const mime=file.type||"application/octet-stream";
      filePayloads.push({name:file.name,mime,data:await readFile(file)});
     }
-    const result=await api("ai/analyze",{mode:modeSelect.value,tanggal:date.value,text:sourceText,files:filePayloads});
+    if(!current())return;
+    const result=await api("ai/analyze",{mode:requestMode,tanggal:requestDate,text:sourceText,files:filePayloads});
+    if(!current())return;
     if(!result?.analysis||typeof result.analysis!=="object")throw new Error("Respons analisis tidak lengkap. Periksa sumber dan coba kembali.");
-    mode=modeSelect.value;dateValue=date.value;
+    mode=requestMode;dateValue=requestDate;
     renderAnalysis(resultContent,result.analysis);
     results.dataset.state=(result.analysis.menu_groups?.length||result.analysis.recipient_updates?.length||result.analysis.master_updates?.length)?"success":"empty";
     results.hidden=false;
     setMessageSafe(result.message||"Analisis selesai. Periksa seluruh usulan sebelum menyimpan.",false,results.dataset.state);
     results.scrollIntoView({behavior:"auto",block:"start"});
-   }catch(error){results.dataset.state="error";setMessageSafe(error.message||"Analisis AI gagal.",true,"error")}
+   }catch(error){if(current()){results.dataset.state="error";setMessageSafe(error.message||"Analisis AI gagal.",true,"error")}}
    finally{analyze.disabled=false;analyze.removeAttribute("aria-busy");analyze.textContent="Baca dan klasifikasikan"}
   }
   function renderAnalysis(target,data){
@@ -269,6 +277,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    const controls=text(target,"div","ai-action-row");
    const save=button(controls,"Konfirmasi & simpan penerima","primary",saveRecipientRows);
    async function saveRecipientRows(){
+    if(!active()||saving)return;
     const selected=Array.from(section.querySelectorAll("[data-recipient-row]")).filter(card=>card.querySelector("[data-include-recipient]")?.checked);
     if(!selected.length){setMessageSafe("Pilih minimal satu usulan penerima yang sudah diperiksa.",true);return}
     let payload;try{payload=selected.map(card=>{
@@ -298,6 +307,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
     })}catch(error){setMessageSafe(error.message||"Periksa kembali nilai penerima.",true);return}
     if(payload.some(row=>!row.data.kelompok||!row.data.nama||!row.data.jenjang)){setMessageSafe("Kelompok, nama, dan jenjang harus lengkap pada setiap baris.",true);return}
     if(!confirm("Konfirmasi penyimpanan "+payload.length+" penerima? Hanya baris yang dicentang yang akan diperbarui/ditambahkan. Data penerima lain tidak dihapus."))return;
+    saving=true;onBusyChange(true);inputPanel.inert=true;results.inert=true;
     save.disabled=true;save.textContent="Menyimpan...";
     let saved=0;
     try{
@@ -314,9 +324,9 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
      setMessageSafe(saved+" baris penerima berhasil disimpan. Periksa kembali Data Master.");
      checkboxesAfterSave(selected);
     }catch(error){
-     if(saved>0)await onMasterChanged();
+     if(saved>0){try{await onMasterChanged()}catch(_){} }
      setMessageSafe((saved?saved+" baris sudah tersimpan. ":"")+(error.message||"Data penerima gagal disimpan."),true);
-    }finally{save.disabled=false;save.textContent="Konfirmasi & simpan penerima"}
+    }finally{saving=false;onBusyChange(false);inputPanel.inert=false;results.inert=false;save.disabled=false;save.textContent="Konfirmasi & simpan penerima"}
    }
    function checkboxesAfterSave(cards){cards.forEach(card=>{const input=card.querySelector("[data-include-recipient]");if(input){input.checked=false;input.disabled=true}})}
   }
@@ -353,6 +363,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
    const controls=text(target,"div","ai-action-row");
    const save=button(controls,"Konfirmasi & simpan Data Master","primary",saveMasterRows);
    async function saveMasterRows(){
+    if(!active()||saving)return;
     const selected=Array.from(section.querySelectorAll("[data-master-row]")).filter(card=>card.querySelector("[data-include-master]")?.checked);
     if(!selected.length){setMessageSafe("Pilih minimal satu baris Data Master yang sudah diperiksa.",true);return}
     const payload=[];
@@ -375,6 +386,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
     }catch(error){setMessageSafe(error.message||"Periksa kembali data master.",true);return}
     const preview=payload.map(item=>MASTER_TITLES[item.entity]+" · "+String(item.data.nama_sppg||item.data.nama||item.data.no_kendaraan||item.data.teks_menu)).join("\n");
     if(!confirm("Konfirmasi penyimpanan "+payload.length+" data master berikut?\n\n"+preview+"\n\nHanya baris terpilih yang akan disimpan."))return;
+    saving=true;onBusyChange(true);inputPanel.inert=true;results.inert=true;
     save.disabled=true;save.textContent="Menyimpan...";
     let saved=0;
     try{
@@ -387,9 +399,9 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
      await onMasterChanged();
      setMessageSafe(saved+" data master berhasil disimpan.");
     }catch(error){
-     if(saved>0)await onMasterChanged();
+     if(saved>0){try{await onMasterChanged()}catch(_){} }
      setMessageSafe((saved?saved+" data sudah tersimpan. ":"")+(error.message||"Data master gagal disimpan."),true);
-    }finally{save.disabled=false;save.textContent="Konfirmasi & simpan Data Master"}
+    }finally{saving=false;onBusyChange(false);inputPanel.inert=false;results.inert=false;save.disabled=false;save.textContent="Konfirmasi & simpan Data Master"}
    }
   }
 

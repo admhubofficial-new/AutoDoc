@@ -11,6 +11,7 @@ function nowInJakarta(){
 }
 const today=()=>nowInJakarta();
 let realizationMode=false, queueRequest=0, historyRequest=0, masterRequest=0, publishing=false, formDirty=false;
+let copyMenuRequest=0, menuRevision=0;
 const DRAFT_KEY="autodoc:distribution-draft:v1";
 const DRAFT_TTL=12*60*60*1000;
 let renderingForm=false,restoringDraft=false,draftRestored=false;
@@ -43,7 +44,7 @@ function saveDraft(){
   draftMessage("Draf tersimpan di tab ini · berlaku 12 jam");
  }catch(_){draftMessage("Draf hanya tersimpan sementara di halaman ini. Penyimpanan browser tidak tersedia.")}
 }
-function isBusy(){return publishing||!!modal?.querySelector(".docs-realization[data-state='loading']")}
+function isBusy(){return publishing||!!modal?.querySelector(".docs-realization[data-state='loading'],.docs-delete-panel[data-state='loading']")}
 function notifyBusy(){status("Penyimpanan sedang berlangsung. Tunggu konfirmasi server sebelum berpindah halaman.",false,"loading")}
 let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, activeAiMenuPlan=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
 
@@ -75,9 +76,10 @@ function status(message,bad,state){
  }
 function close(returnHome=true){
  if(!modal)return;
- if(returnHome&&isBusy()){notifyBusy();return}
- queueRequest++;historyRequest++;masterRequest++;
- modal.hidden=true;modal.style.display="none";modal.setAttribute("aria-hidden","true");
+ if(returnHome&&!leaveHistory())return
+ queueRequest++;historyRequest++;masterRequest++;copyMenuRequest++;
+ clearHistory();
+ modal.hidden=true;modal.setAttribute("aria-hidden","true");
  if(returnHome){
   window.AutoDocSetHomeNav?.("home");
   if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();
@@ -87,8 +89,6 @@ function show(loadFormData=true){
  if(!modal)build()
  returnFocusEl=document.activeElement;
  modal.hidden=false;
- modal.style.display="flex";
- modal.style.visibility="visible";
  modal.setAttribute("aria-hidden","false");
  $(".docs-close",modal)?.focus();
  if(loadFormData&&!masterLoaded)loadMaster().catch(e=>{if(!modal.hidden&&tab==="create")status(e.message,true)});
@@ -111,11 +111,6 @@ function build(){
   if(e.key==="Escape"){close();return}
  });
  renderCreate();
-}
-function options(items,valueKey,labelKey,label){
- let html="<option value=''>"+esc(label)+"</option>";
- (items||[]).filter(x=>x.aktif!==false).forEach(x=>{html+="<option value='"+esc(x[valueKey])+"'>"+esc(x[labelKey])+"</option>"});
- return html;
 }
 function masterSuggestions(items,key){
  return (Array.isArray(items)?items:[]).filter(item=>item&&item.aktif!==false&&String(item[key]||"").trim())
@@ -175,7 +170,6 @@ async function loadMaster(){
  const warning=masterResult.status==="rejected"?" Data pendukung (menu/petugas/kendaraan/pengemudi) gagal dimuat; daftar penerima tetap tersedia.":"";
  status(activeCount+" penerima aktif berhasil dimuat dari "+recipients.length+" data."+warning,masterResult.status==="rejected",masterResult.status==="rejected"?"error":activeCount?"success":"empty");
 }
-function renderMenuComponents(){menuController?.render()}
 function readMenuComponents(){return menuController?.read()||[]}
 function getAiMenuPlan(date){
  const plan=activeAiMenuPlan;
@@ -267,7 +261,7 @@ function applyAiMenuPlan(plan){
   menuController?.set(first);
   const plannedRecipients=new Set([...used].map(String));
   modal.querySelectorAll("input[name='recipient']").forEach(input=>{input.checked=plannedRecipients.has(String(input.value))});
-  renderMenuComponents();renderAiMenuPlanNotice();updateSelectedCount();
+  renderAiMenuPlanNotice();updateSelectedCount();
   status("Menu AI diterapkan dan "+used.size+" penerima sudah dipilih otomatis. Periksa kembali setiap kelompok sebelum menerbitkan.");
  };
  if(masterLoaded)applyToForm();
@@ -283,22 +277,26 @@ function addMenuComponent(value=""){menuController?.add(value)}
 async function copyLastMenu(){
  const button=$("#docsCopyLastMenu",modal);
  if(!button)return;
+ const request=++copyMenuRequest,revision=menuRevision;
+ const active=()=>request===copyMenuRequest&&revision===menuRevision&&!modal.hidden&&tab==="create"&&button.isConnected;
  const oldText=button.textContent;button.disabled=true;button.textContent="Memuat menu terakhir...";
  try{
   const days=await api("docs/days?offset=0");
+  if(!active())return;
   const latest=Array.isArray(days.distributions)?days.distributions[0]:null;
   if(!latest){status("Belum ada distribusi sebelumnya untuk disalin.",true);return}
   const detail=await api("docs/list?tanggal="+encodeURIComponent(latest.tanggal));
+  if(!active())return;
   const distribution=detail.distribution||latest;
   const items=Array.isArray(distribution.menu_items)
    ? distribution.menu_items.map(item=>String(item.nama_komponen||"").trim()).filter(Boolean)
    : [];
   if(!items.length&&String(distribution.menu||"").trim())items.push(String(distribution.menu).trim());
   if(!items.length){status("Distribusi terakhir belum memiliki komponen menu.",true);return}
-  formDirty=true;menuController?.set(items.slice(0,8));renderMenuComponents();saveDraft();
+  formDirty=true;menuController?.set(items.slice(0,8));saveDraft();
   status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+(menuController?.count()||items.length)+" komponen).");previewController?.updateLivePreview();
- }catch(error){status(error.message,true)}
- finally{button.disabled=false;button.textContent=oldText}
+ }catch(error){if(active())status(error.message,true)}
+ finally{if(button.isConnected){button.disabled=false;button.textContent=oldText}}
 }
 function captureDraft(){
  const ids=draftFields;
@@ -307,7 +305,7 @@ function captureDraft(){
 function restoreDraft(draft){
  restoringDraft=true;
  for(const [id,value] of draft.fields){const input=$("#"+id,modal);if(!input||value===undefined)continue;if(input.type==="checkbox")input.checked=value;else input.value=value}
- menuController?.set(draft.menu);renderMenuComponents();
+ menuController?.set(draft.menu);
  const selected=new Set(draft.recipients);
  modal.querySelectorAll("input[name='recipient']").forEach(input=>{input.checked=selected.has(input.value)});
  updateSelectedCount();renderAiMenuPlanNotice();
@@ -358,7 +356,7 @@ function renderCreateForm(){
   "</section>"+
   "<details class='docs-preview-panel' id='docsPreviewDisclosure'><summary class='docs-preview-summary'><strong>Pratinjau dokumen</strong><span class='docs-preview-toggle'>Buka</span></summary><div class='docs-preview-content'><div class='docs-preview-head'><div><strong>Data pratinjau</strong><small id='docsPreviewRecipient'>Pilih penerima untuk melihat dokumen</small></div><div class='docs-preview-selects'><select id='docsPreviewRecipientSelect' aria-label='Penerima pratinjau'><option value=''>Penerima</option></select><select id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><div class='docs-preview-paper'><iframe id='docsPreviewFrame' title='Pratinjau dokumen cetak' loading='lazy'></iframe></div></div></details>"+
  "</div>";
- renderMenuComponents();
+ menuController?.render();
  renderAiMenuPlanNotice();
  renderRecipients(recipients);
  const form=$("#docsCreateForm",target);
@@ -554,7 +552,8 @@ async function createDocs(event){
   $("#docsCreateResult",modal).innerHTML="";$("#docsCreateResult",modal).append(summary);
   status((result.message||"Selesai.")+masterSaveWarning,failed>0||!!masterSaveWarning,failed>0||masterSaveWarning?"error":"success");
   await loadHistory(body.tanggal);
-  if(!failed){clearStoredDraft();formDirty=false;activeAiMenuPlan=null;renderCreate()}
+  const fullyIssued=!failed&&Number(result.requested)>0&&Number(result.berhasil)===Number(result.requested);
+  if(fullyIssued){clearStoredDraft();formDirty=false;activeAiMenuPlan=null;renderCreate()}
   window.AutoDocSetHomeNav?.("archive");
   $("#docsTitle",modal).textContent="Dokumen distribusi";
   $(".docs-head p",modal).textContent="Periksa hasil penerbitan dan gunakan aksi cetak."
@@ -563,8 +562,18 @@ async function createDocs(event){
  }catch(e){status(e.message,true)}
  finally{publishing=false;button.textContent="Terbitkan dokumen";syncPreflightSummary()}
 }
+function clearHistory(){
+ currentDocs=[];currentDistribution=null;
+ $(".docs-view-history",modal)?.replaceChildren();
+}
+function leaveHistory(){
+ if(isBusy()){notifyBusy();return false}
+ if(modal.querySelector(".docs-realization[data-state='editing'],.docs-realization[data-state='error'],.docs-delete-panel")&&!window.confirm("Tutup formulir yang belum disimpan?"))return false;
+ modal.querySelectorAll(".docs-realization,.docs-delete-panel").forEach(panel=>panel.remove());
+ return true;
+}
 async function loadDistributions(initialOffset=0){
- historyRequest++;
+ historyRequest++;clearHistory();
  if(!archiveController)throw new Error("Modul arsip belum siap.");
  return archiveController.loadDistributions(initialOffset);
 }
@@ -573,9 +582,10 @@ async function loadHistory(date){
  const request=++historyRequest;
  const target=$(".docs-view-history",modal);if(!target)return;
  const chosen=date||($("#docsHistoryDate",modal)?.value)||today();
-  target.innerHTML="<section class='docs-distribution-detail' aria-labelledby='docsDetailTitle'><header class='docs-detail-context'><div><p class='docs-detail-breadcrumb'>Arsip distribusi / Detail distribusi</p><h3 id='docsDetailTitle'>Detail Distribusi</h3><p class='docs-note'>Periksa dokumen pada tanggal ini. Aksi cetak tersedia terpisah dari pengelolaan arsip.</p></div><button type='button' class='docs-btn' id='docsBackToDays'>Kembali ke daftar distribusi</button></header><div class='docs-history-top'><div class='docs-field'><label for='docsHistoryDate'>Tanggal distribusi</label><input id='docsHistoryDate' type='date' value='"+esc(chosen)+"'></div><button type='button' class='docs-btn primary' id='docsLoadHistory'>Tampilkan</button></div><section class='docs-print-area' aria-labelledby='docsPrintAreaTitle'><div><h4 id='docsPrintAreaTitle'>Aksi cetak</h4><p class='docs-note'>Cetak ulang satu atau beberapa dokumen pada distribusi ini.</p></div><div class='docs-print-bulk' id='docsPrintBulk'><span class='docs-print-bulk-label'>Cetak massal</span><button type='button' class='docs-btn' id='docsPrintSj'>Semua Surat Jalan</button><button type='button' class='docs-btn' id='docsPrintBast'>Semua BAST</button><button type='button' class='docs-btn' id='docsPrintOrganoleptic'>Semua Uji Organoleptik</button></div><div class='docs-print-selection' id='docsPrintSelection'><label><input type='checkbox' id='docsPrintSelectAll'> Pilih semua dokumen</label><span id='docsPrintSelectionCount'>0 dipilih</span><button type='button' class='docs-btn primary' id='docsPrintSelected' disabled>Cetak dipilih</button></div><div id='docsPrintSelectedSlot'></div></section><div id='docsDistributionMeta' class='docs-note'></div><div class='docs-list' id='docsList'></div></section>";
- $("#docsBackToDays",target).onclick=()=>loadDistributions().catch(e=>status(e.message,true));
- $("#docsLoadHistory",target).onclick=()=>loadHistory($("#docsHistoryDate",target).value).catch(e=>status(e.message,true));
+ currentDocs=[];currentDistribution=null;
+  target.innerHTML="<section class='docs-distribution-detail' aria-labelledby='docsDetailTitle'><header class='docs-detail-context'><div><p class='docs-detail-breadcrumb'>Arsip distribusi / Detail distribusi</p><h3 id='docsDetailTitle'>Detail Distribusi</h3><p class='docs-note'>Periksa dokumen pada tanggal ini. Aksi cetak tersedia terpisah dari pengelolaan arsip.</p></div><button type='button' class='docs-btn' id='docsBackToDays'>Kembali ke daftar distribusi</button></header><div class='docs-history-top'><div class='docs-field'><label for='docsHistoryDate'>Tanggal distribusi</label><input id='docsHistoryDate' type='date' value='"+esc(chosen)+"'></div><button type='button' class='docs-btn primary' id='docsLoadHistory'>Tampilkan</button></div><section class='docs-print-area' aria-labelledby='docsPrintAreaTitle'><div><h4 id='docsPrintAreaTitle'>Aksi cetak</h4><p class='docs-note'>Cetak ulang satu atau beberapa dokumen pada distribusi ini.</p></div><div class='docs-print-bulk' id='docsPrintBulk'><span class='docs-print-bulk-label'>Cetak massal</span><button type='button' class='docs-btn' id='docsPrintSj' disabled>Semua Surat Jalan</button><button type='button' class='docs-btn' id='docsPrintBast' disabled>Semua BAST</button><button type='button' class='docs-btn' id='docsPrintOrganoleptic' disabled>Semua Uji Organoleptik</button></div><div class='docs-print-selection' id='docsPrintSelection'><label><input type='checkbox' id='docsPrintSelectAll' disabled> Pilih semua dokumen</label><span id='docsPrintSelectionCount'>0 dipilih</span><button type='button' class='docs-btn primary' id='docsPrintSelected' disabled>Cetak dipilih</button></div><div id='docsPrintSelectedSlot'></div></section><div id='docsDistributionMeta' class='docs-note'></div><div class='docs-list' id='docsList'></div></section>";
+ $("#docsBackToDays",target).onclick=()=>{if(leaveHistory())loadDistributions().catch(e=>status(e.message,true))};
+ $("#docsLoadHistory",target).onclick=()=>{if(leaveHistory())loadHistory($("#docsHistoryDate",target).value).catch(e=>status(e.message,true))};
  $("#docsPrintSj",target).onclick=()=>printDocuments(currentDocs.filter(doc=>doc.jenis==="SJ"));
  $("#docsPrintBast",target).onclick=()=>printDocuments(currentDocs.filter(doc=>doc.jenis==="BAST"));
  $("#docsPrintOrganoleptic",target).onclick=()=>printOrganolepticForms(getArchiveRecipients(),getArchiveRecipientMenus());
@@ -601,7 +611,8 @@ async function loadHistory(date){
  try{
   const result=await api("docs/list?tanggal="+encodeURIComponent(chosen));
   if(request!==historyRequest||realizationMode||modal.hidden)return;
-  currentDistribution=result.distribution;currentDocs=result.documents||[];
+  if(!Array.isArray(result.documents))throw Error("Respons dokumen tidak valid.");
+  currentDistribution=result.distribution;currentDocs=result.documents;
   const list=$("#docsList",target);list.innerHTML="";
   const dist=currentDistribution||{};
   $("#docsDistributionMeta",target).textContent=(dist.menu||"Menu belum diisi")+" · Waktu makan: "+(dist.waktu_makan||"siang")+" · "+(dist.nama_petugas||"Petugas belum diisi")+" · "+(dist.nama_pengemudi||"Pengemudi belum diisi")+" · "+(dist.no_kendaraan||"Kendaraan belum diisi");
@@ -619,7 +630,7 @@ async function loadHistory(date){
   }
   if(!currentDocs.length){
    list.append(node("div","docs-empty","Belum ada dokumen bernomor untuk tanggal ini. Formulir Uji Organoleptik tetap dapat dicetak bila dipilih pada proses penerbitan."));
-   status("");
+   updatePrintSelection();status("");
    return;
   }
   const grouped=new Map();
@@ -633,7 +644,7 @@ async function loadHistory(date){
   for(const group of grouped.values())list.append(renderDocumentGroup(group,selectedPrintIds,updatePrintSelection));
   updatePrintSelection();
   status(currentDocs.length+" dokumen · "+grouped.size+" penerima.");
- }catch(e){if(request===historyRequest&&!modal.hidden)status(e.message,true)}
+ }catch(e){if(request===historyRequest&&!modal.hidden){currentDocs=[];currentDistribution=null;status(e.message,true)}}
 }
 async function loadAllPendingBast(){
  const target=$(".docs-view-history",modal);
@@ -825,9 +836,9 @@ function printDocuments(documents){
     markButton.textContent="Status cetak dicatat";
     note.textContent="Konfirmasi cetak berhasil disimpan.";
     window.dispatchEvent(new Event("autodoc:data-changed"));
-    if(!modal.hidden){
+    if(!modal.hidden&&tab==="history"&&!realizationMode&&!isBusy()&&!modal.querySelector(".docs-realization,.docs-delete-panel")&&currentDocs.some(doc=>docs.some(printed=>printed.id===doc.id))){
      const dateField=$("#docsHistoryDate",modal);
-     if(dateField)loadHistory(dateField.value).catch(()=>{});
+     if(dateField&&dateField.value===currentDistribution?.tanggal)loadHistory(dateField.value).catch(()=>{});
     }
    }else{
     markButton.disabled=false;markButton.textContent="Ulangi konfirmasi";
@@ -940,13 +951,13 @@ function showRealization(card,doc){
 function init(){
  build();
  window.addEventListener("autodoc:data-changed",()=>{masterLoaded=false});
- menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored){formDirty=true;saveDraft()}}});
+ menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{menuRevision++;syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored){formDirty=true;saveDraft()}}});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
  previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,readMenuComponents,readMenuComponentsForRecipient:menuItemsForRecipient,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
  window.AutoDocDocuments=Object.freeze({
   open(){
-   realizationMode=false;queueRequest++;historyRequest++;
+   realizationMode=false;queueRequest++;historyRequest++;copyMenuRequest++;clearHistory();
    show();
    tab="create";
    $("#docsTitle",modal).textContent="Distribusi harian";
@@ -955,11 +966,11 @@ function init(){
    $(".docs-view-history",modal).hidden=true;
   },
   close,
-  isBusy,notifyBusy,
+  isBusy,notifyBusy,leaveHistory,
   resetSession(){close(false);clearStoredDraft();draftRestored=false;masterLoaded=false;master={};formDirty=false;activeAiMenuPlan=null;pendingOrganolepticPrint=null;currentDocs=[];currentDistribution=null;renderCreate();$(".docs-view-history",modal).replaceChildren()},
   applyAiMenuPlan,
   openRealization(date){
-   realizationMode=true;masterRequest++;
+   realizationMode=true;masterRequest++;copyMenuRequest++;clearHistory();
    show(false);tab="history";
    $("#docsTitle",modal).textContent="Realisasi BAST";
    $(".docs-head p",modal).textContent="Pilih tanggal dan selesaikan pencatatan penerimaan makanan.";
@@ -968,7 +979,7 @@ function init(){
    loadRealizationQueue(date);
   },
   openArchive(date){
-   realizationMode=false;queueRequest++;masterRequest++;
+   realizationMode=false;queueRequest++;masterRequest++;copyMenuRequest++;clearHistory();
    show(false);
    tab="history";
    $("#docsTitle",modal).textContent="Arsip Dokumen";

@@ -40,6 +40,7 @@
       const selectAll = node("input");
       selectAll.id = "docsDaysSelectAll";
       selectAll.type = "checkbox";
+      selectAll.disabled = true;
       selectAllLabel.append(selectAll, node("span", null, "Pilih semua pada halaman ini"));
       const selectionCount = node("strong", "docs-days-selection-count", "0 riwayat dipilih");
       const deleteButton = node("button", "docs-btn danger", "Hapus dipilih");
@@ -78,6 +79,8 @@
       let rows = [];
       let searchTimer = null;
       let requestSequence = 0;
+      let deleting = false;
+      const active = () => workspace.isConnected && !modal.hidden && !target.hidden;
       const selectedIds = new Set();
       const selectedDetails = new Map();
 
@@ -86,7 +89,7 @@
         live.dataset.state = state || (bad ? "error" : message ? "success" : "");
         live.setAttribute("role", bad ? "alert" : "status");
         live.setAttribute("aria-live", bad ? "assertive" : "polite");
-        if (typeof status === "function") status(message, bad, state);
+        if (active() && typeof status === "function") status(message, bad, state);
       }
 
       function formatDate(value) {
@@ -215,6 +218,7 @@
                 selectedIds.delete(id);
                 selectedDetails.delete(id);
               }
+              confirmSlot.replaceChildren();
               updateSelection();
             });
             pick.append(checkbox);
@@ -252,15 +256,18 @@
       }
 
       async function loadPage(nextOffset) {
+        if (!active() || deleting) return;
         const requestId = ++requestSequence;
         announce("Memuat arsip…", false, "loading");
         previous.disabled = true;
         next.disabled = true;
+        selectAll.disabled = true;
         renderLoading();
         try {
           const query = "?offset=" + encodeURIComponent(nextOffset) + "&q=" + encodeURIComponent(input.value.trim());
           const result = await api("docs/days" + query);
           if (requestId !== requestSequence) return;
+          if (!active()) return;
           rows = Array.isArray(result.distributions) ? result.distributions : [];
           offset = Number(result.offset || 0);
           hasMore = Boolean(result.has_more);
@@ -272,6 +279,7 @@
           announce(rows.length + " riwayat dimuat pada halaman ini.", false, rows.length ? "success" : "empty");
         } catch (error) {
           if (requestId !== requestSequence) return;
+          if (!active()) return;
           announce(error.message || "Arsip gagal dimuat.", true, "error");
           renderError(error);
           previous.disabled = offset === 0;
@@ -281,6 +289,7 @@
       }
 
       selectAll.addEventListener("change", () => {
+        confirmSlot.replaceChildren();
         const selecting = selectAll.checked;
         let capped = false;
         rows.forEach(row => {
@@ -314,9 +323,11 @@
       previous.addEventListener("click", () => loadPage(Math.max(0, offset - 60)));
       next.addEventListener("click", () => loadPage(offset + 60));
       input.addEventListener("input", () => {
+        confirmSlot.replaceChildren();
         syncSearchControls();
         if (searchTimer) clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
+          if(!active() || deleting)return;
           selectedIds.clear();
           selectedDetails.clear();
           confirmSlot.replaceChildren();
@@ -326,7 +337,7 @@
       });
 
       deleteButton.addEventListener("click", () => {
-        if (!selectedIds.size) return;
+        if (!selectedIds.size || deleting || !active()) return;
         confirmSlot.replaceChildren();
         const ids = Array.from(selectedIds);
         const panel = node("section", "docs-delete-panel");
@@ -373,8 +384,14 @@
 
         form.addEventListener("submit", async event => {
           event.preventDefault();
-          if (!form.reportValidity()) return;
+          if (deleting || !active() || !form.reportValidity()) return;
+          if (ids.length !== selectedIds.size || ids.some(id => !selectedIds.has(id))) {confirmSlot.replaceChildren();announce("Pilihan berubah. Konfirmasi ulang penghapusan.",true);return;}
           const token = pin.value;
+          pin.value = "";
+          deleting = true;
+          panel.dataset.state = "loading";
+          workspace.inert = true;
+          if (searchTimer) clearTimeout(searchTimer);
           submit.disabled = true;
           cancel.disabled = true;
           submit.textContent = "Memverifikasi PIN dan menghapus…";
@@ -384,9 +401,11 @@
             selectedDetails.clear();
             confirmSlot.replaceChildren();
             announce(result.message || "Riwayat berhasil dihapus.", false, "success");
+            deleting = false;workspace.inert = false;
             await loadPage(0);
             window.dispatchEvent(new Event("autodoc:data-changed"));
           } catch (error) {
+            deleting = false;workspace.inert = false;panel.dataset.state = "error";
             announce(error.message || "Penghapusan gagal.", true, "error");
             submit.disabled = false;
             cancel.disabled = false;

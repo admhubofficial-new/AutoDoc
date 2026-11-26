@@ -15,7 +15,9 @@ const categoryGroups=[
  {label:"Pengaturan",keys:["settings"]},
  {label:"Bantuan input",keys:["ai"]}
 ];
-let contextualAi=false,loadSequence=0;
+let contextualAi=false,loadSequence=0,saving=false;
+function isBusy(){return saving}
+function notifyBusy(){msg("Penyimpanan Data Master sedang berlangsung.",false,"loading")}
 let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null,aiInitialMode="both",suspendedDocumentOverlay=null;
 async function api(path,body){const h={"apikey":KEY,"Accept":"application/json"};const r=await fetch(API+"/"+path,{method:body?"POST":"GET",headers:body?{...h,"Content-Type":"application/json"}:h,body:body?JSON.stringify(body):undefined,credentials:"include",cache:"no-store"});let d={};try{d=await r.json()}catch(_){}if(!r.ok)throw Error(d.message||"Permintaan gagal.");return d;}
 function msg(text,bad=false,state){
@@ -43,19 +45,21 @@ function restoreDocumentOverlay(){
  if(ariaHidden===null)element.removeAttribute("aria-hidden");else element.setAttribute("aria-hidden",ariaHidden);
  suspendedDocumentOverlay=null;
 }
-function close(returnHome=true){if(!modal)return;loadSequence++;const wasContextual=contextualAi;const wasOpen=!modal.hidden;modal.hidden=true;restoreDocumentOverlay();document.body.style.overflow="";if(returnHome&&wasOpen){if(!wasContextual)window.AutoDocSetHomeNav?.("home");if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}}
+function close(returnHome=true){if(!modal)return;if(returnHome&&isBusy()){notifyBusy();return}loadSequence++;const wasContextual=contextualAi;const wasOpen=!modal.hidden;modal.hidden=true;restoreDocumentOverlay();document.body.style.overflow="";if(returnHome&&wasOpen){if(!wasContextual)window.AutoDocSetHomeNav?.("home");if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}}
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function init(){
  const home=document.querySelector(".home-content");if(!home)return;
 
  modal=el("div","dm-overlay");modal.hidden=true;const dialog=el("section","dm-dialog");dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","dmTitle");
  const head=el("header","dm-head");const h=el("h2",null,"Data Master");h.id="dmTitle";const closeBtn=el("button","dm-close","Tutup");closeBtn.type="button";closeBtn.onclick=()=>close();head.append(h,closeBtn);
- const tabs=el("nav","dm-tabs");tabs.setAttribute("aria-label","Navigasi kategori Data Master");const categorySelect=el("select","dm-category-select");categorySelect.id="dmCategorySelect";categorySelect.setAttribute("aria-label","Pilih kategori Data Master");tabs.append(categorySelect);categorySelect.addEventListener("change",()=>{entity=categorySelect.value;render()});const content=el("div","dm-content");const toolbar=el("div","dm-toolbar");const title=el("h3");const actions=el("div");toolbar.append(title,actions);const intro=el("p",null,"Data master dipakai untuk dokumen baru. Dokumen yang sudah diterbitkan tetap menyimpan snapshot lama.");
+ const tabs=el("nav","dm-tabs");tabs.setAttribute("aria-label","Navigasi kategori Data Master");const categorySelect=el("select","dm-category-select");categorySelect.id="dmCategorySelect";categorySelect.setAttribute("aria-label","Pilih kategori Data Master");tabs.append(categorySelect);categorySelect.addEventListener("change",()=>{if(isBusy()){categorySelect.value=entity;notifyBusy();return}entity=categorySelect.value;render()});const content=el("div","dm-content");const toolbar=el("div","dm-toolbar");const title=el("h3");const actions=el("div");toolbar.append(title,actions);const intro=el("p",null,"Data master dipakai untuk dokumen baru. Dokumen yang sudah diterbitkan tetap menyimpan snapshot lama.");
  const search=el("input","dm-search");search.type="search";search.placeholder="Cari nama, lokasi, status, atau informasi…";search.setAttribute("aria-label","Cari data master");search.autocomplete="off";
  const formSlot=el("div");const table=el("div","dm-table-wrap");const message=el("p","dm-msg");
  content.append(toolbar,intro,search,formSlot,table,message);dialog.append(head,tabs,content);modal.append(dialog);document.getElementById("workspacePages").append(modal);
  aiController=window.AutoDocAiAssistant?.create({
   api,el,getRecipients:()=>Array.isArray(cache.recipients)?cache.recipients:[],
+  isActive:()=>!modal.hidden&&entity==="ai",
+  onBusyChange:value=>{saving=value},
   onApplyMenuPlan:plan=>{
    close();
    if(window.AutoDocDocuments?.applyAiMenuPlan)window.AutoDocDocuments.applyAiMenuPlan(plan);
@@ -89,6 +93,7 @@ function init(){
  }
  search.addEventListener("input",applySearch);
  function open(nextEntity,initialSearch,options={}){
+  if(isBusy()){notifyBusy();return}
   if(nextEntity==="ai"||(nextEntity&&Object.prototype.hasOwnProperty.call(defs,nextEntity)))entity=nextEntity;
   aiInitialMode=options?.mode==="menus"?"menus":"both";
   const requestedSearch=String(initialSearch||"");
@@ -118,7 +123,7 @@ function init(){
   close(false);cache={};entity="recipients";aiInitialMode="both";
   search.value="";formSlot.replaceChildren();table.replaceChildren();msg("");
  }
- window.AutoDocMaster=Object.freeze({open,close,resetSession});
+ window.AutoDocMaster=Object.freeze({open,close,resetSession,isBusy,notifyBusy});
  function render(){
   tabs.querySelectorAll("button,.dm-category-heading").forEach(item=>item.remove());categorySelect.replaceChildren();
   for(const group of categoryGroups){
@@ -128,7 +133,7 @@ function init(){
     const definition=key==="ai"?{title:"Asisten AI"}:defs[key];
     const option=el("option",null,definition.title);option.value=key;optgroup.append(option);
     const tabButton=el("button",null,definition.title);tabButton.type="button";tabButton.setAttribute("aria-selected",String(key===entity));tabButton.setAttribute("aria-label",definition.title);
-    tabButton.addEventListener("click",()=>{entity=key;if(key==="ai")aiInitialMode="both";render()});tabs.insertBefore(tabButton,categorySelect);
+    tabButton.addEventListener("click",()=>{if(isBusy()){notifyBusy();return}entity=key;if(key==="ai")aiInitialMode="both";render()});tabs.insertBefore(tabButton,categorySelect);
    }
    categorySelect.append(optgroup);
   }
@@ -187,7 +192,7 @@ function init(){
    (recipientGroups.get((entity==="settings"?settingsFieldGroup:recipientFieldGroup)[key])||f).append(wrap);
   });
   if(row?.id){const id=el("input");id.type="hidden";id.dataset.key="id";id.value=row.id;f.append(id)}
-  const buttons=el("div","dm-form-actions");const cancel=el("button","dm-btn","Batal");cancel.type="button";cancel.onclick=()=>{if(entity==="settings"&&row){form(row);msg("Isian dikembalikan ke data terakhir yang dimuat.")}else formSlot.innerHTML=""};const save=el("button","dm-btn primary","Simpan");save.type="submit";buttons.append(cancel,save);f.append(buttons);f.onsubmit=async e=>{e.preventDefault();const data={};f.querySelectorAll("[data-key]").forEach(x=>data[x.dataset.key]=x.type==="checkbox"?x.checked:x.value);save.disabled=true;save.textContent="Menyimpan…";msg("Menyimpan data "+defs[entity].title.toLocaleLowerCase("id-ID")+"…",false,"loading");try{await api("master/save",{entity,data});await load();msg("Data berhasil disimpan.",false,"success");window.dispatchEvent(new Event("autodoc:data-changed"))}catch(err){msg(err.message||"Data gagal disimpan.",true,"error");save.disabled=false;save.textContent="Simpan"}};formSlot.append(f);f.scrollIntoView({behavior:"smooth",block:"nearest"});
+  const buttons=el("div","dm-form-actions");const cancel=el("button","dm-btn","Batal");cancel.type="button";cancel.onclick=()=>{if(entity==="settings"&&row){form(row);msg("Isian dikembalikan ke data terakhir yang dimuat.")}else formSlot.innerHTML=""};const save=el("button","dm-btn primary","Simpan");save.type="submit";buttons.append(cancel,save);f.append(buttons);f.onsubmit=async e=>{e.preventDefault();if(isBusy())return;saving=true;const data={};f.querySelectorAll("[data-key]").forEach(x=>data[x.dataset.key]=x.type==="checkbox"?x.checked:x.value);save.disabled=true;cancel.disabled=true;f.inert=true;save.textContent="Menyimpan…";msg("Menyimpan data "+defs[entity].title.toLocaleLowerCase("id-ID")+"…",false,"loading");try{await api("master/save",{entity,data});await load();if(table.dataset.state==="error")msg("Data berhasil disimpan, tetapi daftar belum dapat diperbarui. Coba lagi.",true,"error");else msg("Data berhasil disimpan.",false,"success");window.dispatchEvent(new Event("autodoc:data-changed"))}catch(err){msg(err.message||"Data gagal disimpan.",true,"error");save.disabled=false;save.textContent="Simpan"}finally{saving=false;cancel.disabled=false;f.inert=false}};formSlot.append(f);f.scrollIntoView({behavior:"smooth",block:"nearest"});
  }
  async function load(){
   const request=++loadSequence;
@@ -268,8 +273,8 @@ function init(){
     cancel.addEventListener("click",()=>{preview.remove();msg("Impor CSV dibatalkan. Tidak ada baris yang dikirim.",false,"empty")});
     let submitting=false;
     confirmImport.addEventListener("click",async()=>{
-     if(submitting)return;
-     submitting=true;confirmImport.disabled=true;cancel.disabled=true;confirmImport.textContent="Mengimpor…";
+     if(submitting||isBusy())return;
+     saving=true;submitting=true;confirmImport.disabled=true;cancel.disabled=true;confirmImport.textContent="Mengimpor…";
      msg("Mengimpor "+rows.length+" penerima…",false,"loading");
      try{
       const result=await api("master/import",{rows});
@@ -281,7 +286,7 @@ function init(){
      }catch(error){
       submitting=false;confirmImport.disabled=false;cancel.disabled=false;confirmImport.textContent="Konfirmasi impor "+rows.length+" baris";
       msg(error.message||"Impor CSV gagal. Pratinjau tetap tersedia untuk dicoba kembali.",true,"error");
-     }
+     }finally{saving=false}
     });
     preview.scrollIntoView({behavior:"auto",block:"nearest"});
    }catch(error){msg(error.message||"Impor CSV gagal.",true,"error")}

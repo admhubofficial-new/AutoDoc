@@ -513,7 +513,7 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
 test("mobile recipient selection stays in the page flow and offers clear grouped filters", () => {
   const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   assert.match(stylesSource, /\.docs-recipient-box-compact \.docs-recipient-list\s*\{[^}]*max-height:\s*none;[^}]*overflow:\s*visible/s);
-  assert.match(stylesSource, /\.docs-recipient-box-compact \.docs-recipient-head\s*\{[^}]*position:\s*static/s);
+  assert.doesNotMatch(stylesSource, /\.docs-recipient-box-compact \.docs-recipient-head\s*\{/);
   assert.ok(source.includes("id='docsRecipientSearch'"));
   assert.ok(source.includes("id='docsRecipientGroup'"));
   assert.ok(source.includes("Pilih semua hasil"));
