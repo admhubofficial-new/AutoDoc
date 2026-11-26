@@ -184,8 +184,8 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     await page.locator("input[name='recipient']").check();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("PRATINJAU · BELUM DITERBITKAN").waitFor();
-    await page.locator("#docsStaff").fill("Petugas Browser Test");
-    await preview.getByText("Petugas Browser Test", { exact: true }).waitFor();
+    await page.locator("#docsDriver").fill("Pengemudi Browser Test");
+    await preview.getByText("Pengemudi Browser Test", { exact: false }).waitFor();
     assert.equal(app.writes.some(item => item.route === "docs/create"), false);
     assert.deepEqual(app.errors, []);
   } finally {
@@ -327,7 +327,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     await page.locator("#docsRecipientGroup").selectOption("Sekolah/Lembaga");
     assert.equal(await page.locator(".docs-recipient:visible").count(), 1);
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
-    await preview.getByText("SDN UJI BROWSER", { exact: false }).waitFor();
+    await preview.locator(".meta-table td").filter({ hasText: "SDN UJI BROWSER" }).waitFor();
     const recipientOverflow = await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY);
     assert.equal(recipientOverflow, "visible");
     assert.equal(desktop.writes.some(item => item.route === "docs/create"), false);
