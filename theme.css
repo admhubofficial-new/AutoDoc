@@ -650,7 +650,7 @@ body .workspace-pages .workspace-page .docs-submit-bar{position:static;backgroun
 .home-page .workspace-pages:has(.docs-create-layout){width:min(1320px,calc(100% - 48px))}
 .workspace-page .docs-create-layout{grid-template-columns:minmax(288px,1fr) minmax(0,2fr);max-width:none;gap:24px;align-items:start}
 .docs-create-form-panel{background:transparent;padding:0 0 16px}
-.docs-mobile-switch,.docs-preview-panel .docs-preview-summary{display:none}
+.docs-mobile-switch,.docs-preview-zoom{display:none}
 .docs-menu-disclosure>summary,.docs-shipping-details>summary{cursor:pointer;font-weight:650;padding-block:12px}
 .docs-menu-disclosure{border-top:1px solid var(--color-border);margin-top:16px}
 .docs-create-layout .docs-kind-group{margin-top:16px}
@@ -752,7 +752,15 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{
  body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{display:grid;gap:8px;border-top:0;border-radius:0 0 var(--radius-card) var(--radius-card)}
  .docs-create-layout .docs-preview-panel{min-height:0;overflow:hidden}
  .docs-create-layout .docs-preview-content{height:100%}
- .docs-create-layout .docs-preview-pages{overflow-y:auto;min-height:0;overscroll-behavior:contain}
+ .docs-create-layout .docs-preview-pages{
+  flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  grid-template-columns:repeat(auto-fill,min(100%, var(--sheet-width,794px)));
+  justify-content:center;align-content:start;align-items:start;scrollbar-gutter:stable;
+ }
+ .docs-preview-pages iframe{pointer-events:none}
+ .docs-preview-zoom{display:inline-flex;align-items:center;gap:8px;font-size:13px}
+ .docs-preview-zoom input{width:96px;min-height:44px;accent-color:var(--color-primary)}
+ .docs-preview-zoom output{min-width:4ch;font-variant-numeric:tabular-nums}
 }
 @media(max-width:720px){
  .home-page:not(.mobile-nav-open) .home-topbar{position:sticky;inset:0 0 auto;transform:none;width:100%;max-width:none;height:52px;padding:0 16px;flex-direction:row;align-items:center;background:var(--color-surface);border-bottom:1px solid var(--color-border);pointer-events:auto}

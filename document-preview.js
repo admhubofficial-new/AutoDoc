@@ -23,15 +23,22 @@ function create(dependencies){
   if(!disclosure||disclosure===boundDisclosure)return;
   boundDisclosure=disclosure;
   const pages=disclosure.querySelector("#docsPreviewPages");
-  pages.addEventListener("scroll",syncPagePosition,{passive:true});
+  pages.addEventListener("scroll",()=>syncPagePosition(),{passive:true});
+  const zoom=disclosure.querySelector("#docsZoom");
+  zoom.addEventListener("input",()=>{
+   pages.style.setProperty("--sheet-width",Math.round(794*zoom.valueAsNumber/100)+"px");
+   zoom.nextElementSibling.value=zoom.value+"%";
+   fitPreviewFrame();
+   syncPagePosition();
+  });
   disclosure.querySelectorAll("[data-page-step]").forEach(button=>{
    button.addEventListener("click",()=>{
     const next=Number(pages.dataset.current||0)+Number(button.dataset.pageStep);
     pages.children[next]?.scrollIntoView({block:"start",behavior:"instant"});
-    syncPagePosition();
+    syncPagePosition(next);
    });
   });
-  disclosure.addEventListener("toggle",fitPreviewFrame);
+
  }
  function previewPortionRows(recipient){
  const definitions=[["siswa_kecil","Siswa kecil","Porsi Kecil"],["balita","Balita","Porsi Kecil"],["siswa_besar","Siswa besar","Porsi Besar"],["tendik","Tenaga pendidik","Porsi Besar"],["ibu_hamil","Ibu hamil","Porsi Besar"],["ibu_menyusui","Ibu menyusui","Porsi Besar"],["putus_sekolah","Anak putus sekolah","Porsi Besar"],["kader","Kader","Porsi Besar"]];
@@ -157,20 +164,23 @@ function updateLivePreview(){
 
 
 
- function syncPagePosition(){
+ function syncPagePosition(preferred){
   const host=$("#docsPreviewPages",getModal());
   if(!host?.getClientRects().length||!host.firstElementChild?.dataset.recipient)return;
   const pages=Array.from(host.children);
   const top=Math.max(0,host.getBoundingClientRect().top);
   const threshold=top+Math.min(host.clientHeight,innerHeight-top)*0.35;
   const index=pages.findIndex(page=>page.getBoundingClientRect().bottom>threshold);
-  const current=index<0?pages.length-1:index;
+  const first=index<0?pages.length-1:index;
+  const previous=Number(host.dataset.current);
+  const sameRow=pages[previous]?.offsetTop===pages[first].offsetTop;
+  const current=Number.isInteger(preferred)&&pages[preferred]?preferred:sameRow?previous:first;
   host.dataset.current=String(current);
   $("#docsPreviewPageCount",getModal()).textContent=(current+1)+" dari "+pages.length+" · "+pages[current].dataset.recipient;
   getModal().querySelector("[data-page-step='-1']").disabled=current===0;
   getModal().querySelector("[data-page-step='1']").disabled=current===pages.length-1;
  }
- window.addEventListener("scroll",syncPagePosition,{passive:true});
+ window.addEventListener("scroll",()=>syncPagePosition(),{passive:true});
  return Object.freeze({updateLivePreview,fitPreviewFrame});
 }
 window.AutoDocDocumentPreview=Object.freeze({create});
