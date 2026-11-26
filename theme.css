@@ -668,3 +668,9 @@ body .workspace-pages .workspace-page .docs-submit-bar{position:static;backgroun
  .docs-create-layout:not(.show-mobile-preview) .docs-preview-panel,
  .docs-create-layout.show-mobile-preview .docs-create-form-panel{display:none}
 }
+
+.docs-preview-pages{display:grid;gap:16px}
+.docs-preview-pages .docs-preview-paper{min-width:0}
+.ai-composer{display:grid;gap:8px;border:1px solid var(--color-border);border-radius:var(--radius-card);padding:12px;margin-top:16px;background:var(--color-surface)}
+.ai-composer textarea{width:100%;min-height:96px;border:0;padding:8px;font:inherit;resize:vertical}
+.ai-composer .ai-action-row{display:flex;justify-content:space-between;margin:0}

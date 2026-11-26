@@ -15,7 +15,10 @@ function create(dependencies){
  return definitions.flatMap(([key,label,jenis])=>{const jumlah=Number(recipient?.[key]||0);return jumlah>0?[{kelompok_sasaran:label,jenis_porsi:jenis,jumlah}]:[]});
 }
 function fitPreviewFrame(){
- const frame=$("#docsPreviewFrame",getModal()),host=frame?.parentElement;
+ getModal()?.querySelectorAll("#docsPreviewPages iframe[data-document-page]").forEach(fitPage);
+}
+function fitPage(frame){
+ const host=frame.parentElement;
  if(!frame||!host||!frame.contentDocument?.body||!frame.getClientRects().length||!host.clientWidth)return;
  const scale=Math.min(1,Math.max(.25,host.clientWidth/794));
  const body=frame.contentDocument.body;
@@ -34,22 +37,17 @@ function renderOrganolepticPreview(frame,recipient,date,menu,settings){
   doc.body.style.width="794px";doc.body.style.margin="0";doc.body.style.padding="0";
   const root=doc.getElementById("previewRoot");
   root.append(renderer.organolepticSheet(doc,{tanggalLabel:dateLabel,waktuMakan:$("#docsMealTime",getModal())?.value||"siang",ahliGizi:String(settings.nama_ahli_gizi||""),menu},recipient));
-  fitPreviewFrame();
+  fitPage(frame);
  };
  frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>"+css+"</style></head><body data-preview-type='organoleptic'><main id='previewRoot'></main></body></html>";
 }
 function updateLivePreview(){
- if(!getModal()||!$("#docsPreviewFrame",getModal()))return;
+ const pages=$("#docsPreviewPages",getModal());
+ if(!pages)return;
  bindPreviewDisclosure();
  const form=$("#docsCreateForm",getModal());if(!form)return;
- const selected=Array.from(form.querySelectorAll("input[name='recipient']:checked"));
- const recipients=Array.isArray(getMaster().recipients)?getMaster().recipients:[];
- const recipientSelect=$("#docsPreviewRecipientSelect",getModal()),previousRecipient=recipientSelect?.value||"";
- const selectedRecipients=selected.map(input=>recipients.find(item=>String(item.id)===input.value)).filter(Boolean);
- if(recipientSelect){
-  recipientSelect.innerHTML=selectedRecipients.length?selectedRecipients.map(item=>"<option value='"+esc(item.id)+"'>"+esc(item.nama)+"</option>").join(""):"<option value=''>Pilih penerima</option>";
-  if(selectedRecipients.some(item=>String(item.id)===previousRecipient))recipientSelect.value=previousRecipient;
- }
+ const selected=new Set(Array.from(form.querySelectorAll("input[name='recipient']:checked"),input=>input.value));
+ const recipients=(getMaster().recipients||[]).filter(item=>selected.has(String(item.id)));
  const kindSelect=$("#docsPreviewKind",getModal()),currentKind=kindSelect?.value||"SJ";
  const includeOrganoleptic=$("#docsIncludeOrganoleptic",form)?.checked===true;
  const kinds=selectedDocumentKinds();
@@ -61,22 +59,33 @@ function updateLivePreview(){
   button.setAttribute("aria-pressed",String(button.dataset.previewKind===kind && !button.disabled));
  }
  const date=$("#docsDate",form)?.value||today();
- const frame=$("#docsPreviewFrame",getModal());
- const label=$("#docsPreviewRecipient",getModal());
- if(!selected.length){
-  if(label)label.textContent="Belum ada penerima dipilih.";
-  frame.onload=null;
+ pages.replaceChildren();
+ const makeFrame=(title)=>{
+  const paper=document.createElement("div");
+  paper.className="docs-preview-paper";
+  const frame=document.createElement("iframe");
+  if(!pages.children.length)frame.id="docsPreviewFrame";
+  frame.title=title;
+  paper.append(frame);
+  pages.append(paper);
+  return frame;
+ };
+ if(!recipients.length){
+  const frame=makeFrame("Pratinjau belum tersedia");
   frame.style.height="220px";
   frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:32px;background:#fff;color:#647269;font:14px/1.6 Inter,Arial,sans-serif;text-align:center}main{max-width:420px}h2{margin:0 0 8px;color:#1f2a23;font-size:19px}p{margin:0}</style></head><body><main><h2>Pratinjau belum tersedia</h2><p>Pilih penerima pada formulir untuk melihat dokumen dengan data sebenarnya.</p></main></body></html>";
   return;
  }
- const recipient=selectedRecipients.find(item=>String(item.id)===(recipientSelect?.value||selected[0].value))||selectedRecipients[0]||{};
+ for(const recipient of recipients){
+ const frame=makeFrame("Pratinjau "+recipient.nama);
+ frame.dataset.documentPage="";
+ frame.loading="lazy";
+ frame.style.aspectRatio="794 / 1123";
  const settings=Array.isArray(getMaster().settings)?(getMaster().settings[0]||{}):(getMaster().settings||{});
  const menu=typeof readMenuComponentsForRecipient==="function"?readMenuComponentsForRecipient(recipient.id,date):readMenuComponents();
- if(label)label.textContent=recipient.nama||"Penerima terpilih";
  if(kind==="ORGANOLEPTIC"){
   renderOrganolepticPreview(frame,recipient,date,menu,settings);
-  return;
+  continue;
  }
  const snapshot={
   sppg:settings,
@@ -89,7 +98,8 @@ function updateLivePreview(){
  let html=renderer.buildPrintHtml(doc,esc,logoUrl());
  html=html.replace("</style>","@page{margin:0}html,body{margin:0!important;background:#fff!important}.preview-ribbon{position:absolute;top:12px;right:16px;padding:4px 8px;border:1px solid #d6dfd6;border-radius:4px;color:#56705e;background:#f4f8f3;font:700 9px Arial;letter-spacing:.7px}</style>");
  html=html.replace("<body>","<body><div class='preview-ribbon'>PRATINJAU · BELUM DITERBITKAN</div>");
- frame.onload=()=>fitPreviewFrame();frame.srcdoc=html;
+ frame.onload=()=>fitPage(frame);frame.srcdoc=html;
+ }
 }
 
 
