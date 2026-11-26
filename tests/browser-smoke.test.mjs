@@ -205,7 +205,7 @@ test("P0 shared design system and active navigation context work without runtime
     assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
     assert.equal(await page.locator("input[name='recipient']").isChecked(),true);
     assert.equal(await page.locator("style").count(), 0);
-    await page.locator(".docs-close").click();
+    await page.locator('[data-home-nav="home"]').click();
     await page.locator(".docs-overlay").waitFor({ state: "hidden" });
     await page.locator('[data-home-nav="master"]').click();
     await page.locator(".dm-overlay:not([hidden])").waitFor();

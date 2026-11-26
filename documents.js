@@ -85,7 +85,7 @@ function show(loadFormData=true){
  returnFocusEl=document.activeElement;
  modal.hidden=false;
  modal.setAttribute("aria-hidden","false");
- $(".docs-close",modal)?.focus();
+ if(tab==="create")$("#docsDate",modal)?.focus({preventScroll:true});else $(".docs-close",modal)?.focus();
  if(loadFormData&&!masterLoaded)loadMaster().catch(e=>{if(!modal.hidden&&tab==="create")status(e.message,true)});
  else if(loadFormData)syncPreflightSummary();
 }
