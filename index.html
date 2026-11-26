@@ -196,9 +196,9 @@
       }
 
       function showLogin() {
-        window.AutoDocMaster?.close(false);
-        window.AutoDocDocuments?.close(false);
         finishAuthBootstrap();
+        window.AutoDocMaster?.close(false);
+        window.AutoDocDocuments?.resetSession?.();
         homePage.hidden = true;
         authPage.hidden = false;
         loginPanel.hidden = false;
@@ -368,17 +368,25 @@
         if (tabName === "history") window.AutoDocDocuments.openArchive();
         else window.AutoDocDocuments.open();
       }
+      function canNavigate() {
+        if (!window.AutoDocDocuments?.isBusy?.()) return true;
+        window.AutoDocDocuments?.notifyBusy?.();
+        return false;
+      }
       window.AutoDocOpenDocs = (tabName) => {
+        if (!canNavigate()) return;
         window.AutoDocMaster?.close(false);
         setHomeNav("print");
         openDocsTab(tabName || "create");
       };
       window.AutoDocOpenArchive = (date) => {
+        if (!canNavigate()) return;
         window.AutoDocMaster?.close(false);
         setHomeNav("archive");
         window.AutoDocDocuments?.openArchive(date);
       };
       window.AutoDocOpenRealization = (date) => {
+        if (!canNavigate()) return;
         window.AutoDocMaster?.close(false);
         setHomeNav("realization");
         window.AutoDocDocuments?.openRealization(date);
@@ -393,7 +401,7 @@
       });
       homeNav.addEventListener("click", (event) => {
         const button = event.target.closest("[data-home-nav]");
-        if (!button) return;
+        if (!button || !canNavigate()) return;
         const action = button.dataset.homeNav;
         setHomeNav(action);
         closeHomeNav();
@@ -412,6 +420,7 @@
       updateHomeDate();
 
       logoutButton.addEventListener("click", async () => {
+        if (!canNavigate()) return;
         logoutButton.disabled = true;
         try {
           await postJson("auth/logout", {});
@@ -450,14 +459,14 @@
   </script>
   <script src="./master-utils.js?v=master-csv-hardening-20261121" defer></script>
   <script src="./ai-assistant.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
-  <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2" defer></script>
+  <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123" defer></script>
   <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
   <script src="./document-preview.js?v=p4-simplified-document-flow-20261124" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
-  <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
-  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2" defer></script>
-  <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2" defer></script>
+  <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
+  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2" defer></script>
+  <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2-stability2" defer></script>
 </body>
 </html>

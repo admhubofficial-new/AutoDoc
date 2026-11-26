@@ -26,12 +26,15 @@ function msg(text,bad=false,state){
 function suspendDocumentOverlay(){
  const overlay=document.querySelector(".docs-overlay");
  if(!overlay||overlay.hidden||suspendedDocumentOverlay)return;
- suspendedDocumentOverlay={element:overlay,inert:overlay.inert,ariaHidden:overlay.getAttribute("aria-hidden")};
+ const home=document.getElementById("homePage");
+ suspendedDocumentOverlay={element:overlay,inert:overlay.inert,ariaHidden:overlay.getAttribute("aria-hidden"),home,homeInert:home?.inert};
+ if(home)home.inert=true;
  overlay.inert=true;overlay.setAttribute("aria-hidden","true");
 }
 function restoreDocumentOverlay(){
  if(!suspendedDocumentOverlay)return;
- const {element,inert,ariaHidden}=suspendedDocumentOverlay;
+ const {element,inert,ariaHidden,home,homeInert}=suspendedDocumentOverlay;
+ if(home)home.inert=homeInert;
  element.inert=inert;
  if(ariaHidden===null)element.removeAttribute("aria-hidden");else element.setAttribute("aria-hidden",ariaHidden);
  suspendedDocumentOverlay=null;
@@ -57,7 +60,7 @@ function init(){
   onMasterChanged:async()=>{const updated=await api("master/list");cache=updated.data||{};window.dispatchEvent(new Event("autodoc:data-changed"))},
   setMessage:msg
  })||null;
- modal.addEventListener("click",e=>{if(e.target===modal)close()});document.addEventListener("keydown",e=>{
+ modal.addEventListener("click",e=>{if(contextualAi&&e.target===modal)close()});document.addEventListener("keydown",e=>{
   if(modal.hidden||(!contextualAi&&!modal.contains(document.activeElement)))return;
   if(e.key==="Escape"){close();return}
   if(contextualAi&&e.key==="Tab"){

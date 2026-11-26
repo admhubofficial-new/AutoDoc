@@ -145,3 +145,5 @@ Jangan menjalankan test yang menulis, menghapus, atau mengonsumsi nomor dokumen 
 
 ### Workspace v2 (fase 1)
 Modul Buat Dokumen, Arsip, dan Data Master tampil sebagai halaman dalam shell navigasi, bukan dialog layar penuh. Menu Realisasi BAST menyediakan antrean berdasarkan tanggal, pencarian nama dan filter status; formulir realisasi dan verifikasi PIN yang ada tetap dipakai. AI menu tetap menjadi dialog kontekstual agar input distribusi tidak hilang. Penerbitan, nomor, snapshot, API dan renderer cetak tidak berubah. Draf persisten, pelacakan pengiriman dan navigasi bawah mobile belum termasuk fase ini.
+
+Fase stabilisasi: formulir distribusi dipertahankan selama sesi aktif, navigasi ditahan ketika penerbitan atau realisasi sedang disimpan, dan respons riwayat lama diabaikan. Draf ini hanya berada di memori halaman, bukan penyimpanan persisten.

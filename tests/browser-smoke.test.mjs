@@ -224,12 +224,17 @@ test("P0 shared design system and active navigation context work without runtime
     assert.equal((await context.textContent()).trim(), "Buat Dokumen");
     assert.equal(await page.locator("#workspacePages .docs-overlay").count(),1);
     assert.equal(await page.locator('[data-home-nav="realization"]').isVisible(),true);
+    await page.locator("input[name='recipient']").waitFor();
+    await page.locator("input[name='recipient']").check();
+    await page.locator("#docsMealTime").selectOption("pagi");
     await page.locator('[data-home-nav="realization"]').click();
     await page.locator("#docsRealizationQueue").getByRole("button",{name:"Input realisasi"}).waitFor();
     assert.equal(await page.locator("#docsPrintBulk").isVisible(),false);
     assert.equal((await context.textContent()).trim(),"Realisasi BAST");
     await page.locator('[data-home-nav="print"]').click();
     await page.locator("#docsCreateForm").waitFor();
+    assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
+    assert.equal(await page.locator("input[name='recipient']").isChecked(),true);
     assert.equal(await page.locator("style").count(), 0);
     await page.locator(".docs-close").click();
     await page.locator(".docs-overlay").waitFor({ state: "hidden" });
