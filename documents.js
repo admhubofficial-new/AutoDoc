@@ -727,12 +727,14 @@ function printDocuments(documents){
    note.textContent=error.message||"Gagal menyimpan konfirmasi cetak.";
   }
  });
+ printWhenLogosReady(win,()=>{note.textContent="Dialog cetak gagal dibuka. Gunakan tombol cetak browser."});
+}
+function printWhenLogosReady(win,onError){
  let printStarted=false;
  const invokePrint=()=>{
-  if(printStarted)return;
+  if(printStarted||win.closed||typeof win.print!=="function")return;
   printStarted=true;
-  if(win.closed||typeof win.print!=="function")return;
-  try{win.focus();win.print()}catch(_){note.textContent="Dialog cetak gagal dibuka. Gunakan tombol cetak browser."}
+  try{win.focus();win.print()}catch(_){onError()}
  };
  const logos=Array.from(win.document.querySelectorAll(".top-logo"));
  const imageReady=logo=>{
@@ -745,7 +747,7 @@ function printDocuments(documents){
  Promise.all(logos.map(imageReady)).then(()=>setTimeout(invokePrint,100));
  setTimeout(invokePrint,3000);
 }
-const { organolepticElement, organolepticInfoRow, organolepticMealNode, organolepticTable, organolepticSheet } = window.AutoDocOrganolepticPrint;
+const { organolepticElement, organolepticSheet } = window.AutoDocOrganolepticPrint;
 
 function getArchiveRecipientMenus(documents=currentDocs){
  const menus={};
@@ -792,8 +794,8 @@ function printOrganolepticForms(recipients,menuByRecipient={}){
  printDoc.open();
  printDoc.write("<!doctype html><html lang='id'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Formulir Uji Organoleptik</title></head><body></body></html>");
  printDoc.close();
- const style=printDoc.createElement("style");style.textContent=window.AutoDocOrganolepticPrint.styles+".toolbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 20px;background:#14201a;color:#fff;font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;font-size:14px}\n.toolbar button{height:36px;padding:0 18px;border:0;border-radius:8px;background:#fff;color:#14201a;font:inherit;font-weight:600;cursor:pointer}\n.toolbar button:focus-visible{outline:3px solid #9fd3b8;outline-offset:2px}\n@media print{.toolbar{display:none}}";printDoc.head.append(style);
- const toolbar=organolepticElement(printDoc,"div","toolbar");
+ const style=printDoc.createElement("style");style.textContent=window.AutoDocOrganolepticPrint.styles;printDoc.head.append(style);
+ const toolbar=organolepticElement(printDoc,"div","print-toolbar");
  toolbar.append(organolepticElement(printDoc,"span","","Pratinjau formulir uji organoleptik · "+selected.length+" penerima · satu halaman A4 per penerima"));
  const printButton=organolepticElement(printDoc,"button","","Cetak");
  printButton.type="button";printButton.addEventListener("click",()=>{win.focus();win.print()});
@@ -821,7 +823,7 @@ function printOrganolepticForms(recipients,menuByRecipient={}){
   const sppg=archived?.snapshot_json?.sppg||(Array.isArray(master.settings)?master.settings[0]:master.settings);
   return organolepticSheet(printDoc,{...data,sppg,logoUrl:LETTERHEAD_LOGO_URL,escapeHtml:esc,menu:ownMenu.length?ownMenu:menu,nomor},recipient);
  }));
- setTimeout(()=>{if(!win.closed){win.focus();win.print()}},250);
+ printWhenLogosReady(win,()=>status("Dialog cetak gagal dibuka.",true));
 }
 function showRealization(card,doc){
  if(isBusy()){notifyBusy();return}

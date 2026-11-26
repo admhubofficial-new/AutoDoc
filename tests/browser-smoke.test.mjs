@@ -373,7 +373,10 @@ test("P2 BAST realization keeps labels connected and sends the existing transact
     await page.getByLabel("Jam diterima *").fill("12:30");
     await page.getByLabel("Nama penerima *").fill("Penerima Uji");
     await page.getByLabel("PIN akses untuk konfirmasi *").fill("123456");
-    await page.getByRole("button", { name: "Simpan realisasi" }).click();
+    await Promise.all([
+      page.waitForResponse(response => response.url().endsWith("/docs/realization") && response.request().method() === "POST"),
+      page.getByRole("button", { name: "Simpan realisasi" }).click()
+    ]);
 
     const request = app.writes.find(item => item.route === "docs/realization");
     assert.ok(request);
