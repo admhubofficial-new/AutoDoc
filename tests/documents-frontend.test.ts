@@ -501,7 +501,7 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
   assert.ok(source.includes("menuController?.count"));
   assert.match(source, /Siap diterbitkan/);
   assert.match(source, /Pilih minimal satu penerima untuk melanjutkan/);
-  assert.ok(source.includes("button.disabled=!ready"));
+  assert.ok(source.includes("button.disabled=publishing||!ready"));
   assert.ok(source.includes('status("Memuat daftar penerima dan data pendukung...",false,"loading")'));
   assert.ok(source.includes("hasAiMenuPlanDateMismatch(dateValue)"));
   assert.ok(source.includes("Penerbitan diblokir: rencana menu AI dibuat untuk"));

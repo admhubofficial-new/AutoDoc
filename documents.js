@@ -637,7 +637,7 @@ async function loadRealizationQueue(date){
    if(isBusy()||(list.querySelector(".docs-realization")&&!window.confirm("Tutup formulir realisasi yang belum disimpan?"))){search.value=lastSearch;filter.value=lastFilter;return}
    lastSearch=search.value;lastFilter=filter.value;render();
   }
-  search.addEventListener("change",changeFilter);filter.addEventListener("change",changeFilter);render();status("");
+  search.addEventListener("input",()=>{if(!list.querySelector(".docs-realization"))changeFilter()});search.addEventListener("change",changeFilter);filter.addEventListener("change",changeFilter);render();status("");
  }catch(error){
   if(request!==queueRequest||!realizationMode||modal.hidden)return;
   list.append(node("div","docs-empty","Daftar BAST gagal dimuat. Pilih Tampilkan untuk mencoba lagi."));
@@ -820,6 +820,7 @@ function showRealization(card,doc){
 
 function init(){
  build();
+ window.addEventListener("autodoc:data-changed",()=>{masterLoaded=false});
  menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:syncPreflightSummary});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
