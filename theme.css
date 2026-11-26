@@ -649,7 +649,7 @@ body .workspace-pages .workspace-page .docs-submit-bar{position:static;backgroun
 /* Document workspace */
 .home-page .workspace-pages:has(.docs-create-layout){width:min(1320px,calc(100% - 48px))}
 .workspace-page .docs-create-layout{grid-template-columns:minmax(300px, .85fr) minmax(0, 1.15fr);max-width:none;gap:24px;align-items:start}
-.docs-create-form-panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-card);padding:clamp(14px,2vw,24px)}
+.docs-create-form-panel{background:transparent;padding:0 0 16px}
 .docs-mobile-switch,.docs-preview-panel .docs-preview-summary{display:none}
 .docs-menu-disclosure>summary,.docs-shipping-details>summary{cursor:pointer;font-weight:650;padding-block:12px}
 .docs-menu-disclosure{border-top:1px solid var(--color-border);margin-top:16px}
@@ -669,13 +669,39 @@ body .workspace-pages .workspace-page .docs-submit-bar{position:static;backgroun
  .docs-create-layout.show-mobile-preview .docs-create-form-panel{display:none}
 }
 
-.docs-preview-pages{display:grid;gap:16px}
+.docs-preview-pages{display:grid;gap:12px}
 .docs-preview-pages .docs-preview-paper{min-width:0}
 
 /* The preview reads as one stack of paper in the main page scroll. */
-.docs-preview-pages{gap:12px}
 .docs-preview-pages .docs-preview-paper{display:block;padding:0}
 .docs-preview-pages iframe{border:0;background:var(--color-surface)}
 @media(max-width:720px){
  .home-page .workspace-page:has(.docs-create-layout) .docs-head{padding-inline-start:36px}
+}
+
+.workspace-page:has(.docs-create-layout) .docs-head h2{font-size:clamp(24px,3vw,34px);letter-spacing:-.035em}
+.docs-create-layout :is(button,summary){min-height:44px}
+.docs-mobile-switch button{min-height:44px}
+.docs-create-layout button:not(:disabled):hover{filter:brightness(.94)}
+.docs-create-layout :is(button,summary,input,select):focus-visible,.docs-mobile-switch button:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px}
+.docs-create-layout .docs-preview-panel{background:#ecefeb}
+.docs-create-layout #docsPreviewNumberStatus{margin:0 0 12px}
+.docs-preview-pages[aria-busy=true] .docs-preview-paper{animation:preview-load 1s ease-in-out infinite alternate}
+@keyframes preview-load{to{opacity:.65}}
+@media(prefers-reduced-motion:reduce){
+ .docs-preview-pages[aria-busy=true] .docs-preview-paper{animation:none}
+}
+
+/* Shared publication footer for form and paper views. */
+body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{
+ grid-column:1/-1;position:sticky;bottom:0;z-index:4;margin:0;
+ background:var(--color-surface);border-top:1px solid var(--color-border);padding:12px 16px;
+}
+.docs-create-layout .docs-submit-actions{width:auto}
+.docs-create-layout #docsCreateButton{min-width:144px}
+.docs-create-layout #docsOutputCount{font-size:13px;color:var(--color-muted)}
+.docs-create-layout .docs-recipient-subsection>summary{background:var(--color-primary-soft);padding:12px;border-radius:var(--radius-control)}
+@media(max-width:720px){
+ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+ .docs-create-layout .docs-submit-actions{width:100%}
 }

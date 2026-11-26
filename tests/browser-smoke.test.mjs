@@ -156,11 +156,10 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     await mobile.page.locator('[data-mobile-nav="print"]').click();
     await mobile.page.locator("#docsCreateForm").waitFor();
     await mobile.page.locator("input[name='recipient']").check();
-    assert.equal(await mobile.page.locator("#docsSummaryRecipients").textContent(),"1");
-    assert.equal(await mobile.page.locator("#docsSummaryPortions").textContent(),"16");
-    assert.equal(await mobile.page.locator("#docsSummaryDocuments").textContent(),"2");
+    assert.match(await mobile.page.locator("#docsSubmitCount").textContent(), /1 tujuan · 16 porsi/);
+    assert.match(await mobile.page.locator("#docsOutputCount").textContent(),/^2 surat/);
     await mobile.page.locator("#docsKindBast").uncheck();
-    assert.equal(await mobile.page.locator("#docsSummaryDocuments").textContent(),"1");
+    assert.match(await mobile.page.locator("#docsOutputCount").textContent(),/^1 surat/);
     assert.equal(await mobile.page.locator("#docsKindSj").isChecked(),true);
     await mobile.page.locator('[data-mobile-nav="more"]').click();
     await mobile.page.locator("#homePage.mobile-nav-open").waitFor();
@@ -274,7 +273,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     assert.equal(await page.locator("input[name='recipient']").isChecked(), true);
     const summary = await page.locator("#docsPreflightSummary").innerText();
     assert.match(summary, /Siap diterbitkan/);
-    assert.match(await page.locator("#docsSubmitCount").textContent(), /1 penerima/);
+    assert.match(await page.locator("#docsSubmitCount").textContent(), /1 tujuan/);
     assert.match(await page.locator("#docsSubmitCount").textContent(), /16 porsi/);
     assert.equal(await page.locator("#docsCreateButton").isDisabled(), false);
     await page.locator("#docsRecipientGroup").selectOption("Sekolah/Lembaga");
