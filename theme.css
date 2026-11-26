@@ -775,12 +775,19 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{
 
 .docs-page-controls{display:flex;align-items:center;gap:8px;min-width:0}.docs-page-controls .docs-btn{min-width:44px;font-size:20px;background:transparent;border:0}
 
-.docs-preview-pages .docs-document-sheet {
+.workspace-page .docs-preview-pages .docs-document-sheet {
+ position: relative;
  aspect-ratio: 794 / 1123;
+ contain: paint;
  overflow: hidden;
 }
-.docs-document-sheet iframe {
- height: 100%;
+.workspace-page .docs-preview-pages .docs-document-sheet iframe {
+ position: absolute;
+ inset: 0 auto auto 0;
+ width: 794px;
+ max-width: none;
+ height: 1123px;
+ transform-origin: top left;
 }
 @media (min-width: 821px) {
  .docs-create-layout .docs-preview-pages {

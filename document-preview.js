@@ -60,10 +60,10 @@ function fitPage(frame){
  body.style.margin="0";
  body.style.padding="0";
  body.style.boxSizing="border-box";
- body.style.transformOrigin="top left";
- body.style.transform="scale("+scale+")";
- frame.style.height=Math.ceil(Math.max(1123,body.scrollHeight)*scale)+"px";
- host.style.height=frame.style.height;
+ const height=Math.max(1123,body.scrollHeight);
+ frame.style.height=height+"px";
+ frame.style.transform="scale("+scale+")";
+ host.style.height=Math.ceil(height*scale)+"px";
 }
 function renderOrganolepticPreview(frame,recipient,date,menu,settings,number){
  const renderer=window.AutoDocOrganolepticPrint;
