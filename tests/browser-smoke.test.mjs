@@ -327,7 +327,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     await page.locator("#docsRecipientGroup").selectOption("Sekolah/Lembaga");
     assert.equal(await page.locator(".docs-recipient:visible").count(), 1);
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
-    await preview.getByText("SDN UJI BROWSER", { exact: false }).waitFor();
+    await preview.locator(".meta-table td").filter({ hasText: "SDN UJI BROWSER" }).waitFor();
     const recipientOverflow = await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY);
     assert.equal(recipientOverflow, "visible");
     assert.equal(desktop.writes.some(item => item.route === "docs/create"), false);
