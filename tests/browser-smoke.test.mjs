@@ -273,7 +273,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     assert.equal(await page.locator("input[name='recipient']").isChecked(), true);
     const summary = await page.locator("#docsPreflightSummary").innerText();
     assert.match(summary, /Siap diterbitkan/);
-    assert.match(await page.locator("#docsSubmitCount").textContent(), /1 penerima/);
+    assert.match(await page.locator("#docsSubmitCount").textContent(), /1 tujuan/);
     assert.match(await page.locator("#docsSubmitCount").textContent(), /16 porsi/);
     assert.equal(await page.locator("#docsCreateButton").isDisabled(), false);
     await page.locator("#docsRecipientGroup").selectOption("Sekolah/Lembaga");
