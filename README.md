@@ -142,3 +142,6 @@ Jangan menjalankan test yang menulis, menghapus, atau mengonsumsi nomor dokumen 
 - Edge Function `autodoc-auth` harus dideploy terpisah setelah perubahan backend disetujui dan siap dirilis.
 - Pertahankan `verify_jwt=false` hanya selama pemeriksaan sesi/origin khusus di dalam fungsi tetap aktif.
 - Verifikasi workflow Pages dan versi Edge Function secara terpisah; merge saja bukan bukti deployment berhasil.
+
+### Workspace v2 (fase 1)
+Modul Buat Dokumen, Arsip, dan Data Master tampil sebagai halaman dalam shell navigasi, bukan dialog layar penuh. Menu Realisasi BAST menyediakan antrean berdasarkan tanggal, pencarian nama dan filter status; formulir realisasi dan verifikasi PIN yang ada tetap dipakai. AI menu tetap menjadi dialog kontekstual agar input distribusi tidak hilang. Penerbitan, nomor, snapshot, API dan renderer cetak tidak berubah. Draf persisten, pelacakan pengiriman dan navigasi bawah mobile belum termasuk fase ini.

@@ -530,3 +530,17 @@ button,input,select,textarea{font-family:inherit}
 @media(prefers-reduced-motion:reduce){
  .dm-tabs,.dm-tabs button,.dm-category-select,.ai-review-queue,.docs-danger-zone{scroll-behavior:auto;transition:none!important}
 }
+
+/* Workspace v2 shared visual hierarchy; the original token palette is retained. */
+body .workspace-pages .workspace-page .docs-head h2,body .workspace-pages .workspace-page .dm-head h2{font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-.5px;color:var(--color-ink)}
+body .workspace-pages .workspace-page .docs-head p{font-size:14px;line-height:1.5;color:var(--color-muted)}
+.workspace-page .docs-form-section-head h4,.workspace-page .docs-group-head h4{font-size:16px;line-height:1.4}
+.workspace-page .docs-field label,.workspace-page .dm-field label{font-size:13px}
+.workspace-page .docs-note,.workspace-page .docs-field-hint,.workspace-page .docs-group-head p,.workspace-page .docs-recipient small{font-size:12px;line-height:1.5}
+.workspace-page .docs-btn,.workspace-page .dm-btn{font-size:13px;min-height:44px}
+.workspace-page .docs-recipient strong{font-size:13px}
+.workspace-page .docs-field input,.workspace-page .docs-field select,.workspace-page .docs-field textarea{font-size:14px}
+.workspace-queue-search,.workspace-queue-filter{font:inherit;font-size:14px;min-height:44px;padding:8px 12px;background:var(--color-surface);border:1px solid var(--color-border-strong);border-radius:var(--radius-control);color:var(--color-ink)}
+.workspace-queue-totals{font-size:14px;font-weight:600;color:var(--color-ink);font-variant-numeric:tabular-nums;margin:16px 0}
+.home-heading p,.home-operator-description,.home-panel-description,.home-card-description{font-size:14px;line-height:1.5}
+.home-work-card h2,.home-archive-card h2,.home-master-check h2{font-size:16px}

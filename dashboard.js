@@ -198,7 +198,7 @@
     dateBlock.append(
       el("span", "home-dashboard-eyebrow", "TANGGAL OPERASIONAL AKTIF"),
       date,
-      el("p", "home-operator-description", "Mulai dokumen distribusi, tindak lanjuti BAST, dan buka arsip terakhir.")
+      el("p", "home-operator-description", "Siapkan distribusi, terbitkan dokumen, lalu selesaikan realisasi penerimaan.")
     );
     const createButton = action("＋ Buat Dokumen", true, () => window.AutoDocOpenDocs?.("create"), "create");
     createButton.classList.add("home-create-cta");
@@ -216,7 +216,7 @@
       el("p", "home-card-description", pendingBast > 0
         ? "Dokumen BAST yang belum selesai dicatat realisasinya."
         : "Tidak ada BAST yang perlu ditindaklanjuti saat ini."),
-      action("Buka arsip distribusi", false, () => window.AutoDocOpenArchive?.())
+      action("Buka antrean realisasi", false, () => window.AutoDocOpenRealization?.(rows.find(row=>Number(row.bast_pending)>0)?.tanggal))
     );
     workGrid.append(bast, renderMasterCheck(counts));
     host.append(workGrid, renderRecentArchive(rows));
