@@ -134,11 +134,15 @@ function partyFields(rows,escapeHtml){
 
 function bastPortionRows(items,real,escapeHtml,fallbackTotal=0){
   const realRows=Array.isArray(real.items)?real.items:[];
-  const rows=items.length?items.map((item,index)=>
-    "<tr><td class='center'>"+(index+1)+"</td><td>"+safe(escapeHtml,item.kelompok_sasaran)+
-    "</td><td>"+safe(escapeHtml,item.jenis_porsi)+"</td><td class='number-cell'>"+
-    formatNumber(item.jumlah)+"</td><td class='number-cell'></td></tr>"
-  ).join(""):"<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td></td><td></td></tr>";
+  const rows=items.length?items.map((item,index)=>{
+    const matching=items.filter(row=>row.jenis_porsi===item.jenis_porsi);
+    const received=realRows.find(row=>row.jenis_porsi===item.jenis_porsi);
+    const first=matching[0]===item;
+    const after=received&&first?formatNumber(received.jumlah_diterima)+(matching.length>1?" (total "+item.jenis_porsi+")":""):"";
+    return "<tr><td class='center'>"+(index+1)+"</td><td>"+safe(escapeHtml,item.kelompok_sasaran)+
+      "</td><td>"+safe(escapeHtml,item.jenis_porsi)+"</td><td class='number-cell'>"+
+      formatNumber(item.jumlah)+"</td><td class='number-cell'>"+safe(escapeHtml,after)+"</td></tr>";
+  }).join(""):"<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td></td><td></td></tr>";
   const totalBefore=items.reduce((sum,item)=>sum+Number(item.jumlah||0),0)||Number(fallbackTotal||0);
   const totalAfter=realRows.length
     ?realRows.reduce((sum,item)=>sum+Number(item.jumlah_diterima||0),0)
@@ -182,13 +186,13 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
   const date=formatDateParts(dist.tanggal).sentence;
   const groups=[
     ["I. PIHAK PERTAMA (yang menyerahkan)",[
-      ["Nama",""],
+      ["Nama",dist.nama_petugas||""],
       ["Jabatan","Petugas Distribusi SPPG Darmaraja"],
       ["Instansi","SPPG Darmaraja (Badan Gizi Nasional)"],
     ]],
     ["II. PIHAK KEDUA (penerima)",[
-      ["Nama",""],
-      ["Jabatan",""],
+      ["Nama",real.nama_penerima||""],
+      ["Jabatan",real.jabatan_penerima||""],
       ["Instansi / Lembaga",recipient.nama||""],
     ]],
   ];
@@ -211,7 +215,7 @@ const PRINT_STYLES=`
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:10pt;line-height:1.25;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.sheet{width:210mm;height:297mm;min-height:297mm;margin:18px auto;padding:15mm 20mm;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18);overflow:hidden}
+.sheet{width:210mm;min-height:297mm;margin:18px auto;padding:15mm 20mm;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18)}
 .letterhead{display:grid;grid-template-columns:24.65mm minmax(0,1fr) 19.4mm;align-items:center;min-height:27mm;padding:0 0 4mm;border-bottom:3px double #111}
 .letterhead-logo{display:flex;align-items:center;justify-content:flex-start}
 .top-logo{display:block;width:20.6mm;height:20.4mm;object-fit:contain}
@@ -272,7 +276,8 @@ body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-s
 .signature-name{font-size:10pt;font-weight:700;text-decoration:underline;white-space:nowrap}
 @media print{
   body{background:#fff}
-  .sheet{margin:0;box-shadow:none}
+  .sheet{margin:0;box-shadow:none;min-height:0}
+  .signature-grid{break-inside:avoid}
 }
 `;
 

@@ -28,7 +28,7 @@ function fitPage(frame){
  body.style.width="794px";
  body.style.minHeight="1123px";
  body.style.margin="0";
- body.style.padding=body.dataset.previewType==="organoleptic"?"0":"60px";
+ body.style.padding="0";
  body.style.boxSizing="border-box";
  body.style.transformOrigin="top left";
  body.style.transform="scale("+scale+")";
@@ -88,7 +88,7 @@ function updateLivePreview(){
  for(const recipient of recipients){
  const frame=makeFrame("Pratinjau "+recipient.nama);
  frame.dataset.documentPage="";
- frame.loading="lazy";
+ if(pages.children.length>1)frame.loading="lazy";
  frame.style.aspectRatio="794 / 1123";
  const settings=Array.isArray(getMaster().settings)?(getMaster().settings[0]||{}):(getMaster().settings||{});
  const menu=typeof readMenuComponentsForRecipient==="function"?readMenuComponentsForRecipient(recipient.id,date):readMenuComponents();
@@ -105,7 +105,7 @@ function updateLivePreview(){
  const doc={jenis:kind,nomor_lengkap:"PRATINJAU",snapshot_json:snapshot,created_at:"Pratinjau langsung"};
  const renderer=window.AutoDocPrintRenderer;if(!renderer?.buildPrintHtml)return;
  let html=renderer.buildPrintHtml(doc,esc,logoUrl());
- html=html.replace("</style>","@page{margin:0}html,body{margin:0!important;background:#fff!important}.preview-ribbon{position:absolute;top:12px;right:16px;padding:4px 8px;border:1px solid #d6dfd6;border-radius:4px;color:#56705e;background:#f4f8f3;font:700 9px Arial;letter-spacing:.7px}</style>");
+ html=html.replace("</style>","@page{margin:0}html,body{margin:0!important;background:#fff!important}.sheet{margin:0!important;box-shadow:none!important}.preview-ribbon{position:absolute;top:12px;right:16px;padding:4px 8px;border:1px solid #d6dfd6;border-radius:4px;color:#56705e;background:#f4f8f3;font:700 9px Arial;letter-spacing:.7px}</style>");
  html=html.replace("<body>","<body><div class='preview-ribbon'>PRATINJAU · BELUM DITERBITKAN</div>");
  frame.onload=()=>fitPage(frame);frame.srcdoc=html;
  }

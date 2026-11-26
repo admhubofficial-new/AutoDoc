@@ -129,7 +129,7 @@ function organolepticSheet(doc,data,recipient){
  const menu=Array.isArray(data.menu)?data.menu.slice(0,8):[];
  sheet.dataset.menuCount=String(Math.max(5,menu.length));
  sheet.append(organolepticElement(doc,"h1","sheet-title","FORMULIR UJI ORGANOLEPTIK"));
-  if(data.nomor)sheet.append(organolepticElement(doc,"p","sheet-number","Nomor: "+data.nomor));
+ sheet.append(organolepticElement(doc,"p","sheet-number","Nomor: "+(data.nomor||"..............................")));
 
  const info=organolepticElement(doc,"div","info");
  organolepticInfoRow(doc,info,recipient.kelompok==="Posyandu"?"Nama Posyandu":"Nama Sekolah",organolepticElement(doc,"span","val",recipient.kelompok==="Posyandu"?String(recipient.nama||"").replace(/^POSYANDU\s+/i,""):recipient.nama||""));
