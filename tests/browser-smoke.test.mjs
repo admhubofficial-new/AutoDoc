@@ -742,7 +742,7 @@ test("v3 number configuration requires explicit PIN and confirmation", async () 
 });
 
 test("desktop paper accepts wheel input and reflows into scrollable rows on zoom", async () => {
-  const app = await openApp({ viewport: { width: 1440, height: 900 }, recipientCount: 7 });
+  const app = await openApp({ viewport: { width: 1440, height: 900 }, recipientCount: 21 });
   try {
     const page = app.page;
     const host = page.locator("#docsPreviewPages");
@@ -755,12 +755,12 @@ test("desktop paper accepts wheel input and reflows into scrollable rows on zoom
     await page.waitForFunction(() => document.querySelector("#docsPreviewPages").scrollTop > 100);
     const zoom = page.locator("#docsZoom");
     await zoom.press("Home");
-    for (let step = 0; step < 5; step++) await zoom.press("ArrowRight");
+    assert.equal(await zoom.inputValue(), "25");
     await page.waitForFunction(() => {
       const pages = document.querySelector("#docsPreviewPages");
       const [a, b] = pages.children;
       const renderedWidth = a.querySelector("iframe").getBoundingClientRect().width;
-      return Math.abs(renderedWidth - a.clientWidth) <= 1 && Math.abs(a.getBoundingClientRect().top - b.getBoundingClientRect().top) <= 1 && b.offsetLeft > a.offsetLeft && pages.children[3].getBoundingClientRect().top >= a.getBoundingClientRect().bottom && a.clientHeight >= a.clientWidth * 1.4 && pages.scrollHeight > pages.clientHeight;
+      return a.clientWidth <= 200 && Math.abs(renderedWidth - a.clientWidth) <= 1 && Math.abs(a.getBoundingClientRect().top - b.getBoundingClientRect().top) <= 1 && b.offsetLeft > a.offsetLeft && pages.children[5].getBoundingClientRect().top >= a.getBoundingClientRect().bottom && a.clientHeight >= a.clientWidth * 1.4 && pages.scrollHeight > pages.clientHeight;
     });
     assert.deepEqual(app.errors, []);
   } finally {
