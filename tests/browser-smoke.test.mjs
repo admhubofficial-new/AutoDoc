@@ -946,7 +946,7 @@ test("audit: leaving archive clears PIN confirmation and pending requests cannot
  try{
   const page=app.page;
   await page.locator('[data-home-nav="archive"]').click();
-  await page.locator("#docsDaysSelectAll:not([disabled])").waitFor();
+  await page.locator("#docsDaysList .docs-day-card").waitFor();
   await page.locator("#docsDaysSelectAll").check();
   await page.locator("#docsDaysDelete").click();
   await page.locator("#docsDeletePin").fill("pin-test-only");

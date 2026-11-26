@@ -440,7 +440,7 @@
       });
       bottomNav.addEventListener("click", (event) => {
         const item=event.target.closest("[data-mobile-nav]");
-        if(!item||!canNavigate())return;
+        if(!item)return;
         if(item.dataset.mobileNav==="more"){toggleSidebar();if(homePage.classList.contains("mobile-nav-open"))menuToggle.focus();return}
         homeNav.querySelector('[data-home-nav="'+item.dataset.mobileNav+'"]')?.click();
       });
@@ -489,7 +489,7 @@
   <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2-phase4-r2" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123" defer></script>
-  <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124-cleanup" defer></script>
+  <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124-cleanup-r2" defer></script>
   <script src="./document-preview.js?v=p4-simplified-document-flow-20261124" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
   <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>

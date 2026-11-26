@@ -40,6 +40,7 @@
       const selectAll = node("input");
       selectAll.id = "docsDaysSelectAll";
       selectAll.type = "checkbox";
+      selectAll.disabled = true;
       selectAllLabel.append(selectAll, node("span", null, "Pilih semua pada halaman ini"));
       const selectionCount = node("strong", "docs-days-selection-count", "0 riwayat dipilih");
       const deleteButton = node("button", "docs-btn danger", "Hapus dipilih");
@@ -260,6 +261,7 @@
         announce("Memuat arsip…", false, "loading");
         previous.disabled = true;
         next.disabled = true;
+        selectAll.disabled = true;
         renderLoading();
         try {
           const query = "?offset=" + encodeURIComponent(nextOffset) + "&q=" + encodeURIComponent(input.value.trim());
