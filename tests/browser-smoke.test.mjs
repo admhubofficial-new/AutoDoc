@@ -44,8 +44,11 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     const url = new URL(request.url());
     const routeName = url.pathname.split("/autodoc-auth/")[1] || "";
     if (apiDelays[routeName]) await new Promise(resolve => setTimeout(resolve, apiDelays[routeName]));
-    if (apiFailures[routeName] > 0) {
-      apiFailures[routeName] -= 1;
+    const failureKey = routeName === "master/list" && url.searchParams.has("include_recipients")
+      ? "master/list?include_recipients=false"
+      : routeName;
+    if (apiFailures[failureKey] > 0) {
+      apiFailures[failureKey] -= 1;
       await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Simulasi gangguan layanan." }) });
       return;
     }
@@ -862,6 +865,7 @@ test("phase 3 all-date BAST queue uses archived dates and opens the existing rea
  const app=await openApp();
  try{
   const page=app.page;
+  await page.locator('[data-home-nav="home"]').click();
   await page.getByRole("button",{name:"Lihat semua BAST tertunda"}).click();
   const queue=page.locator("#docsRealizationQueue");
   await queue.getByText("2026-11-23",{exact:false}).waitFor();
@@ -879,6 +883,7 @@ test("phase 3 BAST history scan retries without claiming incomplete history is c
  const app=await openApp({apiFailures:{"docs/list":1}});
  try{
   const page=app.page;
+  await page.locator('[data-home-nav="home"]').click();
   await page.getByRole("button",{name:"Lihat semua BAST tertunda"}).click();
   const more=page.getByRole("button",{name:"Coba lagi",exact:true});
   await more.waitFor();
