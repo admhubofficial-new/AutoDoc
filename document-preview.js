@@ -1,7 +1,7 @@
 (() => {
 "use strict";
 function create(dependencies){
- const { $, esc, getModal, getMaster, readMenuComponents, readMenuComponentsForRecipient, selectedDocumentKinds, today, logoUrl } = dependencies;
+ const { $, esc, getModal, getMaster, readMenuComponents, selectedDocumentKinds, today, logoUrl } = dependencies;
  let boundDisclosure=null;
  window.addEventListener("resize",fitPreviewFrame);
  function bindPreviewDisclosure(){
@@ -91,7 +91,7 @@ function updateLivePreview(){
  if(pages.children.length>1)frame.loading="lazy";
  frame.style.aspectRatio="794 / 1123";
  const settings=Array.isArray(getMaster().settings)?(getMaster().settings[0]||{}):(getMaster().settings||{});
- const menu=typeof readMenuComponentsForRecipient==="function"?readMenuComponentsForRecipient(recipient.id,date):readMenuComponents();
+ const menu=readMenuComponents();
  if(kind==="ORGANOLEPTIC"){
   renderOrganolepticPreview(frame,recipient,date,menu,settings);
   continue;

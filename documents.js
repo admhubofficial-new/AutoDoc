@@ -28,25 +28,20 @@ function readStoredDraft(){
   const fields=saved.fields.filter(item=>Array.isArray(item)&&draftFields.includes(item[0])&&(typeof item[1]==="boolean"||typeof item[1]==="string"&&item[1].length<=180));
   const menu=saved.menu.filter(item=>typeof item==="string"&&item.length<=180).slice(0,8);
   const recipients=saved.recipients.filter(validId).slice(0,100);
-  let plan=null;
-  if(saved.plan&&typeof saved.plan.tanggal==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(saved.plan.tanggal)&&Array.isArray(saved.plan.groups)&&saved.plan.groups.length<=100){
-   const groups=saved.plan.groups.filter(g=>g&&typeof g.label==="string"&&Array.isArray(g.menu_items)&&g.menu_items.length>0&&g.menu_items.length<=8&&g.menu_items.every(m=>typeof m==="string"&&m.length<=180)&&Array.isArray(g.recipient_ids)&&g.recipient_ids.every(validId)).map(g=>({label:g.label.slice(0,180),menu_items:g.menu_items,recipient_ids:g.recipient_ids.slice(0,100)}));
-   if(groups.length!==saved.plan.groups.length){clearStoredDraft();return null}
-   plan={tanggal:saved.plan.tanggal,groups};
-  }else if(saved.plan){clearStoredDraft();return null}
-  return {fields,menu,recipients,plan};
+
+  return {fields,menu,recipients,needsMenuReview:!!saved.plan};
  }catch(_){clearStoredDraft();return null}
 }
 function saveDraft(){
  if(renderingForm||restoringDraft||!draftRestored||!formDirty||publishing||!$("#docsCreateForm",modal))return;
  try{
-  sessionStorage.setItem(DRAFT_KEY,JSON.stringify({version:1,savedAt:Date.now(),...captureDraft(),plan:activeAiMenuPlan}));
+  sessionStorage.setItem(DRAFT_KEY,JSON.stringify({version:1,savedAt:Date.now(),...captureDraft()}));
   draftMessage("Draf tersimpan di tab ini · berlaku 12 jam");
  }catch(_){draftMessage("Draf hanya tersimpan sementara di halaman ini. Penyimpanan browser tidak tersedia.")}
 }
 function isBusy(){return publishing||!!modal?.querySelector(".docs-realization[data-state='loading'],.docs-delete-panel[data-state='loading']")}
 function notifyBusy(){status("Penyimpanan sedang berlangsung. Tunggu konfirmasi server sebelum berpindah halaman.",false,"loading")}
-let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, activeAiMenuPlan=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
+let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
 
 async function api(route,body){
  const headers={"apikey":KEY,"Accept":"application/json"};
@@ -158,12 +153,12 @@ async function loadMaster(){
  const stored=!draftRestored&&!formDirty?readStoredDraft():null;
  const draft=formDirty?captureDraft():stored;
  draftRestored=true;
- if(stored)activeAiMenuPlan=stored.plan;
  renderCreate();
  if(draft){
   restoreDraft(draft);formDirty=true;saveDraft();
   const unavailable=draft.recipients.filter(id=>!recipients.some(r=>String(r.id)===String(id)));
   if(unavailable.length)draftMessage("Draf dipulihkan. "+unavailable.length+" penerima tidak lagi aktif; periksa pilihan sebelum terbit.");
+  else if(stored?.needsMenuReview)draftMessage("Draf dipulihkan. Periksa menu sebelum menerbitkan karena pemetaan menu per penerima sudah dihapus.");
   else if(stored)draftMessage("Draf dari tab ini berhasil dipulihkan. Periksa kembali sebelum menerbitkan.");
  }
  const activeCount=recipients.length;
@@ -171,102 +166,6 @@ async function loadMaster(){
  status(activeCount+" penerima aktif berhasil dimuat dari "+recipients.length+" data."+warning,masterResult.status==="rejected",masterResult.status==="rejected"?"error":activeCount?"success":"empty");
 }
 function readMenuComponents(){return menuController?.read()||[]}
-function getAiMenuPlan(date){
- const plan=activeAiMenuPlan;
- if(!plan||plan.tanggal!==date||!Array.isArray(plan.groups))return null;
- return plan;
-}
-function hasAiMenuPlanDateMismatch(date){
- return !!(activeAiMenuPlan&&Array.isArray(activeAiMenuPlan.groups)&&activeAiMenuPlan.tanggal!==date);
-}
-function menuItemsForRecipient(recipientId,date){
- const plan=getAiMenuPlan(date||$("#docsDate",modal)?.value||today());
- if(plan){
-  const group=plan.groups.find(item=>(item.recipient_ids||[]).map(String).includes(String(recipientId)));
-  if(group){
-   const firstGroup=plan.groups[0];
-   if(group===firstGroup)return readMenuComponents();
-   return Array.isArray(group.menu_items)?group.menu_items.slice(0,8):[];
-  }
- }
- return readMenuComponents();
-}
-function recipientMenuMap(selected,date,defaultItems){
- const plan=getAiMenuPlan(date);
- const map={};
- if(!plan)return map;
- const selectedSet=new Set(selected.map(String));
- for(const group of plan.groups){
-  const ids=(group.recipient_ids||[]).map(String).filter(id=>selectedSet.has(id));
-  if(!ids.length)continue;
-  const items=group===plan.groups[0]?defaultItems:group.menu_items;
-  if(Array.isArray(items)&&items.length>=1&&items.length<=8)ids.forEach(id=>{map[id]=items.slice()});
- }
- return map;
-}
-function renderAiMenuPlanNotice(){
- const target=$("#docsAiMenuPlanNotice",modal);
- if(!target)return;
- target.replaceChildren();
- const plan=activeAiMenuPlan;
- if(!plan||!Array.isArray(plan.groups)){target.hidden=true;return}
- target.hidden=false;
- const mismatch=hasAiMenuPlanDateMismatch($("#docsDate",modal)?.value||today());
- const heading=node("strong",null,mismatch?"Tanggal rencana menu tidak cocok":"Menu AI · "+plan.groups.length+" kelompok");
- const description=node("p",null,mismatch
-  ?"Rencana ini dibuat untuk "+plan.tanggal+". Samakan tanggal distribusi atau lepaskan rencana sebelum menerbitkan."
-  :"Menu per kelompok akan disimpan pada dokumen masing-masing.");
- target.append(heading,description);
- if(mismatch)target.dataset.state="warning";else delete target.dataset.state;
- const list=node("ul");
- const recipientNames=new Map((master.recipients||[]).map(item=>[String(item.id),item.nama]));
- plan.groups.forEach(group=>{
-  const ids=(group.recipient_ids||[]).map(String);
-  const names=ids.map(id=>recipientNames.get(id)).filter(Boolean);
-  const detail=(group.menu_items||[]).join(", ");
-  list.append(node("li",null,(group.label||"Kelompok menu")+" · "+ids.length+" penerima"+(names.length?" ("+names.join(", ")+")":"")+" · "+detail));
- });
- target.append(list);
- const remove=node("button","docs-btn","Lepas penerapan AI");
- remove.type="button";
- remove.onclick=()=>{activeAiMenuPlan=null;formDirty=true;renderAiMenuPlanNotice();syncPreflightSummary();saveDraft();status("Penerapan menu AI dilepas. Belum ada dokumen diterbitkan.");previewController?.updateLivePreview()};
- target.append(remove);
-}
-function applyAiMenuPlan(plan){
- if(!plan||!/^\d{4}-\d{2}-\d{2}$/.test(String(plan.tanggal||""))||!Array.isArray(plan.groups)||!plan.groups.length)throw new Error("Rencana menu AI tidak valid.");
- const normalized=plan.groups.map(group=>{
-  const menuItems=Array.isArray(group.menu_items)?group.menu_items.map(item=>String(item||"").trim()).filter(Boolean):[];
-  const recipientIds=Array.isArray(group.recipient_ids)?[...new Set(group.recipient_ids.map(String))]:[];
-  if(menuItems.length<1||menuItems.length>8||menuItems.some(item=>item.length>180))throw new Error("Setiap kelompok AI harus memiliki 1 sampai 8 menu yang valid.");
-  return {label:String(group.label||"Kelompok menu"),menu_items:menuItems,recipient_ids:recipientIds};
- });
- const used=new Set();
- normalized.forEach(group=>group.recipient_ids.forEach(id=>{if(used.has(id))throw new Error("Satu penerima tidak boleh berada pada dua kelompok menu.");used.add(id)}));
- if(!used.size)throw new Error("Pilih minimal satu penerima pada kelompok menu AI.");
- activeAiMenuPlan={tanggal:plan.tanggal,groups:normalized};formDirty=true;
- realizationMode=false;queueRequest++;
- window.AutoDocSetHomeNav?.("print");
- show(false);tab="create";
- $("#docsTitle",modal).textContent="Buat Dokumen";
- $(".docs-head p",modal).textContent="Menu sudah dikelompokkan oleh AI. Periksa penerima dan data sebelum menerbitkan.";
- $(".docs-view-create",modal).hidden=false;$(".docs-view-history",modal).hidden=true;
- const applyToForm=()=>{
-  if(!$("#docsCreateForm",modal)){renderCreate()}
-  const date=$("#docsDate",modal);
-  if(date)date.value=activeAiMenuPlan.tanggal;
-  const activeRecipients=new Set((master.recipients||[]).filter(item=>item&&item.aktif!==false).map(item=>String(item.id)));
-  const unknownIds=[...used].filter(id=>!activeRecipients.has(id));
-  if(unknownIds.length)throw new Error(unknownIds.length+" tujuan AI tidak lagi ada atau sudah nonaktif. Ulangi pemuatan Data Master dan periksa pemetaan.");
-  const first=activeAiMenuPlan.groups[0]?.menu_items||[];
-  menuController?.set(first);
-  const plannedRecipients=new Set([...used].map(String));
-  modal.querySelectorAll("input[name='recipient']").forEach(input=>{input.checked=plannedRecipients.has(String(input.value))});
-  renderAiMenuPlanNotice();updateSelectedCount();
-  status("Menu AI diterapkan dan "+used.size+" penerima sudah dipilih otomatis. Periksa kembali setiap kelompok sebelum menerbitkan.");
- };
- if(masterLoaded)applyToForm();
- else loadMaster().then(applyToForm).catch(error=>status(error.message,true));
-}
 function selectedDocumentKinds(){
  const kinds=[];
  if($("#docsKindSj",modal)?.checked)kinds.push("SJ");
@@ -308,7 +207,7 @@ function restoreDraft(draft){
  menuController?.set(draft.menu);
  const selected=new Set(draft.recipients);
  modal.querySelectorAll("input[name='recipient']").forEach(input=>{input.checked=selected.has(input.value)});
- updateSelectedCount();renderAiMenuPlanNotice();
+ updateSelectedCount();
  restoringDraft=false;
 }
 function renderCreate(){
@@ -327,7 +226,6 @@ function renderCreateForm(){
  target.innerHTML="<div class='docs-mobile-switch' aria-label='Tampilan dokumen'><button type='button' class='docs-btn' id='docsEditToggle' aria-controls='docsCreateForm' aria-pressed='true'>Isi</button><button type='button' class='docs-btn' id='docsPreviewToggle' aria-controls='docsPreviewDisclosure' aria-pressed='false'>Pratinjau</button></div><div class='docs-create-layout'>"+
   "<section class='docs-create-form-panel'>"+
    "<form id='docsCreateForm' autocomplete='off'>"+
-    "<button type='button' class='docs-btn' id='docsAiMenuAssist'>Bantu isi dengan AI</button>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Jadwal distribusi</h4></div></div>"+
 
      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div><div class='docs-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
@@ -337,7 +235,6 @@ function renderCreateForm(){
       "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari nama penerima...' aria-label='Cari penerima' autocomplete='off'><select id='docsRecipientGroup' aria-label='Filter kelompok penerima'><option value=''>Semua kelompok</option>"+groupOptions+"</select><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua hasil</button><button type='button' class='docs-btn' id='docsClearAll'>Hapus pilihan</button></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
      "</details>"+
     "<fieldset class='docs-kind-group'><legend>Jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label><label class='docs-kind-choice'><input id='docsIncludeOrganoleptic' type='checkbox' checked> Organoleptik</label></fieldset>"+
-     "<div id='docsAiMenuPlanNotice' class='docs-ai-menu-plan' hidden></div>"+
      "<details class='docs-menu-disclosure'><summary>Menu harian</summary>"+
      "<div class='docs-subsection-head'><div><strong>Menu distribusi</strong></div><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div>"+
      "<div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
@@ -358,13 +255,13 @@ function renderCreateForm(){
   "<details class='docs-preview-panel' id='docsPreviewDisclosure' open><summary class='docs-preview-summary'>Pratinjau dokumen</summary><div class='docs-preview-content'><div class='docs-preview-head'><div class='docs-preview-selects'><div class='docs-preview-kinds' aria-label='Jenis dokumen pratinjau'></div><select hidden id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><div id='docsPreviewPages' class='docs-preview-pages'></div></div></details>"+
  "</div>";
  menuController?.render();
- renderAiMenuPlanNotice();
+
  renderRecipients(recipients);
  const form=$("#docsCreateForm",target);
  $("#docsDiscardDraft",target).onclick=()=>{
   if(isBusy()){notifyBusy();return}
   if(!window.confirm("Kosongkan seluruh isian distribusi yang belum diterbitkan?"))return;
-  clearStoredDraft();formDirty=false;activeAiMenuPlan=null;renderCreate();draftMessage("Draf dikosongkan.");
+  clearStoredDraft();formDirty=false;renderCreate();draftMessage("Draf dikosongkan.");
  };
  $("#docsRecipientSearch",target).addEventListener("input",filterRecipients);
  $("#docsRecipientGroup",target).addEventListener("change",filterRecipients);
@@ -372,11 +269,7 @@ function renderCreateForm(){
  $("#docsClearAll",target).onclick=()=>setAllRecipients(false);
  $("#docsAddMenuItem",target).onclick=()=>addMenuComponent();
  $("#docsCopyLastMenu",target).onclick=copyLastMenu;
- $("#docsAiMenuAssist",target).addEventListener("click",()=>{
-  if(window.AutoDocMaster?.open)window.AutoDocMaster.open("ai","",{mode:"menus",date:$("#docsDate",target).value});
-  else status("Asisten AI belum siap. Muat ulang halaman dan coba kembali.",true,"error");
- });
- $("#docsDate",target).addEventListener("change",()=>{renderAiMenuPlanNotice();previewController?.updateLivePreview()});
+ $("#docsDate",target).addEventListener("change",()=>{previewController?.updateLivePreview()});
  $("#docsPreviewKind",target).addEventListener("change",()=>previewController?.updateLivePreview());
  const layout=$(".docs-create-layout",target);
  const previewToggle=$("#docsPreviewToggle",target);
@@ -473,7 +366,6 @@ function syncPreflightSummary(){
  const menuCount=typeof menuController?.count==="function"?menuController.count():modal.querySelectorAll("#docsMenuItems .docs-menu-input").length;
  const missing=[];
  if(!validDate)missing.push("tanggal distribusi");
- if(hasAiMenuPlanDateMismatch(dateValue))missing.push("samakan tanggal dengan rencana menu AI ("+activeAiMenuPlan.tanggal+") atau lepaskan rencana");
  if(!kinds.length)missing.push("jenis dokumen");
  if(!selectedIds.size)missing.push("minimal satu penerima");
  if(menuCount>8)missing.push("maksimal 8 komponen menu");
@@ -503,11 +395,6 @@ function updateSelectedCount(){
 }
 async function createDocs(event){
  event.preventDefault();if(publishing)return;status("");syncPreflightSummary();
- const dateValue=$("#docsDate",modal)?.value||"";
- if(hasAiMenuPlanDateMismatch(dateValue)){
-  status("Penerbitan diblokir: rencana menu AI dibuat untuk "+activeAiMenuPlan.tanggal+". Samakan tanggal distribusi atau lepaskan rencana menu AI.",true);
-  $("#docsDate",modal)?.focus();return;
- }
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
  if(!selected.length){status("Pilih minimal satu penerima.",true);$("#docsRecipientSearch",modal)?.focus();return}
  const kinds=selectedDocumentKinds();
@@ -515,17 +402,10 @@ async function createDocs(event){
  const includeOrganoleptic=$("#docsIncludeOrganoleptic",modal)?.checked===true;
  const menuItems=readMenuComponents();
  if(menuItems.length>8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
- const aiPlan=getAiMenuPlan(dateValue);
- if(aiPlan){
-  const assigned=new Set(aiPlan.groups.flatMap(group=>group.recipient_ids||[]).map(String));
-  const unassigned=selected.filter(id=>!assigned.has(String(id)));
-  if(unassigned.length){status(unassigned.length+" penerima belum dipetakan ke kelompok menu AI. Petakan atau hapus pilihan tersebut sebelum menerbitkan.",true);return}
- }
  const body={
   tanggal:$("#docsDate",modal).value,
   jam_berangkat:$("#docsTime",modal).value,
   menu_items:menuItems,
-  recipient_menu_items:recipientMenuMap(selected,$("#docsDate",modal).value,menuItems),
   waktu_makan:$("#docsMealTime",modal).value||"siang",
   jenis_dokumen:kinds,
   nama_petugas:$("#docsStaff",modal).value.trim(),
@@ -554,7 +434,7 @@ async function createDocs(event){
   status((result.message||"Selesai.")+masterSaveWarning,failed>0||!!masterSaveWarning,failed>0||masterSaveWarning?"error":"success");
   await loadHistory(body.tanggal);
   const fullyIssued=!failed&&Number(result.requested)>0&&Number(result.berhasil)===Number(result.requested);
-  if(fullyIssued){clearStoredDraft();formDirty=false;activeAiMenuPlan=null;renderCreate()}
+  if(fullyIssued){clearStoredDraft();formDirty=false;renderCreate()}
   window.AutoDocSetHomeNav?.("archive");
   $("#docsTitle",modal).textContent="Dokumen distribusi";
   $(".docs-head p",modal).textContent="Periksa hasil penerbitan dan gunakan aksi cetak."
@@ -957,7 +837,7 @@ function init(){
  menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{menuRevision++;syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored){formDirty=true;saveDraft()}}});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
- previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,readMenuComponents,readMenuComponentsForRecipient:menuItemsForRecipient,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
+ previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,readMenuComponents,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
  window.AutoDocDocuments=Object.freeze({
   open(){
    realizationMode=false;queueRequest++;historyRequest++;copyMenuRequest++;clearHistory();
@@ -970,8 +850,7 @@ function init(){
   },
   close,
   isBusy,notifyBusy,leaveHistory,
-  resetSession(){close(false);clearStoredDraft();draftRestored=false;masterLoaded=false;master={};formDirty=false;activeAiMenuPlan=null;pendingOrganolepticPrint=null;currentDocs=[];currentDistribution=null;renderCreate();$(".docs-view-history",modal).replaceChildren()},
-  applyAiMenuPlan,
+  resetSession(){close(false);clearStoredDraft();draftRestored=false;masterLoaded=false;master={};formDirty=false;pendingOrganolepticPrint=null;currentDocs=[];currentDistribution=null;renderCreate();$(".docs-view-history",modal).replaceChildren()},
   openRealization(date){
    realizationMode=true;masterRequest++;copyMenuRequest++;clearHistory();
    show(false);tab="history";
