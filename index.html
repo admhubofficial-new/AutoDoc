@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2-phase2-phase3-phase4-cleanup-v3-r2">
-  <link rel="stylesheet" href="./theme.css?v=ruang-kerja-20261126">
+  <link rel="stylesheet" href="./theme.css?v=ruang-kerja-20261126-mockup-r1">
 </head>
 <body class="auth-pending">
   <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
@@ -199,6 +199,11 @@
         setStatus("", "");
         document.title = "Beranda — AutoDoc";
         updateHomeDate();
+        if (!window.AutoDocDocuments) {
+          document.addEventListener("DOMContentLoaded", () => window.AutoDocOpenDocs("create"), { once: true });
+        } else {
+          window.AutoDocOpenDocs("create");
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
@@ -490,10 +495,10 @@
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123" defer></script>
   <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124-cleanup-r2" defer></script>
-  <script src="./document-preview.js?v=p4-simplified-document-flow-20261124" defer></script>
+  <script src="./document-preview.js?v=p4-simplified-document-flow-20261124-mockup-r1" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
   <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
-  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3-r2-phase4-cleanup-v3" defer></script>
+  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3-r2-phase4-cleanup-v3-mockup-r1" defer></script>
   <script src="./dashboard.js?v=ruang-kerja-20261126" defer></script>
 </body>
 </html>

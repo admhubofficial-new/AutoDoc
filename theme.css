@@ -645,3 +645,26 @@ body .workspace-pages .workspace-page .docs-submit-bar{position:static;backgroun
  .workspace-page .docs-btn,.workspace-page .dm-btn{min-height:44px}
  .workspace-page .docs-grid-compact{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Document workspace */
+.home-page .workspace-pages:has(.docs-create-layout){width:min(1320px,calc(100% - 48px))}
+.workspace-page .docs-create-layout{grid-template-columns:minmax(300px, .85fr) minmax(0, 1.15fr);max-width:none;gap:24px;align-items:start}
+.docs-create-form-panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-card);padding:clamp(14px,2vw,24px)}
+.docs-mobile-switch,.docs-preview-panel .docs-preview-summary{display:none}
+.docs-menu-disclosure>summary,.docs-shipping-details>summary{cursor:pointer;font-weight:650;padding-block:12px}
+.docs-menu-disclosure{border-top:1px solid var(--color-border);margin-top:16px}
+.docs-create-layout .docs-kind-group{margin-top:16px}
+.docs-create-layout .docs-kind-choice:has(:checked),
+.docs-preview-kinds button[aria-pressed=true],.docs-mobile-switch button[aria-pressed=true]{background:var(--color-primary);color:var(--color-surface);border-color:var(--color-primary)}
+.docs-preview-kinds{display:flex;gap:8px;flex-wrap:wrap}
+.docs-create-layout .docs-preview-selects{display:flex;flex-wrap:wrap;gap:8px}
+.docs-create-layout .docs-preview-panel{background:var(--color-neutral-soft,var(--color-canvas));border-radius:var(--radius-card)}
+.docs-create-layout .docs-preview-paper{background:transparent}
+.docs-create-layout .docs-submit-actions,.docs-create-layout #docsCreateButton{width:100%}
+@media(max-width:820px){
+ .home-page .workspace-pages:has(.docs-create-layout){width:calc(100% - 32px)}
+ .workspace-page .docs-create-layout{grid-template-columns:minmax(0,1fr)}
+ .docs-mobile-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:12px}
+ .docs-create-layout:not(.show-mobile-preview) .docs-preview-panel,
+ .docs-create-layout.show-mobile-preview .docs-create-form-panel{display:none}
+}

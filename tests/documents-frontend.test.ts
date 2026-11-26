@@ -487,9 +487,10 @@ test("organoleptic archive and creation printing use recipient-specific snapshot
 
 test("P4 creation form groups the operator flow and keeps readiness in one compact status", () => {
   const steps = [
-    "Distribusi",
-    "Menu &amp; penerima",
-    "Pengiriman"
+    "<h4>Jadwal distribusi</h4>",
+    "<h4>Penerima</h4>",
+    "<summary>Menu harian</summary>",
+    "<span>Rincian pengiriman</span>"
   ];
   const positions = steps.map(step => source.indexOf(step));
   assert.ok(positions.every(position => position >= 0));
@@ -520,23 +521,14 @@ test("mobile recipient selection stays in the page flow and offers clear grouped
   assert.ok(source.includes("Hapus pilihan"));
 });
 
-test("v3 preview remains closed until explicitly opened at every viewport", () => {
-  const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
-  assert.ok(source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure'>"));
-  assert.ok(source.includes("previewDisclosure.open=false"));
-  assert.doesNotMatch(source,/desktopPreview\.matches/);
-  assert.ok(source.includes('const previewSummaryToggle=$(".docs-preview-toggle",previewDisclosure)'));
-  assert.ok(source.includes('previewSummaryToggle.textContent=expanded?"Tutup":"Buka"'));
-  assert.ok(source.includes('previewDisclosure.scrollIntoView({behavior:"auto",block:"start"})'));
-  assert.ok(source.includes("id='docsPreviewToggle'"));
-  assert.ok(source.includes("aria-controls='docsPreviewDisclosure'"));
-  assert.match(stylesSource, /grid-template-columns:\s*minmax\(0, 1fr\)/);
-  assert.match(stylesSource, /\.docs-preview-panel\s*\{[^}]*position:\s*static/);
-  assert.doesNotMatch(stylesSource, /docs-preview-caption|docs-create-intro|docs-section-number/);
-  assert.ok(previewSource.includes('disclosure.addEventListener("toggle",fitPreviewFrame)'));
-  assert.ok(!previewSource.includes("mobilePreview"));
+test("preview stays open beside the desktop form and has a mobile view switch", () => {
+  const theme = readFileSync(new URL("../theme.css", import.meta.url), "utf8");
+  assert.match(source, /id='docsPreviewDisclosure' open/);
+  assert.match(source, /id='docsEditToggle'[^>]*aria-pressed='true'/);
+  assert.match(source, /id='docsPreviewToggle'[^>]*aria-pressed='false'/);
+  assert.match(theme, /grid-template-columns:minmax\(300px, .85fr\) minmax\(0, 1.15fr\)/);
+  assert.match(theme, /:not\(\.show-mobile-preview\) \.docs-preview-panel/);
   assert.match(previewSource, /Pratinjau belum tersedia/);
-  assert.match(previewSource, /Pilih penerima pada formulir/);
 });
 
 
