@@ -190,6 +190,8 @@
       }
 
       function renderDays() {
+        pagination.hidden = !offset && !hasMore;
+        dangerZone.hidden = !rows.length && !selectedIds.size;
         if (!rows.length) {
           renderEmpty();
         } else {

@@ -67,7 +67,7 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /frame\.srcdoc=html/);
   assert.match(source, /form\.addEventListener\("input",\(\)=>\{formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
   assert.match(source, /form\.addEventListener\("change",\(\)=>\{formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
-  assert.match(previewSource, /Nomor baru mengikuti urutan saat diterbitkan/);
+  assert.match(previewSource, /Memuat nomor surat/);
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
   assert.match(source, /value='ORGANOLEPTIC'/);
@@ -276,7 +276,7 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
     "for='docsDate'",
     "class='docs-recipient-subsection'",
     "<summary>Menu harian</summary>",
-    "<span>Rincian pengiriman</span>"
+    "<span>Pengiriman</span>"
   ];
   const positions = steps.map(step => source.indexOf(step));
   assert.ok(positions.every(position => position >= 0));
@@ -287,7 +287,7 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
   assert.match(source, /docsPreflightSummary/);
   assert.match(source, /docsSubmitCount/);
   assert.ok(source.includes("menuController?.count"));
-  assert.match(source, /Siap diterbitkan/);
+  assert.match(source, /Menu harian belum diisi/);
   assert.match(source, /Pilih minimal satu penerima untuk melanjutkan/);
   assert.ok(source.includes("button.disabled=publishing||!ready"));
   assert.ok(source.includes('status("Memuat daftar penerima dan data pendukung...",false,"loading")'));
@@ -308,7 +308,7 @@ test("preview stays open beside the desktop form and has a mobile view switch", 
   assert.match(source, /id='docsPreviewDisclosure' open/);
   assert.match(source, /id='docsEditToggle'[^>]*aria-pressed='true'/);
   assert.match(source, /id='docsPreviewToggle'[^>]*aria-pressed='false'/);
-  assert.match(theme, /grid-template-columns:minmax\(300px, .85fr\) minmax\(0, 1.15fr\)/);
+  assert.match(theme, /grid-template-columns:minmax\(288px,1fr\) minmax\(0,2fr\)/);
   assert.match(theme, /:not\(\.show-mobile-preview\) \.docs-preview-panel/);
   assert.match(previewSource, /Pratinjau belum tersedia/);
 });

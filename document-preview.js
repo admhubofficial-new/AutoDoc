@@ -90,9 +90,9 @@ function updateLivePreview(){
  pages.setAttribute("aria-busy",String(waiting));
  if(previewStatus)previewStatus.textContent=!recipients.length?"":numberError
   ?"Nomor belum bisa dimuat. Ubah tanggal atau muat ulang untuk mencoba lagi."
-  :waiting?"Memuat nomor surat…":"Nomor baru mengikuti urutan saat diterbitkan.";
+  :waiting?"Memuat nomor surat…":"";
  const pageCount=$("#docsPreviewPageCount",getModal());
- if(pageCount)pageCount.textContent=recipients.length?"Halaman 1 dari "+recipients.length:"";
+ if(pageCount)pageCount.textContent=recipients.length?"1 dari "+recipients.length+" · "+recipients[0].nama:"";
  pages.replaceChildren();
  const makeFrame=(title)=>{
   const paper=document.createElement("div");
@@ -113,6 +113,7 @@ function updateLivePreview(){
  }
  for(const recipient of recipients){
  const frame=makeFrame("Pratinjau "+recipient.nama);
+ frame.parentElement.dataset.recipient=recipient.nama;
  frame.dataset.documentPage="";
  if(pages.children.length>1)frame.loading="lazy";
  frame.style.aspectRatio="794 / 1123";
@@ -149,7 +150,8 @@ function updateLivePreview(){
   const pages=Array.from(getModal()?.querySelectorAll("#docsPreviewPages .docs-preview-paper")||[]);
   if(!count||!count.getClientRects().length||!pages[0]?.getClientRects().length)return;
   const index=pages.findIndex(page=>page.getBoundingClientRect().bottom>innerHeight*.35);
-  count.textContent="Halaman "+(index<0?pages.length:index+1)+" dari "+pages.length;
+  const current=index<0?pages.length-1:index;
+  if(pages[current].dataset.recipient)count.textContent=(current+1)+" dari "+pages.length+" · "+pages[current].dataset.recipient;
  },{passive:true,capture:true});
  return Object.freeze({updateLivePreview,fitPreviewFrame});
 }

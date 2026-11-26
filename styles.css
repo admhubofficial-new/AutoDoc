@@ -929,7 +929,7 @@ body .workspace-pages .workspace-page .dm-tabs{padding:12px;align-self:start;bor
 @media(max-width:480px){.workspace-pages{width:calc(100% - 20px)}.workspace-queue-toolbar .docs-field,.workspace-queue-search,.workspace-queue-filter{flex:1 1 100%}.workspace-queue-toolbar>button{width:100%}}
 
 /* Phase 2: mobile navigation and compact preparation summary. */
-.home-bottom-nav{display:none}
+
 .home-hero-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex:0 0 auto}
 .home-pending-date-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .home-pending-dates{display:grid;gap:8px;margin-top:12px}
@@ -947,10 +947,10 @@ body .workspace-pages .workspace-page .dm-tabs{padding:12px;align-self:start;bor
   .home-page .home-topbar,.home-page.sidebar-collapsed .home-topbar{pointer-events:none;background:transparent;border:0;box-shadow:none}
   .home-page .home-menu-toggle{pointer-events:auto}
   .home-page.mobile-nav-open .home-topbar{pointer-events:auto;background:var(--color-surface);border-right:1px solid var(--color-border)}
-  .home-bottom-nav{position:fixed;z-index:45;inset:auto 0 0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;padding:5px 6px calc(5px + env(safe-area-inset-bottom,0px))}
-  .home-bottom-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:54px;padding:5px 0}
-  .home-bottom-nav svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-  .home-page.mobile-nav-open .home-bottom-nav{visibility:hidden}
+
+
+
+
   .home-page .workspace-page .docs-submit-bar{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
   .home-hero-actions{width:100%}
   .docs-work-summary>div{padding:10px 7px}

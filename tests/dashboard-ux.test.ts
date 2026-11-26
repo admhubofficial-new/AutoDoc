@@ -38,8 +38,8 @@ test("primary navigation supports a horizontal desktop workspace and a mobile dr
   assert.match(index, /Arsip/);
   assert.match(index, /Data Master/);
   assert.match(index, /data-home-nav="archive"/);
-  assert.match(index, /documents\.js\?v=p4-simplified-document-flow-20261124/);
-  assert.match(index, /archive\.js\?v=p2-p3-admin-visual-audit-20261124/);
+  assert.match(index, /documents\.js\?v=dossier-20261127/);
+  assert.match(index, /archive\.js\?v=dossier-20261127/);
   assert.match(css, /body \.docs-overlay \.docs-dialog/);
   assert.match(css, /body \.dm-overlay \.dm-dialog/);
 });
