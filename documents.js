@@ -338,9 +338,10 @@ function renderCreateForm(){
       "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari nama penerima...' aria-label='Cari penerima' autocomplete='off'><select id='docsRecipientGroup' aria-label='Filter kelompok penerima'><option value=''>Semua kelompok</option>"+groupOptions+"</select><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua hasil</button><button type='button' class='docs-btn' id='docsClearAll'>Hapus pilihan</button></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
      "</details>"+
     "<fieldset class='docs-kind-group'><legend>Jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label><label class='docs-kind-choice'><input id='docsIncludeOrganoleptic' type='checkbox'> Organoleptik</label></fieldset>"+
+     "<div id='docsAiMenuPlanNotice' class='docs-ai-menu-plan' hidden></div>"+
      "<details class='docs-menu-disclosure'><summary>Menu harian</summary>"+
      "<div class='docs-subsection-head'><div><strong>Menu distribusi</strong></div><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div>"+
-     "<div id='docsAiMenuPlanNotice' class='docs-ai-menu-plan' hidden></div><div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
+     "<div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
      "<div class='docs-menu-actions'><button type='button' class='docs-btn' id='docsAiMenuAssist'>Bantu isi dengan AI</button><button type='button' class='docs-btn primary' id='docsAddMenuItem'>+ Tambah komponen</button></div>"+
      "</details>"+
     "</section>"+

@@ -822,8 +822,8 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
     staffActive,
     menusActive,
     settings,
-    recentRows,
     todayRow,
+    recentRows,
   ] = await Promise.all([
     countRows("distributions"),
     countRows("documents"),

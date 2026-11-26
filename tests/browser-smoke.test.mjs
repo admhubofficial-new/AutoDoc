@@ -472,7 +472,7 @@ test("AI assistant applies school menu and preselects mapped recipients before i
     await preview.getByText("Nasi Putih", { exact: false }).waitFor();
     assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
     page.once("dialog",dialog=>dialog.accept());
-    await page.getByRole("button", { name: "Periksa & terbitkan" }).click();
+    await page.getByRole("button", { name: "Terbitkan dokumen" }).click();
     const createRequest = app.writes.find(item => item.route === "docs/create");
     assert.ok(createRequest, "document creation should use the mocked local API");
     assert.deepEqual(createRequest.body.recipient_menu_items[recipientId], ["Nasi Putih", "Ayam Kecap"]);
@@ -666,6 +666,7 @@ test("P2 Menu section quick action opens AI directly in menu mode and shows a re
     const page = app.page;
     await page.locator('[data-home-nav="print"]').click();
     await page.locator("#docsCreateForm").waitFor();
+    await page.locator(".docs-menu-disclosure > summary").click();
     await page.getByRole("button", { name: "Bantu isi dengan AI" }).click();
     await page.locator(".dm-dialog").waitFor();
     assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), true, "the underlying document workspace should be inert while the AI dialog is open");
