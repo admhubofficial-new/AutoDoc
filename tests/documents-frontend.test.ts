@@ -72,7 +72,7 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
   assert.match(source, /value='ORGANOLEPTIC'/);
-  assert.match(previewSource, /docsPreviewRecipientSelect/);
+  assert.match(previewSource, /docsPreviewPages/);
 });
 
 test("daily menu supports eight ordered components, suggestions, reordering, and removal", () => {
@@ -453,7 +453,7 @@ test("Data Master exposes the AI assistant as an internal tab without adding a n
   assert.match(masterSource, /restoreDocumentOverlay\(\)/);
   assert.match(masterSource, /entity==="ai"/);
   assert.match(masterSource, /window\.AutoDocAiAssistant\?\.create/);
-  assert.match(htmlSource, /ai-assistant\.js\?v=p2-p3-admin-visual-audit-20261124/);
+  assert.match(htmlSource, /ai-assistant\.js\?v=composer-r1/);
   assert.doesNotMatch(htmlSource, /data-home-nav="ai"/);
 });
 

@@ -669,7 +669,6 @@ test("P2 Menu section quick action opens AI directly in menu mode and shows a re
     const page = app.page;
     await page.locator('[data-home-nav="print"]').click();
     await page.locator("#docsCreateForm").waitFor();
-    await page.locator(".docs-menu-disclosure > summary").click();
     await page.getByRole("button", { name: "Bantu isi dengan AI" }).click();
     await page.locator(".dm-dialog").waitFor();
     assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), true, "the underlying document workspace should be inert while the AI dialog is open");

@@ -89,7 +89,7 @@ test("document creation is a single-page flow with explicit recipient selection"
   assert.doesNotMatch(documentsUi, /data-wizard-step|function goWizardStep|docsReviewSummary/);
   assert.match(documentsUi, /check\.checked=false/);
   assert.match(documentsUi, /Pilih minimal satu penerima/);
-  assert.match(documentsUi, /docsPreviewFrame/);
+  assert.match(documentsUi, /docsPreviewPages/);
 });
 
 test("archive provides global search, page selection, and PIN-confirmed bulk deletion controls", () => {
