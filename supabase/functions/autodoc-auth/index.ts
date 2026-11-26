@@ -1384,7 +1384,754 @@ async function handleSetupStatus(request: Request): Promise<Response> {
     "setup_completed_at",
     { id: "eq.1" },
   );
-  const complet…9161 tokens truncated…AfterSeconds },
+  const complete = Boolean(data?.setup_completed_at);
+  return respond(request, { setupRequired: !complete, setupComplete: complete });
+}
+
+async function handleSetupComplete(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  const body = await readJson(request);
+  const submittedPin = normalizeToken(body.token);
+  const startSj = Number(body.startNumberSj);
+  const startBast = Number(body.startNumberBast);
+  if (!submittedPin) throw new AppError(400, "Masukkan PIN MASUK yang valid (6–128 karakter).");
+  if (
+    !Number.isSafeInteger(startSj) || startSj < 1 ||
+    !Number.isSafeInteger(startBast) || startBast < 1
+  ) {
+    throw new AppError(400, "Nomor awal SJ dan BAST harus bilangan bulat minimal 1.");
+  }
+
+  const throttle = await throttleKey(request);
+  const throttleState = await checkThrottle(throttle.keyHash);
+  if (throttleState.locked) {
+    return appendCookie(lockResponse(request, throttleState.retryAfterSeconds), throttle.cookie);
+  }
+
+  const secretPin = getPinSecret();
+  if (!secureEqual(submittedPin, secretPin)) {
+    const state = await recordFailure(throttle.keyHash);
+    if (state.locked) {
+      return appendCookie(lockResponse(request, state.retryAfterSeconds), throttle.cookie);
+    }
+    return appendCookie(
+      respond(request, { message: "PIN MASUK tidak sesuai." }, 401),
+      throttle.cookie,
+    );
+  }
+
+  try {
+    const result = await rpc<{ session_version: number }>(
+      "selesaikan_setup_awal_dengan_pin",
+      {
+        p_token: secretPin,
+        p_start_sj: startSj,
+        p_start_bast: startBast,
+      },
+    );
+    await clearFailures(throttle.keyHash);
+    await clearFailures(await hmacHex("autodoc-global-login-throttle-v1"));
+    const response = respond(
+      request,
+      { success: true, message: "Setup Awal berhasil. Selamat datang di AutoDoc." },
+      200,
+      { "Set-Cookie": await createSessionCookie(Number(result.session_version)) },
+    );
+    return appendCookie(response, throttle.cookie);
+  } catch (error) {
+    const code = (error as AppError).code;
+    if (code === "55000") throw new AppError(409, "Setup Awal sudah pernah diselesaikan atau tidak tersedia.");
+    if (code === "22023") throw new AppError(400, "Data Setup Awal tidak valid.");
+    throw error;
+  }
+}
+
+async function handleLogin(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  const body = await readJson(request);
+  const token = normalizeToken(body.token);
+  if (!token) throw new AppError(400, "Masukkan PIN MASUK yang valid.");
+
+  const settings = await selectOne<{ setup_completed_at: string | null }>(
+    "settings",
+    "setup_completed_at",
+    { id: "eq.1" },
+  );
+  if (!settings?.setup_completed_at) {
+    return respond(
+      request,
+      { code: "SETUP_REQUIRED", message: "Setup Awal harus diselesaikan terlebih dahulu." },
+      409,
+    );
+  }
+
+  const throttle = await throttleKey(request);
+  const throttleState = await checkThrottle(throttle.keyHash);
+  if (throttleState.locked) {
+    return appendCookie(lockResponse(request, throttleState.retryAfterSeconds), throttle.cookie);
+  }
+
+  const sessionVersion = await rpc<number | null>("authenticate_access_token", {
+    p_token: token,
+  });
+  if (sessionVersion === null) {
+    const state = await recordFailure(throttle.keyHash);
+    if (state.locked) {
+      return appendCookie(lockResponse(request, state.retryAfterSeconds), throttle.cookie);
+    }
+    return appendCookie(
+      respond(request, { message: "PIN MASUK tidak sesuai." }, 401),
+      throttle.cookie,
+    );
+  }
+
+  await clearFailures(throttle.keyHash);
+  await clearFailures(await hmacHex("autodoc-global-login-throttle-v1"));
+  await insertRow("audit_log", {
+    aksi: "login_berhasil",
+    tabel: "settings",
+    record_key: "1",
+    actor: "token",
+    nilai_lama: null,
+    nilai_baru: { login: true },
+    detail: { metode: "PIN MASUK", hasil: "berhasil" },
+  });
+  const response = respond(
+    request,
+    { success: true, message: "Berhasil masuk." },
+    200,
+    { "Set-Cookie": await createSessionCookie(Number(sessionVersion)) },
+  );
+  return appendCookie(response, throttle.cookie);
+}
+
+async function handleSession(request: Request): Promise<Response> {
+  if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
+  const session = await validSession(request);
+  return respond(request, { authenticated: Boolean(session) });
+}
+
+function handleLogout(request: Request): Response {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  return respond(
+    request,
+    { success: true, message: "Sesi telah diakhiri." },
+    200,
+    { "Set-Cookie": clearSessionCookie() },
+  );
+}
+
+async function handleVerifyToken(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request);
+  const token = normalizeToken(body.token);
+  if (!token) throw new AppError(400, "Masukkan kembali PIN MASUK.");
+
+  const throttle = await throttleKey(request);
+  const locked = await requireUnlocked(request, throttle.keyHash);
+  if (locked) return appendCookie(locked, throttle.cookie);
+
+  const valid = await rpc<boolean>("verify_access_token", { p_token: token });
+  if (!valid) {
+    const state = await recordFailure(throttle.keyHash);
+    if (state.locked) return appendCookie(lockResponse(request, state.retryAfterSeconds), throttle.cookie);
+    return appendCookie(
+      respond(request, { message: "PIN MASUK tidak sesuai." }, 401),
+      throttle.cookie,
+    );
+  }
+  await clearFailures(throttle.keyHash);
+  const purpose = typeof body.purpose === "string" &&
+      ["nomor_urut", "pembatalan", "ubah_token", "lainnya"].includes(body.purpose)
+    ? body.purpose
+    : "lainnya";
+  await insertRow("audit_log", {
+    aksi: "token_diverifikasi_ulang",
+    tabel: "settings",
+    record_key: "1",
+    actor: "token",
+    nilai_lama: null,
+    nilai_baru: { verifikasi: "berhasil" },
+    detail: { tujuan: purpose },
+  });
+  return respond(request, { valid: true, message: "Verifikasi PIN berhasil." });
+}
+
+async function handleChangeToken(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request);
+  const currentToken = normalizeToken(body.currentToken);
+  const newToken = normalizeToken(body.newToken);
+  const confirmNewToken = normalizeToken(body.confirmNewToken);
+  if (!currentToken || !newToken || !confirmNewToken) {
+    throw new AppError(400, "Semua kolom PIN wajib diisi. PIN baru minimal 6 karakter.");
+  }
+  if (newToken !== confirmNewToken) throw new AppError(400, "Konfirmasi PIN baru tidak sama.");
+  if (currentToken === newToken) throw new AppError(400, "PIN baru harus berbeda dari PIN lama.");
+
+  const throttle = await throttleKey(request);
+  const locked = await requireUnlocked(request, throttle.keyHash);
+  if (locked) return appendCookie(locked, throttle.cookie);
+
+  try {
+    await rpc("change_access_token", {
+      p_current_token: currentToken,
+      p_new_token: newToken,
+    });
+  } catch (error) {
+    const code = (error as AppError).code;
+    if (code === "28000") {
+      const state = await recordFailure(throttle.keyHash);
+      if (state.locked) return appendCookie(lockResponse(request, state.retryAfterSeconds), throttle.cookie);
+      return appendCookie(
+        respond(request, { message: "PIN lama tidak sesuai." }, 401),
+        throttle.cookie,
+      );
+    }
+    if (code === "22023") throw new AppError(400, "PIN baru tidak valid atau sama dengan PIN lama.");
+    throw error;
+  }
+  await clearFailures(throttle.keyHash);
+  return respond(
+    request,
+    { success: true, message: "PIN berhasil diubah. Silakan masuk kembali." },
+    200,
+    { "Set-Cookie": clearSessionCookie() },
+  );
+}
+
+
+// OpenAI-backed assistant for extracting daily menus and beneficiary updates.
+// The key is read only inside this Edge Function; it is never returned to clients.
+const AI_MAX_REQUEST_BYTES = 10 * 1024 * 1024;
+const AI_ALLOWED_RECIPIENT_FIELDS = [
+  "kelompok", "nama", "jenjang", "alamat", "siswa_kecil", "siswa_besar",
+  "tendik", "ibu_hamil", "ibu_menyusui", "balita", "putus_sekolah", "kader",
+  "urutan", "aktif", "keterangan", "perlu_verifikasi", "catatan_verifikasi",
+] as const;
+const AI_MASTER_FIELDS = {
+  settings: [
+    "nama_sppg", "kode_sppg", "alamat", "kecamatan", "kabupaten",
+    "nama_kepala_sppg", "nama_kepala_sppi", "nama_ahli_gizi",
+    "kabupaten_perlu_verifikasi", "kabupaten_catatan_verifikasi",
+  ],
+  drivers: ["nama", "aktif", "urutan"],
+  vehicles: ["no_kendaraan", "aktif", "urutan"],
+  staff: ["nama", "jabatan", "aktif", "urutan"],
+  menus: ["teks_menu", "aktif", "urutan"],
+} as const;
+type AiMasterEntity = keyof typeof AI_MASTER_FIELDS;
+const AI_MASTER_IDENTITY_FIELDS: Record<AiMasterEntity, string | null> = {
+  settings: null, drivers: "nama", vehicles: "no_kendaraan",
+  staff: "nama", menus: "teks_menu",
+};
+const AI_COUNT_FIELDS = [
+  "siswa_kecil", "siswa_besar", "tendik", "ibu_hamil",
+  "ibu_menyusui", "balita", "putus_sekolah", "kader",
+] as const;
+type AiConfidence = "tinggi" | "sedang" | "rendah";
+
+function aiOutputSchema() {
+  const nullableString = { type: ["string", "null"] };
+  const nullableInteger = { type: ["integer", "null"] };
+  const nullableBoolean = { type: ["boolean", "null"] };
+  const countProperties = Object.fromEntries(
+    AI_COUNT_FIELDS.map((field) => [field, nullableInteger]),
+  );
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      summary: { type: "string" },
+      questions: { type: "array", items: { type: "string" } },
+      warnings: { type: "array", items: { type: "string" } },
+      menu_groups: {
+        type: "array",
+        items: {
+          type: "object", additionalProperties: false,
+          properties: {
+            label: { type: "string" },
+            target_names: { type: "array", items: { type: "string" } },
+            target_ids: { type: "array", items: { type: "string" } },
+            menu_items: { type: "array", items: { type: "string" } },
+            confidence: { type: "string", enum: ["tinggi", "sedang", "rendah"] },
+            reason: { type: "string" },
+            source_reference: { type: "string" },
+          },
+          required: ["label", "target_names", "target_ids", "menu_items", "confidence", "reason", "source_reference"],
+        },
+      },
+      recipient_updates: {
+        type: "array",
+        items: {
+          type: "object", additionalProperties: false,
+          properties: {
+            action: { type: "string", enum: ["update", "new", "review"] },
+            matched_recipient_id: nullableString,
+            kelompok: nullableString,
+            nama: nullableString,
+            jenjang: nullableString,
+            alamat: nullableString,
+            urutan: nullableInteger,
+            aktif: nullableBoolean,
+            keterangan: nullableString,
+            perlu_verifikasi: nullableBoolean,
+            catatan_verifikasi: nullableString,
+            ...countProperties,
+            fields_present: {
+              type: "array",
+              items: {
+                type: "string",
+                enum: [...AI_ALLOWED_RECIPIENT_FIELDS],
+              },
+            },
+            confidence: { type: "string", enum: ["tinggi", "sedang", "rendah"] },
+            reason: { type: "string" },
+            source_quote: { type: "string" },
+            source_reference: { type: "string" },
+          },
+          required: [
+            "action", "matched_recipient_id", "kelompok", "nama", "jenjang", "alamat",
+            ...Object.keys(countProperties), "fields_present", "confidence", "reason",
+            "source_quote", "source_reference",
+          ],
+        },
+      },
+      master_updates: {
+        type: "array",
+        items: {
+          type: "object", additionalProperties: false,
+          properties: {
+            entity: { type: "string", enum: ["settings", "drivers", "vehicles", "staff", "menus"] },
+            action: { type: "string", enum: ["update", "new", "review"] },
+            matched_record_id: nullableString,
+            nama_sppg: nullableString,
+            kode_sppg: nullableString,
+            alamat: nullableString,
+            kecamatan: nullableString,
+            kabupaten: nullableString,
+            nama_kepala_sppg: nullableString,
+            nama_kepala_sppi: nullableString,
+            nama_ahli_gizi: nullableString,
+            kabupaten_perlu_verifikasi: nullableBoolean,
+            kabupaten_catatan_verifikasi: nullableString,
+            nama: nullableString,
+            no_kendaraan: nullableString,
+            teks_menu: nullableString,
+            jabatan: nullableString,
+            urutan: nullableInteger,
+            aktif: nullableBoolean,
+            fields_present: {
+              type: "array",
+              items: {
+                type: "string",
+                enum: [
+                  "nama_sppg", "kode_sppg", "alamat", "kecamatan", "kabupaten",
+                  "nama_kepala_sppg", "nama_kepala_sppi", "nama_ahli_gizi",
+                  "kabupaten_perlu_verifikasi", "kabupaten_catatan_verifikasi",
+                  "nama", "no_kendaraan", "teks_menu", "jabatan", "urutan", "aktif",
+                ],
+              },
+            },
+            confidence: { type: "string", enum: ["tinggi", "sedang", "rendah"] },
+            reason: { type: "string" },
+            source_quote: { type: "string" },
+            source_reference: { type: "string" },
+          },
+          required: [
+            "entity", "action", "matched_record_id",
+            "nama_sppg", "kode_sppg", "alamat", "kecamatan", "kabupaten",
+            "nama_kepala_sppg", "nama_kepala_sppi", "nama_ahli_gizi",
+            "kabupaten_perlu_verifikasi", "kabupaten_catatan_verifikasi",
+            "nama", "no_kendaraan", "teks_menu", "jabatan", "urutan", "aktif",
+            "fields_present", "confidence", "reason", "source_quote", "source_reference",
+          ],
+        },
+      },
+    },
+    required: ["summary", "questions", "warnings", "menu_groups", "recipient_updates", "master_updates"],
+  };
+}
+
+function normalizeAiConfidence(value: unknown): AiConfidence {
+  return value === "tinggi" || value === "sedang" || value === "rendah" ? value : "rendah";
+}
+
+function normalizeAiFile(file: unknown): { name: string; mime: string; data: string; dataUrl: string; image: boolean } | null {
+  if (file === undefined || file === null) return null;
+  if (!file || typeof file !== "object" || Array.isArray(file)) {
+    throw new AppError(400, "Lampiran AI tidak valid.");
+  }
+  const input = file as Record<string, unknown>;
+  const name = cleanText(input.name, "Nama file", true, 180) ?? "";
+  const data = typeof input.data === "string" ? input.data : "";
+  if (!data || data.length > 8_500_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) {
+    throw new AppError(413, "Ukuran atau format file tidak valid. Maksimal 6 MB.");
+  }
+  const extension = name.toLowerCase().split(".").pop() ?? "";
+  const allowedExtensions = new Set([
+    "pdf", "doc", "docx", "xls", "xlsx", "csv", "tsv", "txt", "md",
+    "rtf", "odt", "ppt", "pptx", "json", "html", "xml", "iif", "png", "jpg", "jpeg", "webp",
+  ]);
+  if (!allowedExtensions.has(extension)) {
+    throw new AppError(400, "Format file belum didukung. Gunakan PDF, Word, Excel, CSV, TXT, PowerPoint, atau gambar JPG/PNG.");
+  }
+  const image = ["png", "jpg", "jpeg", "webp"].includes(extension);
+  const mimeByExtension: Record<string, string> = {
+    pdf: "application/pdf", doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    csv: "text/csv", tsv: "text/tab-separated-values", txt: "text/plain",
+    md: "text/markdown", rtf: "application/rtf", odt: "application/vnd.oasis.opendocument.text",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    json: "application/json", html: "text/html", xml: "application/xml", iif: "text/x-iif",
+  };
+  const safeMime = image
+    ? (extension === "png" ? "image/png" : extension === "webp" ? "image/webp" : "image/jpeg")
+    : mimeByExtension[extension] ?? "application/octet-stream";
+  if (image && !safeMime.startsWith("image/")) throw new AppError(400, "Tipe gambar tidak cocok dengan ekstensi file.");
+  return { name, mime: safeMime, data, dataUrl: "data:" + safeMime + ";base64," + data, image };
+}
+
+function normalizeAiFiles(value: unknown): Array<{
+  name: string; mime: string; data: string; dataUrl: string; image: boolean;
+}> {
+  const inputFiles = Array.isArray(value) ? value : value == null ? [] : [value];
+  if (inputFiles.length > 5) {
+    throw new AppError(413, "Maksimal lima file dapat dianalisis sekaligus.");
+  }
+  const files = inputFiles.map((item) => normalizeAiFile(item)).filter(
+    (item): item is NonNullable<ReturnType<typeof normalizeAiFile>> => item !== null,
+  );
+  const combinedBase64Length = files.reduce((total, file) => total + file.data.length, 0);
+  if (combinedBase64Length > 8_500_000) {
+    throw new AppError(413, "Ukuran gabungan lampiran terlalu besar. Maksimal total file 6 MB.");
+  }
+  return files;
+}
+
+function aiTextValue(value: unknown, max = 500): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+async function fetchAiMasterRecords(): Promise<Record<AiMasterEntity, Array<Record<string, unknown>>>> {
+  const entities: AiMasterEntity[] = ["settings", "drivers", "vehicles", "staff", "menus"];
+  const entries = await Promise.all(entities.map(async (entity) => {
+    const config = MASTER_CONFIG[entity];
+    const query = new URLSearchParams({
+      select: config.columns,
+      order: config.order,
+      limit: entity === "settings" ? "1" : "500",
+    });
+    if (entity === "settings") query.set("id", "eq.1");
+    const rows = await supabaseRequest<Array<Record<string, unknown>>>(
+      config.table + "?" + query.toString(),
+    );
+    return [entity, rows] as const;
+  }));
+  return Object.fromEntries(entries) as Record<AiMasterEntity, Array<Record<string, unknown>>>;
+}
+
+function normalizeAiMasterUpdates(
+  raw: unknown,
+  currentMasterRecords: Record<AiMasterEntity, Array<Record<string, unknown>>>,
+  warnings: string[],
+): Array<Record<string, unknown>> {
+  if (!Array.isArray(raw)) return [];
+  const seenNew = new Set<string>();
+  return raw.slice(0, 300).map((value, index) => {
+    const item = value && typeof value === "object" && !Array.isArray(value)
+      ? value as Record<string, unknown> : {};
+    const entity = typeof item.entity === "string" &&
+      Object.prototype.hasOwnProperty.call(AI_MASTER_FIELDS, item.entity)
+      ? item.entity as AiMasterEntity : null;
+    if (!entity) {
+      warnings.push("Usulan Data Master baris " + (index + 1) + " memiliki jenis data yang tidak dikenal dan ditahan untuk pemeriksaan.");
+      return {
+        id: "ai-master-" + (index + 1), entity: "unknown", action: "review",
+        current: null, proposed: {}, changed_fields: [], fields_present: [],
+        confidence: "rendah", reason: "Jenis Data Master tidak dikenal.",
+        source_quote: aiTextValue(item.source_quote, 300),
+        source_reference: aiTextValue(item.source_reference, 180),
+      };
+    }
+    const fields = AI_MASTER_FIELDS[entity] as readonly string[];
+    const candidates = currentMasterRecords[entity] ?? [];
+    const matchedId = typeof item.matched_record_id === "string" ? item.matched_record_id : "";
+    const current = matchedId ? candidates.find((row) => String(row.id) === matchedId) ?? null : null;
+    let action = item.action === "new" || item.action === "update" || item.action === "review"
+      ? item.action : "review";
+    const fieldsPresent = Array.isArray(item.fields_present)
+      ? [...new Set(item.fields_present.filter((field): field is string =>
+        typeof field === "string" && fields.includes(field)
+      ))] : [];
+    const proposed: Record<string, unknown> = current ? { ...current } : {};
+    for (const field of fieldsPresent) {
+      const next = item[field];
+      if (next !== null && next !== undefined) proposed[field] = next;
+    }
+    const identityField = AI_MASTER_IDENTITY_FIELDS[entity];
+    if (entity === "settings" && (!current || action !== "update")) {
+      action = "review";
+      warnings.push("Identitas SPPG hanya dapat diperbarui pada data pengaturan yang sudah ada; usulan baru ditahan.");
+    }
+    if (current && action === "new") {
+      action = "review";
+      warnings.push("Usulan " + entity + " ditandai baru padahal ID data lama ditemukan. Baris ditahan agar tidak terjadi penggantian yang keliru.");
+    }
+    if (action === "update" && !current) {
+      action = "review";
+      warnings.push("Kecocokan data " + entity + " pada baris " + (index + 1) + " tidak ditemukan. Periksa identitasnya.");
+    }
+    if (matchedId && !current) {
+      action = "review";
+      warnings.push("AI mengusulkan ID Data Master yang tidak dikenal untuk " + entity + ". Baris ditahan.");
+    }
+    if (current && identityField && proposed[identityField] !== current[identityField]) {
+      action = "review";
+      warnings.push("Perubahan identitas utama " + entity + " memerlukan pemeriksaan manual agar tidak salah memperbarui data.");
+    }
+    if (!current && action === "new") {
+      if (entity === "settings" || !identityField || !proposed[identityField]) {
+        action = "review";
+        warnings.push("Kolom identitas wajib untuk data " + entity + " belum lengkap. Baris ditahan.");
+      } else {
+        const key = String(proposed[identityField]).normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("id-ID");
+        const duplicate = candidates.some((row) =>
+          String(row[identityField] ?? "").normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("id-ID") === key
+        );
+        if (duplicate || seenNew.has(entity + "|" + key)) {
+          action = "review";
+          warnings.push("Data " + entity + " " + String(proposed[identityField]) + " berpotensi duplikat. Cocokkan dengan Data Master secara manual.");
+        } else {
+          seenNew.add(entity + "|" + key);
+        }
+      }
+    }
+    const changedFields = current
+      ? fieldsPresent.filter((field) => String(proposed[field] ?? "") !== String(current[field] ?? ""))
+      : fieldsPresent.filter((field) => proposed[field] !== undefined);
+    if (action === "update" && !changedFields.length) action = "review";
+    return {
+      id: "ai-master-" + (index + 1),
+      entity,
+      action,
+      matched_record_id: current ? String(current.id) : null,
+      current,
+      proposed,
+      changed_fields: changedFields,
+      fields_present: fieldsPresent,
+      confidence: normalizeAiConfidence(item.confidence),
+      reason: aiTextValue(item.reason, 600),
+      source_quote: aiTextValue(item.source_quote, 300),
+      source_reference: aiTextValue(item.source_reference, 180),
+    };
+  });
+}
+
+function normalizeAiAnalysis(
+  raw: Record<string, unknown>,
+  currentRecipients: Array<Record<string, unknown>>,
+  currentMasterRecords: Record<AiMasterEntity, Array<Record<string, unknown>>>,
+  mode: string,
+) {
+  const candidates = new Map(currentRecipients.map((recipient) => [String(recipient.id), recipient]));
+  const warnings = Array.isArray(raw.warnings) ? raw.warnings.map((item) => aiTextValue(item, 500)).filter(Boolean) : [];
+  const menuGroups = mode === "recipients" || mode === "master" ? [] : (Array.isArray(raw.menu_groups) ? raw.menu_groups : [])
+    .slice(0, 30).map((value, index) => {
+      const group = value && typeof value === "object" && !Array.isArray(value)
+        ? value as Record<string, unknown> : {};
+      const requestedIds = Array.isArray(group.target_ids) ? group.target_ids.map(String) : [];
+      const targetIds = [...new Set(requestedIds.filter((id) => candidates.has(id)))];
+      const invalidIds = requestedIds.filter((id) => !candidates.has(id));
+      if (invalidIds.length) warnings.push("Kelompok menu " + (index + 1) + " berisi ID penerima yang tidak dikenal; pemetaan tersebut diabaikan.");
+      const sourceItems = Array.isArray(group.menu_items) ? group.menu_items : [];
+      const menuItems = sourceItems.map((item) => aiTextValue(item, 180)).filter(Boolean).slice(0, 8);
+      if (sourceItems.length > 8) warnings.push("Kelompok menu " + (index + 1) + " melebihi delapan komponen; hanya delapan pertama ditampilkan.");
+      return {
+        id: "ai-menu-" + (index + 1),
+        label: aiTextValue(group.label, 120) || "Kelompok menu " + (index + 1),
+        target_names: Array.isArray(group.target_names) ? group.target_names.map((item) => aiTextValue(item, 180)).filter(Boolean).slice(0, 100) : [],
+        target_ids: targetIds,
+        menu_items: menuItems,
+        confidence: normalizeAiConfidence(group.confidence),
+        reason: aiTextValue(group.reason, 600),
+        source_reference: aiTextValue(group.source_reference, 180),
+      };
+    });
+  const recipientUpdates = mode === "menus" || mode === "master" ? [] : (Array.isArray(raw.recipient_updates) ? raw.recipient_updates : [])
+    .slice(0, 500).map((value, index) => {
+      const item = value && typeof value === "object" && !Array.isArray(value)
+        ? value as Record<string, unknown> : {};
+      const matchedId = typeof item.matched_recipient_id === "string" ? item.matched_recipient_id : "";
+      const current = matchedId ? candidates.get(matchedId) ?? null : null;
+      let action = item.action === "new" || item.action === "update" || item.action === "review" ? item.action : "review";
+      const fieldsPresent = Array.isArray(item.fields_present)
+        ? [...new Set(item.fields_present.filter((field): field is string =>
+          typeof field === "string" && (AI_ALLOWED_RECIPIENT_FIELDS as readonly string[]).includes(field)
+        ))] : [];
+      let allowManualCompletion = item.action === "new";
+      let manualMissingCounts: string[] = [];
+      const proposed: Record<string, unknown> = current ? {
+        kelompok: current.kelompok,
+        nama: current.nama,
+        jenjang: current.jenjang,
+        alamat: current.alamat,
+        siswa_kecil: current.siswa_kecil,
+        siswa_besar: current.siswa_besar,
+        tendik: current.tendik,
+        ibu_hamil: current.ibu_hamil,
+        ibu_menyusui: current.ibu_menyusui,
+        balita: current.balita,
+        putus_sekolah: current.putus_sekolah,
+        kader: current.kader,
+        urutan: current.urutan,
+        aktif: current.aktif,
+        keterangan: current.keterangan,
+        perlu_verifikasi: current.perlu_verifikasi,
+        catatan_verifikasi: current.catatan_verifikasi,
+      } : {};
+      for (const field of fieldsPresent) {
+        const next = item[field];
+        if (next !== null && next !== undefined) proposed[field] = next;
+      }
+      if (!current && action === "new") {
+        const proposedName = String(proposed.nama ?? "").normalize("NFKC").trim().toLocaleLowerCase("id-ID");
+        const possibleDuplicates = currentRecipients.filter((candidate) =>
+          String(candidate.nama ?? "").normalize("NFKC").trim().toLocaleLowerCase("id-ID") === proposedName
+        );
+        if (proposedName && possibleDuplicates.length) {
+          action = "review";
+          allowManualCompletion = false;
+          warnings.push("Nama penerima " + String(proposed.nama) + " sudah ada pada Data Master. AI tidak akan membuat duplikat; cocokkan kelompok dan jenjang secara manual.");
+        }
+      }
+      if (current && (
+        proposed.nama !== current.nama || proposed.kelompok !== current.kelompok
+      )) {
+        action = "review";
+        allowManualCompletion = false;
+        warnings.push("Baris penerima " + aiTextValue(item.nama, 180) + " mengubah nama/kelompok. Perubahan identitas perlu diperiksa manual agar tidak membuat duplikat.");
+      }
+      if (action === "update" && !current) {
+        action = "review";
+        allowManualCompletion = false;
+        warnings.push("Kecocokan penerima pada baris " + (index + 1) + " tidak ditemukan di data master; tidak akan diperbarui otomatis.");
+      }
+      if (action === "new" && (!proposed.kelompok || !proposed.nama || !proposed.jenjang)) {
+        action = "review";
+        allowManualCompletion = false;
+      }
+      if (!current && action === "new") {
+        const missingCounts = AI_COUNT_FIELDS.filter((field) =>
+          !fieldsPresent.includes(field) ||
+          !Number.isSafeInteger(proposed[field]) ||
+          Number(proposed[field]) < 0
+        );
+        if (missingCounts.length) {
+          action = "review";
+          manualMissingCounts = missingCounts;
+          warnings.push(
+            "Penerima baru " + String(proposed.nama ?? "(tanpa nama)") +
+            " belum memiliki nilai eksplisit untuk semua kategori: " +
+            missingCounts.map((field) => field.replace(/_/g, " ")).join(", ") +
+            ". Baris ditahan untuk pemeriksaan dan tidak dapat disimpan.",
+          );
+        }
+      }
+      if (item.matched_recipient_id && !current) {
+        action = "review";
+        allowManualCompletion = false;
+        warnings.push("AI mengusulkan ID penerima yang tidak ada pada data master. Baris tersebut memerlukan pemeriksaan.");
+      }
+      const changedFields = current
+        ? fieldsPresent.filter((field) => String(proposed[field] ?? "") !== String(current[field] ?? ""))
+        : fieldsPresent.filter((field) => proposed[field] !== undefined);
+      const currentView = current ? {
+        id: current.id, kelompok: current.kelompok, nama: current.nama, jenjang: current.jenjang,
+        alamat: current.alamat, siswa_kecil: current.siswa_kecil, siswa_besar: current.siswa_besar,
+        tendik: current.tendik, ibu_hamil: current.ibu_hamil, ibu_menyusui: current.ibu_menyusui,
+        balita: current.balita, putus_sekolah: current.putus_sekolah, kader: current.kader,
+        porsi_kecil: current.porsi_kecil, porsi_besar: current.porsi_besar, total_porsi: current.total_porsi,
+        urutan: current.urutan, aktif: current.aktif, keterangan: current.keterangan,
+        perlu_verifikasi: current.perlu_verifikasi, catatan_verifikasi: current.catatan_verifikasi,
+      } : null;
+      return {
+        id: "ai-recipient-" + (index + 1),
+        action,
+        matched_recipient_id: current ? String(current.id) : null,
+        current: currentView,
+        proposed: {
+          kelompok: aiTextValue(proposed.kelompok, 40),
+          nama: aiTextValue(proposed.nama, 180),
+          jenjang: aiTextValue(proposed.jenjang, 80),
+          alamat: aiTextValue(proposed.alamat, 500),
+          siswa_kecil: proposed.siswa_kecil ?? (current ? current.siswa_kecil ?? 0 : null),
+          siswa_besar: proposed.siswa_besar ?? (current ? current.siswa_besar ?? 0 : null),
+          tendik: proposed.tendik ?? (current ? current.tendik ?? 0 : null),
+          ibu_hamil: proposed.ibu_hamil ?? (current ? current.ibu_hamil ?? 0 : null),
+          ibu_menyusui: proposed.ibu_menyusui ?? (current ? current.ibu_menyusui ?? 0 : null),
+          balita: proposed.balita ?? (current ? current.balita ?? 0 : null),
+          putus_sekolah: proposed.putus_sekolah ?? (current ? current.putus_sekolah ?? 0 : null),
+          kader: proposed.kader ?? (current ? current.kader ?? 0 : null),
+          urutan: proposed.urutan ?? current?.urutan ?? (index + 1) * 10,
+          aktif: proposed.aktif ?? (current ? current.aktif !== false : true),
+          keterangan: proposed.keterangan ?? current?.keterangan ?? "",
+          perlu_verifikasi: proposed.perlu_verifikasi ?? (current?.perlu_verifikasi === true),
+          catatan_verifikasi: proposed.catatan_verifikasi ?? current?.catatan_verifikasi ?? "",
+        },
+        changed_fields: changedFields,
+        fields_present: fieldsPresent,
+        missing_count_fields: manualMissingCounts,
+        can_complete_manually: !current && action === "review" && allowManualCompletion && manualMissingCounts.length > 0,
+        confidence: normalizeAiConfidence(item.confidence),
+        reason: aiTextValue(item.reason, 600),
+        source_quote: aiTextValue(item.source_quote, 300),
+        source_reference: aiTextValue(item.source_reference, 180),
+      };
+    });
+  const masterUpdates = mode === "menus" || mode === "recipients"
+    ? [] : normalizeAiMasterUpdates(raw.master_updates, currentMasterRecords, warnings);
+  return {
+    summary: aiTextValue(raw.summary, 1200),
+    questions: Array.isArray(raw.questions) ? raw.questions.map((item) => aiTextValue(item, 500)).filter(Boolean).slice(0, 30) : [],
+    warnings: [...new Set(warnings)].slice(0, 50),
+    menu_groups: menuGroups,
+    recipient_updates: recipientUpdates,
+    master_updates: masterUpdates,
+    current_recipient_count: currentRecipients.length,
+  };
+}
+
+async function handleAiAnalyze(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request, AI_MAX_REQUEST_BYTES);
+  const mode = ["menus", "recipients", "master", "both"].includes(String(body.mode)) ? String(body.mode) : "";
+  if (!mode) throw new AppError(400, "Pilih menu, penerima manfaat, Data Master lainnya, atau gabungan data.");
+  const sourceText = cleanText(body.text, "Teks sumber", false, 40000) ?? "";
+  const files = normalizeAiFiles(body.files ?? body.file);
+  if (!sourceText && !files.length) throw new AppError(400, "Tempel teks atau pilih file untuk dianalisis.");
+  const openAiKey = getEnv("API OPEN AI AutoDoc");
+  if (!openAiKey || openAiKey.trim().length < 20) {
+    throw new AppError(503, "Secret API OPEN AI AutoDoc belum tersedia di Supabase Edge Function.");
+  }
+
+  const sessionToken = getCookie(request, COOKIE_NAME);
+  if (!sessionToken) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const sessionKey = await hmacHex("autodoc-ai-admission-v1:" + sessionToken);
+  const admission = AI_REQUEST_GATE.acquire(sessionKey);
+  if (!admission.allowed) {
+    const message = admission.reason === "concurrency"
+      ? "Asisten AI sedang memproses permintaan lain. Coba kembali sebentar lagi."
+      : "Batas analisis AI untuk sesi ini tercapai. Coba kembali setelah jeda yang ditentukan.";
+    return respond(
+      request,
+      { message, retry_after_seconds: admission.retryAfterSeconds },
       429,
       { "Retry-After": String(admission.retryAfterSeconds) },
     );
