@@ -682,3 +682,11 @@ body .workspace-pages .workspace-page .docs-submit-bar{position:static;backgroun
 @media(max-width:720px){
  .home-page .workspace-page:has(.docs-create-layout) .docs-head{padding-inline-start:36px}
 }
+
+/* The document AI dialog stays above the distribution form on every screen. */
+body .dm-overlay.dm-contextual-ai{padding:16px;align-items:center}
+body .dm-overlay.dm-contextual-ai .dm-dialog{display:flex;flex-direction:column;width:min(560px,100%);height:auto;min-height:0;max-height:calc(100dvh - 32px);border-radius:16px;overflow:hidden}
+body .dm-contextual-ai .dm-content{padding:16px;height:auto;overflow:auto}
+.dm-contextual-ai .dm-tabs,.dm-contextual-ai .dm-toolbar,.dm-contextual-ai .dm-content>p,.dm-contextual-ai .ai-form-grid[hidden]{display:none}
+.dm-contextual-ai .ai-panel:has(.ai-composer){border:0;padding:0;background:transparent}
+.dm-contextual-ai .ai-composer{margin:0}

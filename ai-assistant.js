@@ -63,16 +63,17 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
   if(typeof setMessage==="function")setMessage(message,bad,state);
  }
   const inputPanel=text(shell,"section","ai-panel");
-  text(inputPanel,"h4","","Asisten AI AutoDoc");
-  text(inputPanel,"p","ai-lead","Tempel teks atau unggah dokumen untuk dipetakan ke menu distribusi, penerima manfaat, serta Data Master seperti identitas SPPG, pengemudi, kendaraan, petugas, dan daftar menu master.");
+  if(!options.compact)text(inputPanel,"h4","","Asisten AI AutoDoc");
+  if(!options.compact)text(inputPanel,"p","ai-lead","Tempel teks atau unggah dokumen untuk dipetakan ke menu distribusi, penerima manfaat, serta Data Master seperti identitas SPPG, pengemudi, kendaraan, petugas, dan daftar menu master.");
   const grid=text(inputPanel,"div","ai-form-grid");
+  grid.hidden=!!options.compact;
   const modeSelect=el("select");modeSelect.id="aiMode";
   [["both","Menu, penerima & Data Master"],["menus","Klasifikasi menu harian"],["recipients","Perubahan penerima manfaat"],["master","Data Master lainnya"]].forEach(([value,label])=>{const opt=el("option");opt.value=value;opt.textContent=label;modeSelect.append(opt)});
   if(["both","menus","recipients","master"].includes(options?.mode))modeSelect.value=options.mode;
   field(grid,"Apa yang ingin dianalisis?",modeSelect);
-  const date=el("input");date.type="date";date.value=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta"}).format(new Date());date.id="aiDate";
+  const date=el("input");date.type="date";date.value=options.date||new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta"}).format(new Date());date.id="aiDate";
   field(grid,"Tanggal distribusi untuk menu",date);
-  const source=el("textarea");source.id="aiSourceText";source.placeholder="Tempel pesan WhatsApp, daftar menu, tabel penerima, atau keterangan perubahan di sini...";
+  const source=el("textarea");source.id="aiSourceText";source.placeholder=options.compact?"Tulis atau tempel daftar menu…":"Tempel pesan WhatsApp, daftar menu, tabel penerima, atau keterangan perubahan di sini...";
   const composer=text(inputPanel,"div","ai-composer");
   source.setAttribute("aria-label","Pesan untuk Asisten AI");
   composer.append(source);
@@ -83,7 +84,7 @@ function create({api,el,getRecipients,onApplyMenuPlan,onMasterChanged,setMessage
   const attach=button(actions,"+","",()=>fileInput.click());
   attach.setAttribute("aria-label","Tambah lampiran");
   attach.title="Tambah lampiran";
-  const fileHint=text(composer,"small","ai-helper","Format: PDF, Word, Excel, CSV/TSV, TXT/Markdown, HTML/XML, PowerPoint, JSON, dan gambar JPG/PNG/WebP. Semua file terpilih dianalisis bersama; belum ada data yang disimpan.");
+  const fileHint=text(composer,"small","ai-helper",options.compact?"Tambahkan foto atau dokumen · maksimal 5 file / 6 MB":"Format: PDF, Word, Excel, CSV/TSV, TXT/Markdown, HTML/XML, PowerPoint, JSON, dan gambar JPG/PNG/WebP. Semua file terpilih dianalisis bersama; belum ada data yang disimpan.");
   fileHint.classList.add("wide");
   const analyze=button(actions,"Baca dan klasifikasikan","primary",analyzeInput);
   const status=text(shell,"p","ai-status","Tempel teks atau pilih file, kemudian mulai analisis.");

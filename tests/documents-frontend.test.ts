@@ -416,7 +416,7 @@ test("P2 Data Master provides desktop category navigation, mobile selection, gro
 
 test("P2 quick AI menu shortcut opens menu mode and analysis results are organized as a review queue", () => {
   assert.match(source, /docsAiMenuAssist/);
-  assert.match(source, /window\.AutoDocMaster\.open\("ai","",\{mode:"menus"\}\)/);
+  assert.match(source, /window\.AutoDocMaster\.open\("ai","",\{mode:"menus",date:/);
   assert.match(aiSource, /render\(container,options=\{\}\)/);
   assert.match(aiSource, /Antrean pemeriksaan/);
   assert.match(aiSource, /ai-review-status/);
