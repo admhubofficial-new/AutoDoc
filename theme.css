@@ -764,3 +764,5 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{
  .workspace-page:has(.docs-create-layout) .docs-mobile-switch{margin-inline-start:0}
  body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{bottom:0;padding-bottom:max(12px,env(safe-area-inset-bottom))}
 }
+
+.docs-page-controls{display:flex;align-items:center;gap:8px;min-width:0}.docs-page-controls .docs-btn{min-width:44px;font-size:20px;background:transparent;border:0}

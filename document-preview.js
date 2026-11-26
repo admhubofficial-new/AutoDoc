@@ -22,6 +22,15 @@ function create(dependencies){
   const disclosure=$("#docsPreviewDisclosure",getModal());
   if(!disclosure||disclosure===boundDisclosure)return;
   boundDisclosure=disclosure;
+  const pages=disclosure.querySelector("#docsPreviewPages");
+  pages.addEventListener("scroll",syncPagePosition,{passive:true});
+  disclosure.querySelectorAll("[data-page-step]").forEach(button=>{
+   button.addEventListener("click",()=>{
+    const next=Number(pages.dataset.current||0)+Number(button.dataset.pageStep);
+    pages.children[next]?.scrollIntoView({block:"start",behavior:"instant"});
+    syncPagePosition();
+   });
+  });
   disclosure.addEventListener("toggle",fitPreviewFrame);
  }
  function previewPortionRows(recipient){
@@ -94,6 +103,9 @@ function updateLivePreview(){
  const pageCount=$("#docsPreviewPageCount",getModal());
  if(pageCount)pageCount.textContent=recipients.length?"1 dari "+recipients.length+" · "+recipients[0].nama:"";
  pages.replaceChildren();
+ pages.dataset.current="0";
+ getModal().querySelector("[data-page-step='-1']").disabled=true;
+ getModal().querySelector("[data-page-step='1']").disabled=recipients.length<2;
  const makeFrame=(title)=>{
   const paper=document.createElement("div");
   paper.className="docs-preview-paper";
@@ -145,14 +157,20 @@ function updateLivePreview(){
 
 
 
- window.addEventListener("scroll",()=>{
-  const count=$("#docsPreviewPageCount",getModal());
-  const pages=Array.from(getModal()?.querySelectorAll("#docsPreviewPages .docs-preview-paper")||[]);
-  if(!count||!count.getClientRects().length||!pages[0]?.getClientRects().length)return;
-  const index=pages.findIndex(page=>page.getBoundingClientRect().bottom>innerHeight*.35);
+ function syncPagePosition(){
+  const host=$("#docsPreviewPages",getModal());
+  if(!host?.getClientRects().length||!host.firstElementChild?.dataset.recipient)return;
+  const pages=Array.from(host.children);
+  const top=Math.max(0,host.getBoundingClientRect().top);
+  const threshold=top+Math.min(host.clientHeight,innerHeight-top)*0.35;
+  const index=pages.findIndex(page=>page.getBoundingClientRect().bottom>threshold);
   const current=index<0?pages.length-1:index;
-  if(pages[current].dataset.recipient)count.textContent=(current+1)+" dari "+pages.length+" · "+pages[current].dataset.recipient;
- },{passive:true,capture:true});
+  host.dataset.current=String(current);
+  $("#docsPreviewPageCount",getModal()).textContent=(current+1)+" dari "+pages.length+" · "+pages[current].dataset.recipient;
+  getModal().querySelector("[data-page-step='-1']").disabled=current===0;
+  getModal().querySelector("[data-page-step='1']").disabled=current===pages.length-1;
+ }
+ window.addEventListener("scroll",syncPagePosition,{passive:true});
  return Object.freeze({updateLivePreview,fitPreviewFrame});
 }
 window.AutoDocDocumentPreview=Object.freeze({create});
