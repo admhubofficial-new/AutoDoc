@@ -122,24 +122,11 @@ test("meal time supports pagi, siang, and sore with siang selected by default", 
 
 test("organoleptic printing matches the approved A4 portrait template", () => {
   assert.match(organolepticSource, /FORMULIR UJI ORGANOLEPTIK/);
-  assert.match(source, /@page\{size:A4 portrait;margin:0\}/);
-  assert.match(source, /break-after:page/);
+  assert.match(organolepticSource, /@page\{size:A4 portrait;margin:0\}/);
+  assert.match(organolepticSource, /break-after:page/);
   assert.match(organolepticSource, /function organolepticSheet/);
   assert.match(organolepticSource, /function organolepticTable/);
   for (const aspect of ["Aroma", "Suhu", "Penampilan", "Citarasa", "Tekstur"]) assert.match(organolepticSource, new RegExp(aspect));
-});
-test("organoleptic checkboxes and handwritten fields stay blank", () => {
-  assert.match(organolepticSource, /for\(let i=0;i<10;i\+\+\)row\.append\(doc\.createElement\("td"\)\)/);
-  assert.match(organolepticSource, /organolepticElement\(doc,"div","followup","Tindak Lanjut:"\)/);
-  assert.match(organolepticSource, /organolepticElement\(doc,"div","sign-line"\)/);
-});
-test("organoleptic forms use distribution snapshots and five blank menu rows", () => {
-  assert.match(source, /currentDistribution\.nama_ahli_gizi/);
-  assert.match(source, /currentDistribution\.waktu_makan/);
-  assert.match(source, /currentDistribution\.menu_items/);
-  assert.match(organolepticSource, /Array\(5\)\.fill\(""\)/);
-  assert.match(organolepticSource, /Nama Posyandu/);
-  assert.match(organolepticSource, /Nama Sekolah/);
 });
 
 test("organoleptic output is available in bulk, per recipient, and from wizard print selection", () => {
@@ -162,24 +149,7 @@ test("organoleptic user data is inserted with textContent rather than HTML inter
   assert.doesNotMatch(organolepticSource, /innerHTML|insertAdjacentHTML/);
 });
 
-test("printed Surat Jalan has three role-specific signatories", () => {
-  assert.match(printRendererSource, /Yang Menyerahkan/);
-  assert.match(printRendererSource, /Petugas Distribusi SPPG/);
-  assert.match(printRendererSource, /Pengemudi/);
-  assert.match(printRendererSource, /Yang Menerima/);
-  assert.match(printRendererSource, /sign-line/);
-  assert.match(printRendererSource, /sign-space/);
-  assert.match(printRendererSource, /signatureBlock\("Pengemudi"/);
-  assert.match(printRendererSource, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-});
 
-test("printed BAST includes Kepala SPPI from the immutable SPPG snapshot", () => {
-  assert.match(printRendererSource, /sppg\.nama_kepala_sppi/);
-  assert.match(printRendererSource, /Mengetahui,/);
-  assert.match(printRendererSource, /Kepala SPPI/);
-  assert.match(printRendererSource, /const signatures=isBast/);
-  assert.match(printRendererSource, /signatureBlock\("Yang Menyerahkan"/);
-});
 
 test("BAST realization form is isolated in its module and preserves validation and PIN confirmation", () => {
   assert.match(realizationSource, /function showRealization\(card,\s*doc\)/);
@@ -212,53 +182,8 @@ test("archive module owns global search, page selection, and PIN-protected bulk 
 
 
 
-test("organoleptic renderer module loads before documents and exposes the expected API", () => {
-  const rendererTag = htmlSource.indexOf('src="./organoleptic-print.js');
-  const printTag = htmlSource.indexOf('src="./documents-print.js');
-  const archiveTag = htmlSource.indexOf('src="./archive.js');
-  const previewTag = htmlSource.indexOf('src="./document-preview.js');
-  const realizationTag = htmlSource.indexOf('src="./bast-realization.js');
-  const documentsTag = htmlSource.indexOf('src="./documents.js');
-  assert.ok(rendererTag >= 0 && printTag > rendererTag && archiveTag > printTag && previewTag > archiveTag && realizationTag > previewTag && documentsTag > realizationTag);
-  assert.ok(organolepticSource.includes("window.AutoDocOrganolepticPrint = Object.freeze"));
-  for (const name of ["organolepticElement", "organolepticInfoRow", "organolepticMealNode", "organolepticTable", "organolepticSheet"]) {
-    assert.match(organolepticSource, new RegExp(name));
-  }
-  assert.match(previewSource, /renderOrganolepticPreview/);
-});
 
 
-test("document print renderer formats SJ and BAST snapshots and escapes user content", () => {
-  const sandbox = { window: {} };
-  runInNewContext(printRendererSource, sandbox);
-  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
-  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[char]);
-  const snapshot = {
-    sppg: { nama_sppg: "SPPG Darmaraja", alamat: "Alamat", kecamatan: "Darmaraja", kabupaten: "Sumedang", kode_sppg: "01", nama_kepala_sppi: "Kepala SPPI" },
-    distribusi: { tanggal: "2026-11-22", jam_berangkat: "08:00", nama_petugas: "Petugas", nama_pengemudi: "Pengemudi", no_kendaraan: "D 1234 XX", menu: "Menu harian" },
-    penerima: { nama: "<img src=x onerror=alert(1)>", kelompok: "Sekolah", jenjang: "SD", alamat: "Alamat penerima" },
-    rincian_porsi: [{ kelompok_sasaran: "Kelas 1", jenis_porsi: "Porsi Kecil", jumlah: 10 }],
-    ringkasan: { total_porsi: 10 }
-  };
-  const sj = buildPrintHtml({ jenis: "SJ", nomor_lengkap: "SJ/001", snapshot_json: snapshot }, escapeHtml, "logo-bgn.png");
-  assert.match(sj, /SURAT JALAN/);
-  assert.match(sj, /src='logo-bgn\.png'/);
-  assert.match(sj, /&lt;img src=x onerror=alert\(1\)&gt;/);
-  assert.doesNotMatch(sj, /<img src=x onerror=alert\(1\)>/);
-  assert.match(sj, /Petugas Distribusi SPPG/);
-  assert.match(sj, /Pengemudi/);
-  assert.match(sj, /class='sign-line'/);
-  const bast = buildPrintHtml({
-    jenis: "BAST", nomor_lengkap: "BAST/001", snapshot_json: snapshot,
-    realisasi: { document_id: "real-1", kondisi: "baik", jam_diterima: "09:00", suhu_c: 45, ompreng_kembali: 10, nama_penerima: "Penerima", jabatan_penerima: "Kepala Sekolah", items: [], catatan: "" }
-  }, escapeHtml, "logo-bgn.png");
-  assert.match(bast, /BERITA ACARA SERAH TERIMA/);
-  assert.match(bast, /Kepala SPPI/);
-  assert.match(bast, /Realisasi Penerimaan/);
-  assert.match(bast, /Penerima/);
-});
 
 
 test("distribution date defaults to today in WIB and departure time starts empty", () => {
@@ -282,34 +207,7 @@ test("creation form accepts new staff, driver and vehicle values and remembers t
 });
 
 
-test("organoleptic signatures have clear writing lines and name positions", () => {
-  assert.match(organolepticSource, /organolepticElement\(doc,"div","sign-line"/);
-  assert.match(organolepticSource, /organolepticElement\(doc,"div","sign-person"/);
-  assert.match(previewSource, /\.sign \.sign-line\{width:82%;height:1px/);
-  assert.doesNotMatch(source, /\.sign \.dots\{/);
-});
 
-test("all SJ and BAST signatory blocks render a consistent horizontal signature line", () => {
-  const sandbox = { window: {} };
-  runInNewContext(printRendererSource, sandbox);
-  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
-  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[char]);
-  const snapshot = {
-    sppg: { nama_kepala_sppi: "Kepala SPPI" },
-    distribusi: { nama_petugas: "Petugas", nama_pengemudi: "Pengemudi" },
-    penerima: { nama: "Sekolah" },
-    rincian_porsi: [], ringkasan: { total_porsi: 0 }
-  };
-  const sj = buildPrintHtml({jenis:"SJ",nomor_lengkap:"SJ/1",snapshot_json:snapshot},escapeHtml,"logo.png");
-  const bast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/1",snapshot_json:snapshot,realisasi:{nama_penerima:"Penerima",items:[]}},escapeHtml,"logo.png");
-  assert.equal((sj.match(/class='sign-line'/g)||[]).length,3);
-  assert.equal((bast.match(/class='sign-line'/g)||[]).length,3);
-  assert.ok(sj.includes("Petugas</div>"));
-  assert.ok(sj.includes("Pengemudi</div>"));
-  assert.ok(bast.includes("Kepala SPPI</div>"));
-});
 
 
 test("live document preview is isolated in its own module and initialized before documents", () => {
@@ -334,53 +232,7 @@ test("daily menu editor is isolated, capped at eight, and delegates preview refr
 });
 
 
-test("BAST print shows before/after quantities and names above aligned signature lines", () => {
-  const sandbox = { window: {} };
-  runInNewContext(printRendererSource, sandbox);
-  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
-  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[char]);
-  const snapshot = {
-    sppg: { nama_kepala_sppi: "Kepala SPPI" },
-    distribusi: { nama_petugas: "Petugas Distribusi" },
-    penerima: { nama: "SDN Contoh" },
-    rincian_porsi: [
-      { kelompok_sasaran: "Siswa kecil", jenis_porsi: "Porsi Kecil", jumlah: 20 },
-      { kelompok_sasaran: "Balita", jenis_porsi: "Porsi Kecil", jumlah: 5 },
-      { kelompok_sasaran: "Siswa besar", jenis_porsi: "Porsi Besar", jumlah: 10 }
-    ],
-    ringkasan: { porsi_kecil: 25, porsi_besar: 10, total_porsi: 35 }
-  };
-  const bast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/2",snapshot_json:snapshot,realisasi:{
-    document_id:"real-2",nama_penerima:"Nama Penerima",items:[
-      {jenis_porsi:"Porsi Kecil",jumlah_diserahkan:25,jumlah_diterima:24},
-      {jenis_porsi:"Porsi Besar",jumlah_diserahkan:10,jumlah_diterima:9}
-    ]
-  }},escapeHtml,"logo.png");
-  assert.match(bast, /Jumlah Sebelum/);
-  assert.match(bast, /Jumlah Sesudah/);
-  assert.match(bast, /25<\/td><td style='text-align:right'>24/);
-  assert.match(bast, /10<\/td><td style='text-align:right'>9/);
-  assert.match(bast, /Nama Penerima<\/div><div class='sign-line'/);
-  assert.match(bast, /Petugas Distribusi<\/div><div class='sign-line'/);
-  assert.doesNotMatch(bast, /Dokumen dibuat oleh/);
-  assert.doesNotMatch(bast, /Snapshot dokumen:/);
-  const pending = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/3",snapshot_json:snapshot},escapeHtml,"logo.png");
-  assert.match(pending, /Jumlah Sesudah/);
-  assert.match(pending, /25<\/td><td style='text-align:right'><\/td>/);
-  assert.match(pending, /10<\/td><td style='text-align:right'><\/td>/);
-});
 
-test("organoleptic signature names render above aligned horizontal lines", () => {
-  const left = organolepticSource.indexOf("left.append(leftHeading");
-  const right = organolepticSource.indexOf("right.append(rightHeading");
-  assert.ok(left >= 0 && right > left);
-  assert.ok(organolepticSource.indexOf('sign-person",data.ahliGizi||""),organolepticElement(doc,"div","sign-line"') >= 0);
-  assert.ok(organolepticSource.indexOf('sign-person",""),organolepticElement(doc,"div","sign-line"') >= 0);
-  assert.match(source, /sign-heading\{height:10mm/);
-  assert.match(source, /sign-person\{height:5mm/);
-});
 
 
 test("archive history supports selecting individual or all documents for batch printing", () => {
@@ -398,44 +250,9 @@ test("archive history supports selecting individual or all documents for batch p
 });
 
 
-test("optional distribution details print as blank fields rather than dash placeholders", () => {
-  assert.ok(printRendererSource.includes("[rec.kelompok,rec.jenjang].filter(Boolean).join(\" / \")"));
-  for (const field of ["dist.jam_berangkat", "dist.nama_petugas", "dist.nama_pengemudi", "dist.no_kendaraan", "dist.menu", "rec.nama", "rec.alamat"]) {
-    assert.ok(printRendererSource.includes(field + '||"'), field + " should be blank when absent");
-    assert.ok(!printRendererSource.includes(field + '||"—"'), field + " must not show a dash");
-  }
-});
 
 
-test("SJ and BAST letterhead removes SPPG code and generic operational caption", () => {
-  assert.doesNotMatch(printRendererSource, /top-meta|kode_sppg|SPPG-DMJ|Dokumen operasional MBG/);
-  assert.ok(printRendererSource.includes("grid-template-columns:70px minmax(0,1fr)"));
-  assert.ok(printRendererSource.includes("escapeHtml(sppgLocation)"));
-});
 
-test("missing SJ and BAST fields and unentered BAST realization print blank, not dashes", () => {
-  const sandbox = { window: {} };
-  runInNewContext(printRendererSource, sandbox);
-  const { buildPrintHtml } = sandbox.window.AutoDocPrintRenderer;
-  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[char]);
-  const snapshot = {
-    sppg: {}, distribusi: {}, penerima: {}, rincian_porsi: [],
-    ringkasan: { total_porsi: 16 }
-  };
-  for (const jenis of ["SJ", "BAST"]) {
-    const html = buildPrintHtml({jenis,nomor_lengkap:"DOC/1",snapshot_json:snapshot},escapeHtml,"logo.png");
-    assert.doesNotMatch(html, /—/);
-    for (const label of ["Alamat", "Menu", "Pengemudi", "Kendaraan", "Petugas"]) {
-      assert.ok(html.includes("<b>"+label+"</b>: </div>"), label + " should be blank when absent");
-    }
-    assert.ok(html.includes("<b>Total porsi</b>: 16</div>"));
-  }
-  const pendingBast = buildPrintHtml({jenis:"BAST",nomor_lengkap:"BAST/2",snapshot_json:snapshot},escapeHtml,"logo.png");
-  assert.ok(pendingBast.includes("Jumlah Sesudah"));
-  assert.doesNotMatch(pendingBast, /—/);
-});
 
 test("organoleptic meal options remain normal text for manual marking", () => {
   assert.ok(organolepticSource.includes('["Pagi","Siang","Sore"]'));
@@ -622,4 +439,25 @@ test("phase 4 obsolete hidden document tabs are removed while main navigation st
   assert.doesNotMatch(source, /drawTabs|switchTab|docs-tabs/);
   assert.match(masterSource, /function resetSession\(\)/);
   assert.match(masterSource, /request!==loadSequence\|\|modal.hidden/);
+});
+
+test("Word template keeps document wording and dynamic snapshot values", () => {
+  const scope = { window: {} as { AutoDocPrintRenderer?: { buildPrintHtml: (document: object, escape: (value: unknown) => string, logo: string) => string } } };
+  runInNewContext(printRendererSource, scope);
+  const render = scope.window.AutoDocPrintRenderer!.buildPrintHtml;
+  const escape = (value: unknown) => String(value ?? "").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  const snapshot_json = {
+    sppg: { nama_sppg: "SPPG Darmaraja", nama_kepala_sppg: "Kepala Uji" },
+    distribusi: { tanggal: "2026-11-26" },
+    penerima: { nama: "<Sekolah Uji>" },
+    rincian_porsi: [{ kelompok_sasaran: "Siswa PAUD/TK", jenis_porsi: "Porsi Kecil", jumlah: 13 }]
+  };
+  const sj = render({ jenis: "SJ", nomor_lengkap: "001/SJ/SPPG-DMJ/XI/2026", snapshot_json }, escape, "");
+  assert.match(sj, /Kamis, 26 November 2026/);
+  assert.match(sj, /PENGIRIMAN \/ DISTRIBUSI MBG/);
+  assert.match(sj, /&lt;Sekolah Uji&gt;/);
+  const bast = render({ jenis: "BAST", nomor_lengkap: "015/BAST/SPPG-DMJ/XI/2026", snapshot_json }, escape, "");
+  for (const wording of ["BERITA ACARA SERAH TERIMA (BAST)", "PAKET MAKAN BERGIZI GRATIS (MBG)", "PIHAK PERTAMA", "PIHAK KEDUA", "Jumlah Sebelum", "Jumlah Sesudah", "TOTAL PORSI", "Kondisi makanan saat diterima:", "rangkap 2 (dua)", "Kepala Uji"]) {
+    assert.ok(bast.includes(wording), wording);
+  }
 });

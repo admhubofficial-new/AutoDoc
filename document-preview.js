@@ -37,14 +37,14 @@ function fitPage(frame){
 function renderOrganolepticPreview(frame,recipient,date,menu,settings){
  const renderer=window.AutoDocOrganolepticPrint;
  if(!renderer?.organolepticSheet)return;
- const css="*{box-sizing:border-box}body{margin:0;background:#fff;color:#000;font-family:'Times New Roman',Times,serif;font-size:12pt;line-height:1.35}.sheet{width:210mm;height:297mm;margin:0;padding:15mm;background:#fff;display:flex;flex-direction:column}.title{margin:4mm 0 8mm;text-align:center;font-size:13pt;font-weight:700}.info{display:grid;grid-template-columns:34mm 4mm 1fr;row-gap:1mm;margin-bottom:6mm}.info .val{font-weight:400}.caption{margin:0 0 1.5mm;text-align:center;font-weight:700;font-size:11.5pt}table.grid{width:100%;border-collapse:collapse;table-layout:fixed}table.grid th,table.grid td{border:1px solid #000;padding:1.5mm;text-align:center}table.grid thead th{font-weight:700;font-size:11.5pt}table.grid col.menu{width:28%}table.grid thead tr+tr th{font-size:10.5pt;padding:1.5mm .5mm}table.grid tbody td{height:10mm}table.grid tbody th{font-weight:700;font-size:11.5pt;padding:1.5mm 2mm}.note{margin:5mm 0 4mm;font-size:11.5pt}.note p{margin:0}.note .row{display:grid;grid-template-columns:14mm 1fr}.followup{flex:1 1 auto;min-height:50mm;border:1px solid #000;padding:3mm 4mm;font-weight:700}.signs{display:flex;justify-content:space-between;gap:18mm;margin-top:8mm;font-size:11.5pt}.sign{width:72mm;text-align:center}.sign .space{height:22mm}.sign .sign-line{width:82%;height:1px;margin:0 auto;border-bottom:1px solid #000}.sign .sign-person{min-height:5mm;padding-top:1mm;font-size:10.5pt}";
+ const css=renderer.styles+"body{background:#fff}.sheet{margin:0;box-shadow:none}";
  const dateLabel=/^\d{4}-\d{2}-\d{2}$/.test(date)?new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date(date+"T00:00:00")):date;
  frame.onload=()=>{
   const doc=frame.contentDocument;if(!doc)return;
   doc.body.dataset.previewType="organoleptic";
   doc.body.style.width="794px";doc.body.style.margin="0";doc.body.style.padding="0";
   const root=doc.getElementById("previewRoot");
-  root.append(renderer.organolepticSheet(doc,{tanggalLabel:dateLabel,waktuMakan:$("#docsMealTime",getModal())?.value||"siang",ahliGizi:String(settings.nama_ahli_gizi||""),menu},recipient));
+  root.append(renderer.organolepticSheet(doc,{tanggalLabel:dateLabel,nomor:"Belum terbit",waktuMakan:$("#docsMealTime",getModal())?.value||"siang",ahliGizi:String(settings.nama_ahli_gizi||""),menu},recipient));
   fitPage(frame);
  };
  frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>"+css+"</style></head><body data-preview-type='organoleptic'><main id='previewRoot'></main></body></html>";
