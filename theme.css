@@ -570,3 +570,7 @@ body .workspace-pages .workspace-page .docs-submit-bar{background:var(--color-su
  .docs-work-summary strong{font-size:19px}
  .docs-work-summary small{font-size:11px}
 }
+
+.docs-draft-line{font-size:12px;line-height:1.5;color:var(--color-muted)}
+.docs-draft-line .docs-btn{font-size:12px}
+.workspace-queue-intro h3{font-size:18px;color:var(--color-ink)}

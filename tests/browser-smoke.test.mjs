@@ -828,3 +828,65 @@ test("P3 AI loading and error states preserve the source and support retry into 
     await app.context.close();
   }
 });
+
+
+test("phase 3 distribution draft survives reload, can be discarded, and never issues documents", async () => {
+ const app=await openApp();
+ try{
+  const page=app.page;
+  await page.locator('[data-home-nav="print"]').click();
+  await page.locator("input[name='recipient']").check();
+  await page.locator("#docsMealTime").selectOption("pagi");
+  await page.locator("#docsAddMenuItem").click();
+  await page.locator(".docs-menu-input").fill("Nasi uji draf");
+  await page.locator("#docsDraftStatus").getByText(/Draf tersimpan/).waitFor();
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.locator('[data-home-nav="print"]').click();
+  await page.locator("input[name='recipient']").waitFor();
+  assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
+  assert.equal(await page.locator("input[name='recipient']").isChecked(),true);
+  assert.equal(await page.locator(".docs-menu-input").inputValue(),"Nasi uji draf");
+  assert.equal(app.writes.some(item=>item.route==="docs/create"),false);
+  page.once("dialog",dialog=>dialog.accept());
+  await page.locator("#docsDiscardDraft").click();
+  assert.equal(await page.locator("input[name='recipient']").isChecked(),false);
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem("autodoc:distribution-draft:v1")),null);
+  await page.locator("input[name='recipient']").check();
+  await page.locator("#logoutButton").click();
+  await page.locator("#loginPanel:not([hidden])").waitFor();
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem("autodoc:distribution-draft:v1")),null);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});
+
+test("phase 3 all-date BAST queue uses archived dates and opens the existing realization form", async () => {
+ const app=await openApp();
+ try{
+  const page=app.page;
+  await page.getByRole("button",{name:"Lihat semua BAST tertunda"}).click();
+  const queue=page.locator("#docsRealizationQueue");
+  await queue.getByText("2026-11-23",{exact:false}).waitFor();
+  assert.match(await page.locator(".workspace-queue-totals").textContent(),/1 BAST belum diisi/);
+  await queue.getByRole("button",{name:"Input realisasi"}).click();
+  await page.locator(".docs-realization").waitFor();
+  assert.equal(await page.locator("#docsHistoryDate").inputValue(),"2026-11-23");
+  assert.equal(app.writes.some(item=>item.route==="docs/realization"),false);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});
+
+
+test("phase 3 BAST history scan retries without claiming incomplete history is complete", async () => {
+ const app=await openApp({apiFailures:{"docs/list":1}});
+ try{
+  const page=app.page;
+  await page.getByRole("button",{name:"Lihat semua BAST tertunda"}).click();
+  const more=page.getByRole("button",{name:"Coba lagi",exact:true});
+  await more.waitFor();
+  assert.match(await page.locator(".workspace-queue-totals").textContent(),/riwayat belum selesai/);
+  await more.click();
+  await page.locator("#docsRealizationQueue").getByRole("button",{name:"Input realisasi"}).waitFor();
+  assert.match(await page.locator(".workspace-queue-totals").textContent(),/1 tanggal diperiksa/);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});
