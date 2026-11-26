@@ -20,11 +20,19 @@ function fitPreviewFrame(){
 function fitPage(frame){
  const host=frame.parentElement;
  if(!frame||!host||!frame.contentDocument?.body||!frame.getClientRects().length||!host.clientWidth)return;
- const scale=Math.min(1,Math.max(.25,host.clientWidth/794));
- const body=frame.contentDocument.body;
- body.style.width="794px";body.style.minHeight="1123px";body.style.margin="0";body.style.padding=body.dataset.previewType==="organoleptic"?"0":"60px";body.style.boxSizing="border-box";
- body.style.transformOrigin="top left";body.style.transform="scale("+scale+")";
- frame.style.height=Math.ceil(1123*scale)+"px";
+ const scale=Math.min(1,host.clientWidth/794);
+ const doc=frame.contentDocument;
+ const body=doc.body;
+ doc.documentElement.style.overflow="hidden";
+ body.style.overflow="hidden";
+ body.style.width="794px";
+ body.style.minHeight="1123px";
+ body.style.margin="0";
+ body.style.padding=body.dataset.previewType==="organoleptic"?"0":"60px";
+ body.style.boxSizing="border-box";
+ body.style.transformOrigin="top left";
+ body.style.transform="scale("+scale+")";
+ frame.style.height=Math.ceil(Math.max(1123,body.scrollHeight)*scale)+"px";
 }
 function renderOrganolepticPreview(frame,recipient,date,menu,settings){
  const renderer=window.AutoDocOrganolepticPrint;
@@ -66,6 +74,7 @@ function updateLivePreview(){
   const frame=document.createElement("iframe");
   if(!pages.children.length)frame.id="docsPreviewFrame";
   frame.title=title;
+  frame.setAttribute("scrolling","no");
   paper.append(frame);
   pages.append(paper);
   return frame;
