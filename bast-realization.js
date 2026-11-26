@@ -153,6 +153,7 @@
       form.addEventListener("submit", async event => {
         event.preventDefault();
         if (!form.reportValidity()) return;
+        const submittedDate = $("#docsHistoryDate", modal)?.value;
         const data = Object.fromEntries(new FormData(form).entries());
         data.document_id = doc.id;
 
@@ -173,7 +174,7 @@
           save.textContent = "Tersimpan";
 
           try {
-            await loadHistory($("#docsHistoryDate", modal).value);
+            if(panel.isConnected&&!modal.hidden)await loadHistory(submittedDate);
           } catch (refreshError) {
             live.dataset.state = "warning";
             live.textContent = "Realisasi berhasil disimpan, tetapi daftar dokumen belum dapat diperbarui. Muat ulang riwayat untuk melihat status terbaru.";

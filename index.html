@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124">
-  <link rel="stylesheet" href="./theme.css?v=p2-p3-admin-visual-audit-20261124">
+  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2">
+  <link rel="stylesheet" href="./theme.css?v=p2-p3-admin-visual-audit-20261124-workspace-v2">
 </head>
 <body class="auth-pending">
   <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
@@ -110,6 +110,10 @@
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
           <span>Buat Dokumen</span>
         </button>
+        <button type="button" data-home-nav="realization" aria-label="Realisasi BAST">
+          <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 13l3 3 5-6"/></svg></span>
+          <span>Realisasi BAST</span>
+        </button>
         <button type="button" data-home-nav="archive" aria-label="Arsip">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
           <span>Arsip</span>
@@ -143,6 +147,7 @@
         </div>
         <section id="opsDashboard" class="home-dashboard" aria-label="Ringkasan operasional"></section>
       </section>
+      <div id="workspacePages" class="workspace-pages" hidden></div>
     </div>
   </main>
 
@@ -192,6 +197,8 @@
 
       function showLogin() {
         finishAuthBootstrap();
+        window.AutoDocMaster?.close(false);
+        window.AutoDocDocuments?.resetSession?.();
         homePage.hidden = true;
         authPage.hidden = false;
         loginPanel.hidden = false;
@@ -342,7 +349,10 @@
         }).format(new Date());
       }
       function setHomeNav(active) {
-        const labels = { home: "Beranda", print: "Buat Dokumen", archive: "Arsip", master: "Data Master" };
+        const labels = { home: "Beranda", print: "Buat Dokumen", archive: "Arsip", master: "Data Master", realization: "Realisasi BAST" };
+        homePage.dataset.activePage = active;
+        homePage.querySelector(".home-content").hidden = active !== "home";
+        document.getElementById("workspacePages").hidden = active === "home";
         const label = labels[active] || labels.home;
         homeNav.querySelectorAll("button").forEach(item => {
           if (item.dataset.homeNav === active) item.setAttribute("aria-current", "page");
@@ -352,18 +362,34 @@
         if (context) context.textContent = label;
         document.title = label + " — AutoDoc";
       }
+      window.AutoDocSetHomeNav = setHomeNav;
       function openDocsTab(tabName) {
         if (!window.AutoDocDocuments) return;
         if (tabName === "history") window.AutoDocDocuments.openArchive();
         else window.AutoDocDocuments.open();
       }
+      function canNavigate() {
+        if (!window.AutoDocDocuments?.isBusy?.()) return true;
+        window.AutoDocDocuments?.notifyBusy?.();
+        return false;
+      }
       window.AutoDocOpenDocs = (tabName) => {
+        if (!canNavigate()) return;
+        window.AutoDocMaster?.close(false);
         setHomeNav("print");
         openDocsTab(tabName || "create");
       };
       window.AutoDocOpenArchive = (date) => {
+        if (!canNavigate()) return;
+        window.AutoDocMaster?.close(false);
         setHomeNav("archive");
         window.AutoDocDocuments?.openArchive(date);
+      };
+      window.AutoDocOpenRealization = (date) => {
+        if (!canNavigate()) return;
+        window.AutoDocMaster?.close(false);
+        setHomeNav("realization");
+        window.AutoDocDocuments?.openRealization(date);
       };
       menuToggle.addEventListener("click", toggleSidebar);
       sidebarBackdrop.addEventListener("click", closeHomeNav);
@@ -375,30 +401,26 @@
       });
       homeNav.addEventListener("click", (event) => {
         const button = event.target.closest("[data-home-nav]");
-        if (!button) return;
+        if (!button || !canNavigate()) return;
         const action = button.dataset.homeNav;
         setHomeNav(action);
         closeHomeNav();
         if (action === "home") {
-          window.AutoDocDocuments?.close();
-          window.AutoDocMaster?.close();
+          window.AutoDocMaster?.close(false);
+          window.AutoDocDocuments?.close(false);
         }
-        if (action === "print") {
-          window.AutoDocMaster?.close();
-          window.AutoDocOpenDocs("create");
-        }
-        if (action === "archive") {
-          window.AutoDocMaster?.close();
-          window.AutoDocOpenArchive();
-        }
+        if (action === "print") window.AutoDocOpenDocs("create");
+        if (action === "archive") window.AutoDocOpenArchive();
+        if (action === "realization") window.AutoDocOpenRealization();
         if (action === "master") {
-          window.AutoDocDocuments?.close();
+          window.AutoDocDocuments?.close(false);
           window.AutoDocMaster?.open("recipients");
         }
       });
       updateHomeDate();
 
       logoutButton.addEventListener("click", async () => {
+        if (!canNavigate()) return;
         logoutButton.disabled = true;
         try {
           await postJson("auth/logout", {});
@@ -437,14 +459,14 @@
   </script>
   <script src="./master-utils.js?v=master-csv-hardening-20261121" defer></script>
   <script src="./ai-assistant.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
-  <script src="./master.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
+  <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123" defer></script>
   <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
   <script src="./document-preview.js?v=p4-simplified-document-flow-20261124" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
-  <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
-  <script src="./documents.js?v=p4-simplified-document-flow-20261124" defer></script>
-  <script src="./dashboard.js?v=p1-operator-workspace-20261124" defer></script>
+  <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
+  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2" defer></script>
+  <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2-stability2" defer></script>
 </body>
 </html>

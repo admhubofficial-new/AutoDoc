@@ -66,8 +66,8 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /function updateLivePreview\(\)/);
   assert.match(previewSource, /window\.AutoDocPrintRenderer/);
   assert.match(previewSource, /frame\.srcdoc=html/);
-  assert.match(source, /form\.addEventListener\("input",\(\)=>\{syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
-  assert.match(source, /form\.addEventListener\("change",\(\)=>\{syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
+  assert.match(source, /form\.addEventListener\("input",\(\)=>\{formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
+  assert.match(source, /form\.addEventListener\("change",\(\)=>\{formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
   assert.match(previewSource, /PRATINJAU · BELUM DITERBITKAN/);
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
@@ -501,7 +501,7 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
   assert.ok(source.includes("menuController?.count"));
   assert.match(source, /Siap diterbitkan/);
   assert.match(source, /Pilih minimal satu penerima untuk melanjutkan/);
-  assert.ok(source.includes("button.disabled=!ready"));
+  assert.ok(source.includes("button.disabled=publishing||!ready"));
   assert.ok(source.includes('status("Memuat daftar penerima dan data pendukung...",false,"loading")'));
   assert.ok(source.includes("hasAiMenuPlanDateMismatch(dateValue)"));
   assert.ok(source.includes("Penerbitan diblokir: rencana menu AI dibuat untuk"));

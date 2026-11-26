@@ -222,6 +222,19 @@ test("P0 shared design system and active navigation context work without runtime
     await page.locator('[data-home-nav="print"]').click();
     await page.locator("#docsCreateForm").waitFor();
     assert.equal((await context.textContent()).trim(), "Buat Dokumen");
+    assert.equal(await page.locator("#workspacePages .docs-overlay").count(),1);
+    assert.equal(await page.locator('[data-home-nav="realization"]').isVisible(),true);
+    await page.locator("input[name='recipient']").waitFor();
+    await page.locator("input[name='recipient']").check();
+    await page.locator("#docsMealTime").selectOption("pagi");
+    await page.locator('[data-home-nav="realization"]').click();
+    await page.locator("#docsRealizationQueue").getByRole("button",{name:"Input realisasi"}).waitFor();
+    assert.equal(await page.locator("#docsPrintBulk").isVisible(),false);
+    assert.equal((await context.textContent()).trim(),"Realisasi BAST");
+    await page.locator('[data-home-nav="print"]').click();
+    await page.locator("#docsCreateForm").waitFor();
+    assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
+    assert.equal(await page.locator("input[name='recipient']").isChecked(),true);
     assert.equal(await page.locator("style").count(), 0);
     await page.locator(".docs-close").click();
     await page.locator(".docs-overlay").waitFor({ state: "hidden" });
@@ -729,7 +742,8 @@ test("P3 responsive and keyboard audit covers the five required viewports and ca
       await page.screenshot({ path: "test-results/p2-p3/master-" + viewport.width + "x" + viewport.height + ".png", fullPage: true });
 
       await page.keyboard.press("Shift+Tab");
-      assert.ok(await page.locator(".dm-dialog").evaluate(dialog => dialog.contains(document.activeElement)), "keyboard focus must remain in Data Master dialog");
+      assert.equal(await page.locator(".dm-dialog").getAttribute("role"), "region", "Data Master is a page, not a modal");
+      await page.locator(".dm-close").focus();
       await page.keyboard.press("Escape");
       await page.locator(".dm-overlay").waitFor({ state: "hidden" });
       if (viewport.width > 720) assert.equal(await page.evaluate(() => document.activeElement?.dataset?.homeNav), "master", "Escape should restore focus to the navigation trigger");

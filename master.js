@@ -11,6 +11,7 @@ const defs={
  menus:{title:"Menu makanan",fields:[["teks_menu","Nama/menu makanan","text",1],["urutan","Urutan","number"],["aktif","Aktif","checkbox"]]}
 };
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let contextualAi=false;
 let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null,aiInitialMode="both",suspendedDocumentOverlay=null;
 async function api(path,body){const h={"apikey":KEY,"Accept":"application/json"};const r=await fetch(API+"/"+path,{method:body?"POST":"GET",headers:body?{...h,"Content-Type":"application/json"}:h,body:body?JSON.stringify(body):undefined,credentials:"include",cache:"no-store"});let d={};try{d=await r.json()}catch(_){}if(!r.ok)throw Error(d.message||"Permintaan gagal.");return d;}
 function msg(text,bad=false,state){
@@ -25,27 +26,30 @@ function msg(text,bad=false,state){
 function suspendDocumentOverlay(){
  const overlay=document.querySelector(".docs-overlay");
  if(!overlay||overlay.hidden||suspendedDocumentOverlay)return;
- suspendedDocumentOverlay={element:overlay,inert:overlay.inert,ariaHidden:overlay.getAttribute("aria-hidden")};
+ const home=document.getElementById("homePage");
+ suspendedDocumentOverlay={element:overlay,inert:overlay.inert,ariaHidden:overlay.getAttribute("aria-hidden"),home,homeInert:home?.inert};
+ if(home)home.inert=true;
  overlay.inert=true;overlay.setAttribute("aria-hidden","true");
 }
 function restoreDocumentOverlay(){
  if(!suspendedDocumentOverlay)return;
- const {element,inert,ariaHidden}=suspendedDocumentOverlay;
+ const {element,inert,ariaHidden,home,homeInert}=suspendedDocumentOverlay;
+ if(home)home.inert=homeInert;
  element.inert=inert;
  if(ariaHidden===null)element.removeAttribute("aria-hidden");else element.setAttribute("aria-hidden",ariaHidden);
  suspendedDocumentOverlay=null;
 }
-function close(){if(!modal)return;modal.hidden=true;restoreDocumentOverlay();document.body.style.overflow="";if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}
+function close(returnHome=true){if(!modal)return;const wasContextual=contextualAi;const wasOpen=!modal.hidden;modal.hidden=true;restoreDocumentOverlay();document.body.style.overflow="";if(returnHome&&wasOpen){if(!wasContextual)window.AutoDocSetHomeNav?.("home");if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}}
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function init(){
  const home=document.querySelector(".home-content");if(!home)return;
 
  modal=el("div","dm-overlay");modal.hidden=true;const dialog=el("section","dm-dialog");dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","dmTitle");
- const head=el("header","dm-head");const h=el("h2",null,"Data Master");h.id="dmTitle";const closeBtn=el("button","dm-close","Tutup");closeBtn.type="button";closeBtn.onclick=close;head.append(h,closeBtn);
+ const head=el("header","dm-head");const h=el("h2",null,"Data Master");h.id="dmTitle";const closeBtn=el("button","dm-close","Tutup");closeBtn.type="button";closeBtn.onclick=()=>close();head.append(h,closeBtn);
  const tabs=el("nav","dm-tabs");tabs.setAttribute("aria-label","Navigasi kategori Data Master");const categorySelect=el("select","dm-category-select");categorySelect.id="dmCategorySelect";categorySelect.setAttribute("aria-label","Pilih kategori Data Master");tabs.append(categorySelect);categorySelect.addEventListener("change",()=>{entity=categorySelect.value;render()});const content=el("div","dm-content");const toolbar=el("div","dm-toolbar");const title=el("h3");const actions=el("div");toolbar.append(title,actions);const intro=el("p",null,"Data master dipakai untuk dokumen baru. Dokumen yang sudah diterbitkan tetap menyimpan snapshot lama.");
  const search=el("input","dm-search");search.type="search";search.placeholder="Cari nama, lokasi, status, atau informasi…";search.setAttribute("aria-label","Cari data master");search.autocomplete="off";
  const formSlot=el("div");const table=el("div","dm-table-wrap");const message=el("p","dm-msg");
- content.append(toolbar,intro,search,formSlot,table,message);dialog.append(head,tabs,content);modal.append(dialog);document.body.append(modal);
+ content.append(toolbar,intro,search,formSlot,table,message);dialog.append(head,tabs,content);modal.append(dialog);document.getElementById("workspacePages").append(modal);
  aiController=window.AutoDocAiAssistant?.create({
   api,el,getRecipients:()=>Array.isArray(cache.recipients)?cache.recipients:[],
   onApplyMenuPlan:plan=>{
@@ -56,10 +60,10 @@ function init(){
   onMasterChanged:async()=>{const updated=await api("master/list");cache=updated.data||{};window.dispatchEvent(new Event("autodoc:data-changed"))},
   setMessage:msg
  })||null;
- modal.addEventListener("click",e=>{if(e.target===modal)close()});document.addEventListener("keydown",e=>{
-  if(modal.hidden)return;
+ modal.addEventListener("click",e=>{if(contextualAi&&e.target===modal)close()});document.addEventListener("keydown",e=>{
+  if(modal.hidden||(!contextualAi&&!modal.contains(document.activeElement)))return;
   if(e.key==="Escape"){close();return}
-  if(e.key==="Tab"){
+  if(contextualAi&&e.key==="Tab"){
    const focusable=Array.from(modal.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])")).filter(item=>!item.closest("[hidden]")&&item.getClientRects().length>0);
    if(!focusable.length)return;
    const first=focusable[0],last=focusable[focusable.length-1];
@@ -85,12 +89,22 @@ function init(){
   aiInitialMode=options?.mode==="menus"?"menus":"both";
   const requestedSearch=String(initialSearch||"");
   returnFocusEl=document.activeElement;
-  if(options?.mode==="menus")suspendDocumentOverlay();
-  modal.hidden=false;document.body.style.overflow="hidden";search.value="";render();
-  document.querySelectorAll("[data-home-nav]").forEach(button=>{
-   if(button.dataset.homeNav==="master")button.setAttribute("aria-current","page");
-   else button.removeAttribute("aria-current");
-  });
+  contextualAi=options?.mode==="menus";
+  if(contextualAi){
+   suspendDocumentOverlay();
+   document.body.append(modal);
+   modal.classList.remove("workspace-page");
+   dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");
+   document.body.style.overflow="hidden";
+  }else{
+   window.AutoDocDocuments?.close(false);
+   window.AutoDocSetHomeNav?.("master");
+   document.getElementById("workspacePages").append(modal);
+   modal.classList.add("workspace-page");
+   dialog.setAttribute("role","region");dialog.removeAttribute("aria-modal");
+   document.body.style.overflow="";
+  }
+  modal.hidden=false;search.value="";render();
   closeBtn.focus();
   load().then(()=>{search.value=requestedSearch;applySearch()});
  }

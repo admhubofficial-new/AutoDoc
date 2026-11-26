@@ -960,3 +960,20 @@
     transition: none;
   }
 }
+
+/* Workspace v2: main modules participate in the normal page layout. */
+.workspace-pages{min-width:0;width:min(1280px,calc(100% - 48px));margin:0 auto;padding:24px 0 48px}
+.workspace-pages[hidden],.home-content[hidden],body .workspace-pages .workspace-page[hidden]{display:none!important}
+body .workspace-pages .workspace-page{position:static;inset:auto;z-index:auto!important;display:block;min-width:0;width:100%;padding:0;background:transparent}
+body .workspace-pages .workspace-page .docs-dialog,body .workspace-pages .workspace-page .dm-dialog{width:100%;min-width:0;height:auto;min-height:0;max-height:none;overflow:visible;border:0;background:transparent}
+body .workspace-pages .workspace-page .docs-head,body .workspace-pages .workspace-page .dm-head{position:static;top:auto;padding:0 0 20px;background:transparent;border:0}
+body .workspace-pages .workspace-page .docs-body,body .workspace-pages .workspace-page .dm-content{width:100%;min-width:0;height:auto;overflow:visible;padding:0;margin:0}
+body .workspace-pages .workspace-page .dm-tabs{padding:12px;align-self:start;border:1px solid var(--color-border);border-radius:10px;margin-right:20px}
+.workspace-queue-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:16px}
+.workspace-queue-toolbar .docs-field{flex:1 1 180px}
+.workspace-queue-search{flex:1 1 180px;min-width:0}
+.workspace-queue-filter{flex:0 1 160px;min-width:0}
+.workspace-queue-card .docs-group-head{align-items:center;flex-wrap:wrap}
+.workspace-queue-card .docs-group-head>div{flex:1 1 180px;min-width:0}
+@media(max-width:820px){body .workspace-pages .workspace-page .dm-tabs{margin:0 0 16px}.workspace-pages{width:calc(100% - 32px);padding-top:16px}}
+@media(max-width:480px){.workspace-pages{width:calc(100% - 20px)}.workspace-queue-toolbar .docs-field,.workspace-queue-search,.workspace-queue-filter{flex:1 1 100%}.workspace-queue-toolbar>button{width:100%}}

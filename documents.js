@@ -10,6 +10,9 @@ function nowInJakarta(){
  return values.year+"-"+values.month+"-"+values.day;
 }
 const today=()=>nowInJakarta();
+let realizationMode=false, queueRequest=0, historyRequest=0, masterRequest=0, publishing=false, formDirty=false;
+function isBusy(){return publishing||!!modal?.querySelector(".docs-realization[data-state='loading']")}
+function notifyBusy(){status("Penyimpanan sedang berlangsung. Tunggu konfirmasi server sebelum berpindah halaman.",false,"loading")}
 let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, activeAiMenuPlan=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
 
 async function api(route,body){
@@ -38,11 +41,15 @@ function status(message,bad,state){
   el.dataset.state=state||(bad?"error":message?"success":"");
   el.classList.toggle("error",!!bad);
  }
-function close(){
+function close(returnHome=true){
  if(!modal)return;
+ if(returnHome&&isBusy()){notifyBusy();return}
+ queueRequest++;historyRequest++;masterRequest++;
  modal.hidden=true;modal.style.display="none";modal.setAttribute("aria-hidden","true");
- document.body.style.overflow="";
- if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();
+ if(returnHome){
+  window.AutoDocSetHomeNav?.("home");
+  if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();
+ }
 }
 function show(loadFormData=true){
  if(!modal)build()
@@ -50,36 +57,28 @@ function show(loadFormData=true){
  modal.hidden=false;
  modal.style.display="flex";
  modal.style.visibility="visible";
- modal.style.zIndex="2147483647";
  modal.setAttribute("aria-hidden","false");
- document.body.style.overflow="hidden";
  $(".docs-close",modal)?.focus();
- if(loadFormData)loadMaster().catch(e=>status(e.message,true));
+ if(loadFormData&&!masterLoaded)loadMaster().catch(e=>{if(!modal.hidden&&tab==="create")status(e.message,true)});
+ else if(loadFormData)syncPreflightSummary();
 }
 function build(){
  if(modal)return;
- modal=node("div","docs-overlay");modal.hidden=true;
+ modal=node("div","docs-overlay workspace-page");modal.hidden=true;
  modal.id="docsModal";modal.setAttribute("aria-hidden","true");
- const dialog=node("section","docs-dialog");dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","docsTitle");
+ const dialog=node("section","docs-dialog");dialog.setAttribute("role","region");dialog.setAttribute("aria-labelledby","docsTitle");
  const head=node("header","docs-head");
  const title=node("div");title.innerHTML="<h2 id='docsTitle'>Surat Jalan &amp; BAST MBG</h2><p>Buat dokumen distribusi, cetak, dan catat realisasi penerimaan.</p>";
- const closeBtn=node("button","docs-close","×");closeBtn.type="button";closeBtn.setAttribute("aria-label","Tutup");closeBtn.onclick=close;head.append(title,closeBtn);
+ const closeBtn=node("button","docs-close","×");closeBtn.type="button";closeBtn.setAttribute("aria-label","Kembali ke Beranda");closeBtn.onclick=()=>close();head.append(title,closeBtn);
  const tabs=node("nav","docs-tabs");
  tabs.hidden=true;
  const body=node("div","docs-body");
  body.innerHTML="<div class='docs-view-create'></div><div class='docs-view-history' hidden></div><p class='docs-msg' role='status' aria-live='polite'></p>";
- dialog.append(head,tabs,body);modal.append(dialog);document.body.append(modal);
- modal.addEventListener("click",e=>{if(e.target===modal)close()});
+ dialog.append(head,tabs,body);modal.append(dialog);document.getElementById("workspacePages").append(modal);
+ // Main workspace is not a dismissible backdrop.
  document.addEventListener("keydown",e=>{
-  if(modal.hidden)return;
+  if(modal.hidden||modal.inert||!modal.contains(document.activeElement))return;
   if(e.key==="Escape"){close();return}
-  if(e.key==="Tab"){
-   const focusable=Array.from(modal.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])")).filter(el=>!el.closest("[hidden]")&&el.getClientRects().length>0);
-   if(!focusable.length)return;
-   const first=focusable[0],last=focusable[focusable.length-1];
-   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
-   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
-  }
  });
  drawTabs();renderCreate();
 }
@@ -129,11 +128,13 @@ async function rememberCreationInputs(body){
  for(const value of allMenus)await rememberMasterValue("menus","teks_menu",value);
 }
 async function loadMaster(){
+ const request=++masterRequest;
  status("Memuat daftar penerima dan data pendukung...",false,"loading");
  const [masterResult,recipientResult]=await Promise.allSettled([
   api("master/list?include_recipients=false"),
   api("master/recipients")
  ]);
+ if(request!==masterRequest||modal.hidden)return;
  if(recipientResult.status!=="fulfilled"){
   const reason=recipientResult.reason;
   throw new Error("Daftar penerima gagal dimuat: "+(reason&&reason.message?reason.message:"kesalahan jaringan")+". Periksa sesi login dan endpoint master/recipients.");
@@ -143,7 +144,9 @@ async function loadMaster(){
  master=masterResult.status==="fulfilled"&&masterResult.value&&masterResult.value.data?masterResult.value.data:{};
  master.recipients=recipients;
  masterLoaded=true;
+ const draft=formDirty?captureDraft():null;
  renderCreate();
+ if(draft)restoreDraft(draft);
  const activeCount=recipients.length;
  const warning=masterResult.status==="rejected"?" Data pendukung (menu/petugas/kendaraan/pengemudi) gagal dimuat; daftar penerima tetap tersedia.":"";
  status(activeCount+" penerima aktif berhasil dimuat dari "+recipients.length+" data."+warning,masterResult.status==="rejected",masterResult.status==="rejected"?"error":activeCount?"success":"empty");
@@ -222,7 +225,9 @@ function applyAiMenuPlan(plan){
  const used=new Set();
  normalized.forEach(group=>group.recipient_ids.forEach(id=>{if(used.has(id))throw new Error("Satu penerima tidak boleh berada pada dua kelompok menu.");used.add(id)}));
  if(!used.size)throw new Error("Pilih minimal satu penerima pada kelompok menu AI.");
- activeAiMenuPlan={tanggal:plan.tanggal,groups:normalized};
+ activeAiMenuPlan={tanggal:plan.tanggal,groups:normalized};formDirty=true;
+ realizationMode=false;queueRequest++;
+ window.AutoDocSetHomeNav?.("print");
  show(false);tab="create";drawTabs();
  $("#docsTitle",modal).textContent="Buat Dokumen";
  $(".docs-head p",modal).textContent="Menu sudah dikelompokkan oleh AI. Periksa penerima dan data sebelum menerbitkan.";
@@ -270,6 +275,17 @@ async function copyLastMenu(){
   status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+(menuController?.count()||items.length)+" komponen).");previewController?.updateLivePreview();
  }catch(error){status(error.message,true)}
  finally{button.disabled=false;button.textContent=oldText}
+}
+function captureDraft(){
+ const ids=["docsDate","docsMealTime","docsTime","docsStaff","docsDriver","docsVehicle","docsKindSj","docsKindBast","docsIncludeOrganoleptic"];
+ return {fields:ids.map(id=>{const input=$("#"+id,modal);return [id,input?.type==="checkbox"?input.checked:input?.value]}),menu:readMenuComponents(),recipients:Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(input=>input.value)};
+}
+function restoreDraft(draft){
+ for(const [id,value] of draft.fields){const input=$("#"+id,modal);if(!input||value===undefined)continue;if(input.type==="checkbox")input.checked=value;else input.value=value}
+ menuController?.set(draft.menu);renderMenuComponents();
+ const selected=new Set(draft.recipients);
+ modal.querySelectorAll("input[name='recipient']").forEach(input=>{input.checked=selected.has(input.value)});
+ updateSelectedCount();renderAiMenuPlanNotice();
 }
 function renderCreate(){
  const target=$(".docs-view-create",modal);
@@ -348,8 +364,8 @@ function renderCreate(){
    }
   }
  });
- form.addEventListener("input",()=>{syncPreflightSummary();previewController?.updateLivePreview()});
- form.addEventListener("change",()=>{syncPreflightSummary();previewController?.updateLivePreview()});
+ form.addEventListener("input",()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview()});
+ form.addEventListener("change",()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview()});
  form.addEventListener("submit",createDocs);
  syncPreflightSummary();
  previewController?.updateLivePreview();
@@ -431,7 +447,7 @@ function syncPreflightSummary(){
  const countLabel=$("#docsSubmitCount",modal);
  if(countLabel)countLabel.textContent=selectedIds.size+" penerima · "+totalPortions.toLocaleString("id-ID")+" porsi";
  const button=$("#docsCreateButton",modal);
- if(button)button.disabled=!ready;
+ if(button)button.disabled=publishing||!ready;
 }
 
 function updateSelectedCount(){
@@ -441,7 +457,7 @@ function updateSelectedCount(){
  previewController?.updateLivePreview();
 }
 async function createDocs(event){
- event.preventDefault();status("");syncPreflightSummary();
+ event.preventDefault();if(publishing)return;status("");syncPreflightSummary();
  const dateValue=$("#docsDate",modal)?.value||"";
  if(hasAiMenuPlanDateMismatch(dateValue)){
   status("Penerbitan diblokir: rencana menu AI dibuat untuk "+activeAiMenuPlan.tanggal+". Samakan tanggal distribusi atau lepaskan rencana menu AI.",true);
@@ -473,6 +489,7 @@ async function createDocs(event){
   recipient_ids:selected
  };
  if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);$("#docsDate",modal)?.focus();return}
+ publishing=true;
  const button=$("#docsCreateButton",modal);button.disabled=true;button.textContent="Menerbitkan dokumen...";
  status("Menerbitkan dokumen dan mengonfirmasi hasil dari server...",false,"loading");
  try{
@@ -490,16 +507,20 @@ async function createDocs(event){
   $("#docsCreateResult",modal).innerHTML="";$("#docsCreateResult",modal).append(summary);
   status((result.message||"Selesai.")+masterSaveWarning,failed>0||!!masterSaveWarning,failed>0||masterSaveWarning?"error":"success");
   await loadHistory(body.tanggal);
+  if(!failed){formDirty=false;activeAiMenuPlan=null;renderCreate()}
   tab="history";drawTabs();
   $(".docs-view-create",modal).hidden=true;$(".docs-view-history",modal).hidden=false;
  }catch(e){status(e.message,true)}
- finally{button.textContent="Terbitkan dokumen";syncPreflightSummary()}
+ finally{publishing=false;button.textContent="Terbitkan dokumen";syncPreflightSummary()}
 }
 async function loadDistributions(initialOffset=0){
+ historyRequest++;
  if(!archiveController)throw new Error("Modul arsip belum siap.");
  return archiveController.loadDistributions(initialOffset);
 }
 async function loadHistory(date){
+ if(realizationMode)return loadRealizationQueue(date);
+ const request=++historyRequest;
  const target=$(".docs-view-history",modal);if(!target)return;
  const chosen=date||($("#docsHistoryDate",modal)?.value)||today();
   target.innerHTML="<section class='docs-distribution-detail' aria-labelledby='docsDetailTitle'><header class='docs-detail-context'><div><p class='docs-detail-breadcrumb'>Arsip distribusi / Detail distribusi</p><h3 id='docsDetailTitle'>Detail Distribusi</h3><p class='docs-note'>Periksa dokumen pada tanggal ini. Aksi cetak tersedia terpisah dari pengelolaan arsip.</p></div><button type='button' class='docs-btn' id='docsBackToDays'>Kembali ke daftar distribusi</button></header><div class='docs-history-top'><div class='docs-field'><label for='docsHistoryDate'>Tanggal distribusi</label><input id='docsHistoryDate' type='date' value='"+esc(chosen)+"'></div><button type='button' class='docs-btn primary' id='docsLoadHistory'>Tampilkan</button></div><section class='docs-print-area' aria-labelledby='docsPrintAreaTitle'><div><h4 id='docsPrintAreaTitle'>Aksi cetak</h4><p class='docs-note'>Cetak ulang satu atau beberapa dokumen pada distribusi ini.</p></div><div class='docs-print-bulk' id='docsPrintBulk'><span class='docs-print-bulk-label'>Cetak massal</span><button type='button' class='docs-btn' id='docsPrintSj'>Semua Surat Jalan</button><button type='button' class='docs-btn' id='docsPrintBast'>Semua BAST</button><button type='button' class='docs-btn' id='docsPrintOrganoleptic'>Semua Uji Organoleptik</button></div><div class='docs-print-selection' id='docsPrintSelection'><label><input type='checkbox' id='docsPrintSelectAll'> Pilih semua dokumen</label><span id='docsPrintSelectionCount'>0 dipilih</span><button type='button' class='docs-btn primary' id='docsPrintSelected' disabled>Cetak dipilih</button></div><div id='docsPrintSelectedSlot'></div></section><div id='docsDistributionMeta' class='docs-note'></div><div class='docs-list' id='docsList'></div></section>";
@@ -529,6 +550,7 @@ async function loadHistory(date){
  status("Memuat riwayat...",false,"loading");
  try{
   const result=await api("docs/list?tanggal="+encodeURIComponent(chosen));
+  if(request!==historyRequest||realizationMode||modal.hidden)return;
   currentDistribution=result.distribution;currentDocs=result.documents||[];
   const list=$("#docsList",target);list.innerHTML="";
   const dist=currentDistribution||{};
@@ -561,7 +583,66 @@ async function loadHistory(date){
   for(const group of grouped.values())list.append(renderDocumentGroup(group,selectedPrintIds,updatePrintSelection));
   updatePrintSelection();
   status(currentDocs.length+" dokumen · "+grouped.size+" penerima.");
- }catch(e){status(e.message,true)}
+ }catch(e){if(request===historyRequest&&!modal.hidden)status(e.message,true)}
+}
+async function loadRealizationQueue(date){
+ const target=$(".docs-view-history",modal);
+ const chosen=date||today();
+ historyRequest++;
+ const request=++queueRequest;
+ target.replaceChildren();
+ const toolbar=node("div","workspace-queue-toolbar");
+ const field=node("div","docs-field");
+ const label=node("label",null,"Tanggal distribusi");label.htmlFor="docsHistoryDate";
+ const dateInput=node("input");dateInput.type="date";dateInput.id="docsHistoryDate";dateInput.value=chosen;
+ field.append(label,dateInput);
+ const load=node("button","docs-btn primary","Tampilkan");load.type="button";
+ load.onclick=()=>{if(isBusy()){notifyBusy();return}if(target.querySelector(".docs-realization")&&!window.confirm("Tutup formulir realisasi yang belum disimpan?"))return;loadRealizationQueue(dateInput.value)};
+ const search=node("input","workspace-queue-search");search.type="search";search.placeholder="Cari penerima…";search.setAttribute("aria-label","Cari penerima BAST");
+ const filter=node("select","workspace-queue-filter");filter.setAttribute("aria-label","Status realisasi");
+ for(const [value,label] of [["pending","Belum diisi"],["done","Selesai"],["all","Semua"]]){
+  const option=node("option",null,label);option.value=value;filter.append(option);
+ }
+ toolbar.append(field,load,search,filter);
+ const totals=node("p","workspace-queue-totals");totals.setAttribute("aria-live","polite");
+ const list=node("div","docs-list");list.id="docsRealizationQueue";
+ target.append(toolbar,totals,list);
+ status("Memuat BAST…",false,"loading");
+ try{
+  const result=await api("docs/list?tanggal="+encodeURIComponent(chosen));
+  if(request!==queueRequest||!realizationMode||modal.hidden)return;
+  const docs=(result.documents||[]).filter(doc=>doc.jenis==="BAST"&&doc.status!=="batal");
+  const pending=docs.filter(doc=>!doc.realisasi).length;
+  totals.textContent=docs.length+" BAST · "+(docs.length-pending)+" selesai · "+pending+" belum diisi";
+  function render(){
+   list.replaceChildren();
+   const query=search.value.trim().toLocaleLowerCase("id-ID");
+   const rows=docs.filter(doc=>{
+    const name=String(doc.snapshot_json?.penerima?.nama||"").toLocaleLowerCase("id-ID");
+    return (filter.value==="all"||(filter.value==="done"?!!doc.realisasi:!doc.realisasi))&&name.includes(query);
+   });
+   if(!rows.length)list.append(node("div","docs-empty",docs.length?"Tidak ada BAST sesuai filter.":"Belum ada BAST pada tanggal ini. Pilih tanggal lain atau buat dokumen."));
+   for(const doc of rows){
+    const recipient=doc.snapshot_json?.penerima||{};
+    const card=node("article","docs-group-card workspace-queue-card");
+    const head=node("div","docs-group-head");
+    const info=node("div");info.append(node("h4",null,recipient.nama||"Penerima"),node("p",null,String(doc.nomor_lengkap||"")+" · "+Number(recipient.total_porsi||0).toLocaleString("id-ID")+" porsi"));
+    const action=node("button","docs-btn "+(doc.realisasi?"":"primary"),doc.realisasi?"Lihat/Ubah realisasi":"Input realisasi");action.type="button";action.onclick=()=>showRealization(card,doc);
+    const state=node("span","docs-status "+(doc.realisasi?"selesai":""),doc.realisasi?"Selesai":"Belum diisi");
+    head.append(info,state,action);card.append(head);list.append(card);
+   }
+  }
+  let lastSearch="",lastFilter=filter.value;
+  function changeFilter(){
+   if(isBusy()||(list.querySelector(".docs-realization")&&!window.confirm("Tutup formulir realisasi yang belum disimpan?"))){search.value=lastSearch;filter.value=lastFilter;return}
+   lastSearch=search.value;lastFilter=filter.value;render();
+  }
+  search.addEventListener("input",()=>{if(!list.querySelector(".docs-realization"))changeFilter()});search.addEventListener("change",changeFilter);filter.addEventListener("change",changeFilter);render();status("");
+ }catch(error){
+  if(request!==queueRequest||!realizationMode||modal.hidden)return;
+  list.append(node("div","docs-empty","Daftar BAST gagal dimuat. Pilih Tampilkan untuk mencoba lagi."));
+  status(error.message,true);
+ }
 }
 function renderDocumentGroup(group,selectedPrintIds,updatePrintSelection){
  const recipient=group.recipient||{};
@@ -731,18 +812,22 @@ function printOrganolepticForms(recipients,menuByRecipient={}){
  setTimeout(()=>{if(!win.closed){win.focus();win.print()}},250);
 }
 function showRealization(card,doc){
+ if(isBusy()){notifyBusy();return}
+ if(modal.querySelector(".docs-realization")&&!window.confirm("Tutup formulir realisasi yang belum disimpan?"))return;
  if(!realizationController)throw new Error("Modul realisasi BAST belum siap.");
  return realizationController.showRealization(card,doc);
 }
 
 function init(){
  build();
+ window.addEventListener("autodoc:data-changed",()=>{masterLoaded=false});
  menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:syncPreflightSummary});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
  previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,readMenuComponents,readMenuComponentsForRecipient:menuItemsForRecipient,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
  window.AutoDocDocuments=Object.freeze({
   open(){
+   realizationMode=false;queueRequest++;historyRequest++;
    show();
    tab="create";drawTabs();
    $("#docsTitle",modal).textContent="Buat Dokumen";
@@ -751,8 +836,20 @@ function init(){
    $(".docs-view-history",modal).hidden=true;
   },
   close,
+  isBusy,notifyBusy,
+  resetSession(){close(false);masterLoaded=false;master={};formDirty=false;activeAiMenuPlan=null;pendingOrganolepticPrint=null;currentDocs=[];currentDistribution=null;renderCreate();$(".docs-view-history",modal).replaceChildren()},
   applyAiMenuPlan,
+  openRealization(date){
+   realizationMode=true;masterRequest++;
+   show(false);tab="history";drawTabs();
+   $("#docsTitle",modal).textContent="Realisasi BAST";
+   $(".docs-head p",modal).textContent="Pilih tanggal dan selesaikan pencatatan penerimaan makanan.";
+   $(".docs-view-create",modal).hidden=true;
+   $(".docs-view-history",modal).hidden=false;
+   loadRealizationQueue(date);
+  },
   openArchive(date){
+   realizationMode=false;queueRequest++;masterRequest++;
    show(false);
    tab="history";drawTabs();
    $("#docsTitle",modal).textContent="Arsip Dokumen";
