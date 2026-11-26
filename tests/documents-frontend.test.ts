@@ -273,8 +273,8 @@ test("organoleptic archive and creation printing use recipient-specific snapshot
 
 test("P4 creation form groups the operator flow and keeps readiness in one compact status", () => {
   const steps = [
-    "<h4>Jadwal distribusi</h4>",
-    "<h4>Penerima</h4>",
+    "for='docsDate'",
+    "class='docs-recipient-subsection'",
     "<summary>Menu harian</summary>",
     "<span>Rincian pengiriman</span>"
   ];

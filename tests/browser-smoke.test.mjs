@@ -205,7 +205,7 @@ test("P0 shared design system and active navigation context work without runtime
     assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
     assert.equal(await page.locator("input[name='recipient']").isChecked(),true);
     assert.equal(await page.locator("style").count(), 0);
-    await page.locator(".docs-close").click();
+    await page.locator('[data-home-nav="home"]').click();
     await page.locator(".docs-overlay").waitFor({ state: "hidden" });
     await page.locator('[data-home-nav="master"]').click();
     await page.locator(".dm-overlay:not([hidden])").waitFor();
@@ -242,12 +242,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
 
     await page.locator('[data-dashboard-action="create"]').click();
     await page.locator("#docsCreateForm").waitFor();
-    const headings = await page.locator("#docsCreateForm .docs-form-section-head h4").allTextContents();
-    assert.deepEqual(headings, [
-      "Jadwal distribusi",
-      "Penerima",
-      "Pengiriman"
-    ]);
+    assert.equal(await page.locator("#docsCreateForm .docs-form-section-head").count(), 0);
     assert.equal(await page.locator("#docsPreviewDisclosure").isVisible(), true);
     const previewLayout = await page.evaluate(() => {
       const layout = document.querySelector(".docs-create-layout");
