@@ -193,11 +193,23 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
 
   const mobile = await openApp({ viewport: { width: 390, height: 844 } });
   try {
-    await mobile.page.locator("#homeMenuToggle").click();
+    await mobile.page.locator("#homeBottomNav").waitFor();
+    await mobile.page.locator('[data-mobile-nav="print"]').click();
+    await mobile.page.locator("#docsCreateForm").waitFor();
+    await mobile.page.locator("input[name='recipient']").check();
+    assert.equal(await mobile.page.locator("#docsSummaryRecipients").textContent(),"1");
+    assert.equal(await mobile.page.locator("#docsSummaryPortions").textContent(),"16");
+    assert.equal(await mobile.page.locator("#docsSummaryDocuments").textContent(),"2");
+    await mobile.page.locator(".docs-output-options summary").click();
+    await mobile.page.locator("#docsKindBast").uncheck();
+    assert.equal(await mobile.page.locator("#docsSummaryDocuments").textContent(),"1");
+    assert.match(await mobile.page.locator("#docsOutputLabel").textContent(),/Surat Jalan/);
+    await mobile.page.locator('[data-mobile-nav="more"]').click();
     await mobile.page.locator("#homePage.mobile-nav-open").waitFor();
     await mobile.page.locator('[data-home-nav="archive"]').click();
     await mobile.page.locator("#homePage:not(.mobile-nav-open)").waitFor();
     await mobile.page.locator("#docsDaysList").waitFor();
+    assert.equal(await mobile.page.locator('[data-mobile-nav="archive"]').getAttribute("aria-current"),"page");
     assert.deepEqual(mobile.errors, []);
   } finally {
     await mobile.context.close();

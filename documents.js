@@ -271,7 +271,7 @@ async function copyLastMenu(){
    : [];
   if(!items.length&&String(distribution.menu||"").trim())items.push(String(distribution.menu).trim());
   if(!items.length){status("Distribusi terakhir belum memiliki komponen menu.",true);return}
-  menuController?.set(items.slice(0,8));renderMenuComponents();
+  formDirty=true;menuController?.set(items.slice(0,8));renderMenuComponents();
   status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+(menuController?.count()||items.length)+" komponen).");previewController?.updateLivePreview();
  }catch(error){status(error.message,true)}
  finally{button.disabled=false;button.textContent=oldText}
@@ -300,10 +300,13 @@ function renderCreate(){
   "<section class='docs-create-form-panel'>"+
    ""+
    "<form id='docsCreateForm' autocomplete='off'>"+
+    "<div class='docs-work-summary' aria-label='Ringkasan persiapan'><div><small>Tujuan dipilih</small><strong id='docsSummaryRecipients'>0</strong></div><div><small>Total porsi</small><strong id='docsSummaryPortions'>0</strong></div><div><small>SJ / BAST</small><strong id='docsSummaryDocuments'>0</strong></div></div>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Distribusi</h4></div></div>"+
-     "<fieldset class='docs-kind-group'><legend>Jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label></fieldset>"+
+
      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div><div class='docs-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
-     "<label class='docs-organoleptic-option'><input id='docsIncludeOrganoleptic' type='checkbox'><span><strong>Tambahkan Formulir Uji Organoleptik</strong><small>Satu lembar A4 untuk setiap penerima.</small></span></label>"+
+     "<details class='docs-output-options'><summary><span>Jenis dokumen</span><strong id='docsOutputLabel'>Surat Jalan + BAST</strong></summary>"+
+     "<fieldset class='docs-kind-group'><legend>Pilih jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label></fieldset>"+
+     "<label class='docs-organoleptic-option'><input id='docsIncludeOrganoleptic' type='checkbox'><span><strong>Tambahkan Formulir Uji Organoleptik</strong><small>Satu lembar A4 untuk setiap penerima.</small></span></label></details>"+
     "</section>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Menu &amp; penerima</h4></div></div>"+
      "<div class='docs-subsection-head'><div><strong>Menu distribusi</strong></div><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div>"+
@@ -446,11 +449,16 @@ function syncPreflightSummary(){
  if(needsVerification)target.textContent+=" Periksa kembali "+needsVerification+" penerima bertanda perlu verifikasi.";
  const countLabel=$("#docsSubmitCount",modal);
  if(countLabel)countLabel.textContent=selectedIds.size+" penerima · "+totalPortions.toLocaleString("id-ID")+" porsi";
+ const counts={docsSummaryRecipients:selectedIds.size,docsSummaryPortions:totalPortions,docsSummaryDocuments:selectedIds.size*kinds.length};
+ for(const [id,value] of Object.entries(counts)){const element=$("#"+id,modal);if(element)element.textContent=value.toLocaleString("id-ID")}
+ const outputLabel=$("#docsOutputLabel",modal);
+ if(outputLabel)outputLabel.textContent=(kinds.map(kind=>kind==="SJ"?"Surat Jalan":"BAST").join(" + ")||"Belum dipilih")+($("#docsIncludeOrganoleptic",modal)?.checked?" + Uji Organoleptik":"");
  const button=$("#docsCreateButton",modal);
  if(button)button.disabled=publishing||!ready;
 }
 
 function updateSelectedCount(){
+ formDirty=true;
  const n=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).length;
  const el=$("#docsSelectedCount",modal);if(el)el.textContent="("+n+" dipilih)";
  syncPreflightSummary();
@@ -830,8 +838,8 @@ function init(){
    realizationMode=false;queueRequest++;historyRequest++;
    show();
    tab="create";drawTabs();
-   $("#docsTitle",modal).textContent="Buat Dokumen";
-   $(".docs-head p",modal).textContent="Terbitkan Surat Jalan dan/atau BAST serta siapkan formulir uji organoleptik.";
+   $("#docsTitle",modal).textContent="Distribusi harian";
+   $(".docs-head p",modal).textContent="Lengkapi menu dan penerima, periksa ringkasan, lalu terbitkan dokumen.";
    $(".docs-view-create",modal).hidden=false;
    $(".docs-view-history",modal).hidden=true;
   },

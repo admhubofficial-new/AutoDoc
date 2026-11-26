@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2">
-  <link rel="stylesheet" href="./theme.css?v=p2-p3-admin-visual-audit-20261124-workspace-v2">
+  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2-phase2">
+  <link rel="stylesheet" href="./theme.css?v=p2-p3-admin-visual-audit-20261124-workspace-v2-phase2">
 </head>
 <body class="auth-pending">
   <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
@@ -142,13 +142,20 @@
           <div>
             <span class="home-eyebrow">SPPG DARMARAJA 01</span>
             <h1>Pusat pekerjaan operator</h1>
-            <p>Mulai dokumen distribusi, tindak lanjuti BAST, dan buka arsip terakhir.</p>
+            <p>Siapkan distribusi dan selesaikan administrasi penerimaan dalam satu ruang kerja.</p>
           </div>
         </div>
         <section id="opsDashboard" class="home-dashboard" aria-label="Ringkasan operasional"></section>
       </section>
       <div id="workspacePages" class="workspace-pages" hidden></div>
     </div>
+    <nav class="home-bottom-nav" id="homeBottomNav" aria-label="Navigasi cepat mobile">
+      <button type="button" data-mobile-nav="home" aria-label="Beranda" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 10v11h14V10M9 21v-7h6v7"/></svg><span>Beranda</span></button>
+      <button type="button" data-mobile-nav="print" aria-label="Buat Dokumen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg><span>Distribusi</span></button>
+      <button type="button" data-mobile-nav="realization" aria-label="Realisasi BAST"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 13l3 3 5-6"/></svg><span>Realisasi</span></button>
+      <button type="button" data-mobile-nav="archive" aria-label="Arsip"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Arsip</span></button>
+      <button type="button" data-mobile-nav="more" aria-label="Menu lainnya" aria-controls="homeSidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Lainnya</span></button>
+    </nav>
   </main>
 
   <script src="./config.js?v=shared-config-20261121"></script>
@@ -318,12 +325,15 @@
       });
 
       const homeNav = document.getElementById("homeNav");
+      const bottomNav = document.getElementById("homeBottomNav");
+      const moreNav = bottomNav.querySelector('[data-mobile-nav="more"]');
       const menuToggle = document.getElementById("homeMenuToggle");
       const homeToday = document.getElementById("homeToday");
       const sidebarBackdrop = document.getElementById("homeSidebarBackdrop");
       const isMobileSidebar = () => window.matchMedia("(max-width: 720px)").matches;
       function closeHomeNav() {
         homePage.classList.remove("mobile-nav-open");
+        moreNav.setAttribute("aria-expanded","false");
         const expanded = isMobileSidebar() ? false : !homePage.classList.contains("sidebar-collapsed");
         menuToggle.setAttribute("aria-expanded", String(expanded));
         menuToggle.setAttribute("aria-label", expanded ? "Ciutkan sidebar" : "Buka sidebar");
@@ -333,6 +343,7 @@
         if (isMobileSidebar()) {
           const open = !homePage.classList.contains("mobile-nav-open");
           homePage.classList.toggle("mobile-nav-open", open);
+          moreNav.setAttribute("aria-expanded",String(open));
           menuToggle.setAttribute("aria-expanded", String(open));
           menuToggle.setAttribute("aria-label", open ? "Tutup sidebar" : "Buka sidebar");
           menuToggle.title = open ? "Tutup sidebar" : "Buka sidebar";
@@ -356,6 +367,11 @@
         const label = labels[active] || labels.home;
         homeNav.querySelectorAll("button").forEach(item => {
           if (item.dataset.homeNav === active) item.setAttribute("aria-current", "page");
+          else item.removeAttribute("aria-current");
+        });
+        bottomNav.querySelectorAll("[data-mobile-nav]").forEach(item => {
+          const key=item.dataset.mobileNav;
+          if(key===active||(key==="more"&&active==="master")) item.setAttribute("aria-current","page");
           else item.removeAttribute("aria-current");
         });
         const context = document.querySelector(".home-pagebar-text");
@@ -417,6 +433,12 @@
           window.AutoDocMaster?.open("recipients");
         }
       });
+      bottomNav.addEventListener("click", (event) => {
+        const item=event.target.closest("[data-mobile-nav]");
+        if(!item||!canNavigate())return;
+        if(item.dataset.mobileNav==="more"){toggleSidebar();if(homePage.classList.contains("mobile-nav-open"))menuToggle.focus();return}
+        homeNav.querySelector('[data-home-nav="'+item.dataset.mobileNav+'"]')?.click();
+      });
       updateHomeDate();
 
       logoutButton.addEventListener("click", async () => {
@@ -466,7 +488,7 @@
   <script src="./document-preview.js?v=p4-simplified-document-flow-20261124" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
   <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
-  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2" defer></script>
-  <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2-stability2" defer></script>
+  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2" defer></script>
+  <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2-stability2-phase2" defer></script>
 </body>
 </html>

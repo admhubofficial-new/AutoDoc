@@ -200,9 +200,19 @@
       date,
       el("p", "home-operator-description", "Siapkan distribusi, terbitkan dokumen, lalu selesaikan realisasi penerimaan.")
     );
-    const createButton = action("＋ Buat Dokumen", true, () => window.AutoDocOpenDocs?.("create"), "create");
+    const todayRow=rows.find(row=>row.tanggal===activeDate);
+    const todayStatus=el("p","home-today-status",todayRow
+      ? number(todayRow.documents_count)+" dokumen tercatat hari ini · "+number(todayRow.bast_pending)+" BAST menunggu realisasi"
+      : "Distribusi hari ini belum terlihat dalam daftar terbaru.");
+    dateBlock.append(todayStatus);
+    const createButton = todayRow
+      ? action("Buka distribusi hari ini",true,()=>window.AutoDocOpenArchive?.(activeDate),"today")
+      : action("＋ Buat Dokumen", true, () => window.AutoDocOpenDocs?.("create"), "create");
     createButton.classList.add("home-create-cta");
-    hero.append(dateBlock, createButton);
+    const heroActions=el("div","home-hero-actions");
+    heroActions.append(createButton);
+    if(todayRow)heroActions.append(action("Buat / lengkapi dokumen",false,()=>window.AutoDocOpenDocs?.("create"),"create"));
+    hero.append(dateBlock, heroActions);
     host.append(hero);
 
     const workGrid = el("div", "home-work-grid");
@@ -218,6 +228,19 @@
         : "Tidak ada BAST yang perlu ditindaklanjuti saat ini."),
       action("Buka antrean realisasi", false, () => window.AutoDocOpenRealization?.(rows.find(row=>Number(row.bast_pending)>0)?.tanggal))
     );
+    const pendingDates=rows.filter(row=>Number(row.bast_pending)>0);
+    if(pendingDates.length){
+      const dates=el("div","home-pending-dates");
+      dates.append(el("p","home-card-description","Tanggal dengan BAST tertunda (5 distribusi terbaru)"));
+      pendingDates.forEach(row=>{
+        const line=el("div","home-pending-date-row");
+        line.append(el("span",null,dateLabel(row.tanggal)+" · "+number(row.bast_pending)+" BAST"),action("Isi",false,()=>window.AutoDocOpenRealization?.(row.tanggal)));
+        dates.append(line);
+      });
+      bast.append(dates);
+    }
+    const recentPending=pendingDates.reduce((sum,row)=>sum+Number(row.bast_pending),0);
+    if(pendingBast>recentPending)bast.append(el("p","home-card-description","Ada "+number(pendingBast-recentPending)+" BAST tertunda di luar lima distribusi terbaru. Pilih tanggal melalui Realisasi BAST atau cari di Arsip."));
     workGrid.append(bast, renderMasterCheck(counts));
     host.append(workGrid, renderRecentArchive(rows));
   }
