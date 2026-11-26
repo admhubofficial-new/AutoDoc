@@ -91,6 +91,8 @@ function updateLivePreview(){
  if(previewStatus)previewStatus.textContent=!recipients.length?"":numberError
   ?"Nomor belum bisa dimuat. Ubah tanggal atau muat ulang untuk mencoba lagi."
   :waiting?"Memuat nomor surat…":"Nomor baru mengikuti urutan saat diterbitkan.";
+ const pageCount=$("#docsPreviewPageCount",getModal());
+ if(pageCount)pageCount.textContent=recipients.length?"Halaman 1 dari "+recipients.length:"";
  pages.replaceChildren();
  const makeFrame=(title)=>{
   const paper=document.createElement("div");
@@ -142,6 +144,13 @@ function updateLivePreview(){
 
 
 
+ window.addEventListener("scroll",()=>{
+  const count=$("#docsPreviewPageCount",getModal());
+  const pages=Array.from(getModal()?.querySelectorAll("#docsPreviewPages .docs-preview-paper")||[]);
+  if(!count||!count.getClientRects().length||!pages[0]?.getClientRects().length)return;
+  const index=pages.findIndex(page=>page.getBoundingClientRect().bottom>innerHeight*.35);
+  count.textContent="Halaman "+(index<0?pages.length:index+1)+" dari "+pages.length;
+ },{passive:true,capture:true});
  return Object.freeze({updateLivePreview,fitPreviewFrame});
 }
 window.AutoDocDocumentPreview=Object.freeze({create});

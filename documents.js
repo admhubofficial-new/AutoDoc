@@ -231,10 +231,10 @@ function renderCreateForm(){
      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div><div class='docs-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
     "</section>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Penerima</h4></div></div>"+
-     "<details class='docs-recipient-subsection'"+(recipients.length<=3?" open":"")+"><summary class='docs-subsection-head'><div><strong>Tujuan <span id='docsSelectedCount' aria-live='polite'>(0 dipilih)</span></strong></div><span id='docsRecipientResultCount' class='docs-recipient-result-count' aria-live='polite'>"+recipients.length+" tujuan</span></summary>"+
+     "<details class='docs-recipient-subsection'"+(recipients.length<=3?" open":"")+"><summary class='docs-subsection-head'><div><strong><span id='docsSelectedCount' aria-live='polite'>0 tujuan dipilih</span></strong></div><span class='docs-edit-recipients'>Ubah</span><span id='docsRecipientResultCount' class='docs-recipient-result-count' aria-live='polite'>"+recipients.length+" tujuan</span></summary>"+
       "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari nama penerima...' aria-label='Cari penerima' autocomplete='off'><select id='docsRecipientGroup' aria-label='Filter kelompok penerima'><option value=''>Semua kelompok</option>"+groupOptions+"</select><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua hasil</button><button type='button' class='docs-btn' id='docsClearAll'>Hapus pilihan</button></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
      "</details>"+
-    "<fieldset class='docs-kind-group'><legend>Jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label><label class='docs-kind-choice'><input id='docsIncludeOrganoleptic' type='checkbox' checked> Organoleptik</label></fieldset>"+
+    "<fieldset class='docs-kind-group'><legend>Dokumen yang diterbitkan</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label><label class='docs-kind-choice'><input id='docsIncludeOrganoleptic' type='checkbox' checked> Organoleptik</label></fieldset>"+
      "<details class='docs-menu-disclosure'><summary>Menu harian</summary>"+
      "<div class='docs-subsection-head'><div><strong>Menu distribusi</strong></div><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div>"+
      "<div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
@@ -250,7 +250,7 @@ function renderCreateForm(){
     "<div class='docs-draft-line'><span id='docsDraftStatus' role='status' aria-live='polite'>Draf disimpan di tab ini.</span><button type='button' class='docs-btn' id='docsDiscardDraft'>Atur ulang draf</button></div>"+
    "</form><div id='docsCreateResult'></div>"+
   "</section>"+
-  "<details class='docs-preview-panel' id='docsPreviewDisclosure' open><summary class='docs-preview-summary'>Pratinjau dokumen</summary><div class='docs-preview-content'><div class='docs-preview-head'><div class='docs-preview-selects'><div class='docs-preview-kinds' aria-label='Jenis dokumen pratinjau'></div><select hidden id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><p id='docsPreviewNumberStatus' class='docs-note' role='status'></p><div id='docsPreviewPages' class='docs-preview-pages'></div></div></details>"+
+  "<details class='docs-preview-panel' id='docsPreviewDisclosure' open><summary class='docs-preview-summary'>Pratinjau dokumen</summary><div class='docs-preview-content'><div class='docs-preview-head'><div class='docs-preview-selects'><div class='docs-preview-kinds' aria-label='Jenis dokumen pratinjau'></div><select hidden id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><span id='docsPreviewPageCount' class='docs-page-count'></span><p id='docsPreviewNumberStatus' class='docs-note' role='status'></p><div id='docsPreviewPages' class='docs-preview-pages'></div></div></details>"+
  "<div class='docs-submit-bar'><div class='docs-submit-meta'><strong id='docsSubmitCount' aria-live='polite'>0 tujuan · 0 porsi</strong><div id='docsOutputCount'></div><p id='docsPreflightSummary' data-state='incomplete' role='status' aria-live='polite'>Pilih minimal satu penerima untuk melanjutkan.</p></div><div class='docs-submit-actions'><button class='docs-btn primary' id='docsCreateButton' type='submit' form='docsCreateForm' disabled>Terbitkan</button></div></div>"+
  "</div>";
  menuController?.render();
@@ -387,7 +387,7 @@ function syncPreflightSummary(){
 function updateSelectedCount(){
  if(!renderingForm&&!restoringDraft)formDirty=true;
  const n=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).length;
- const el=$("#docsSelectedCount",modal);if(el)el.textContent="("+n+" dipilih)";
+ const el=$("#docsSelectedCount",modal);if(el)el.textContent=n+" tujuan dipilih";
  syncPreflightSummary();
  previewController?.updateLivePreview();
  saveDraft();
