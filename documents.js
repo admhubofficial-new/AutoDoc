@@ -327,8 +327,6 @@ function renderCreateForm(){
  target.innerHTML="<div class='docs-mobile-switch' aria-label='Tampilan dokumen'><button type='button' class='docs-btn' id='docsEditToggle' aria-controls='docsCreateForm' aria-pressed='true'>Isi</button><button type='button' class='docs-btn' id='docsPreviewToggle' aria-controls='docsPreviewDisclosure' aria-pressed='false'>Pratinjau</button></div><div class='docs-create-layout'>"+
   "<section class='docs-create-form-panel'>"+
    "<form id='docsCreateForm' autocomplete='off'>"+
-    "<div class='docs-draft-line'><span id='docsDraftStatus' role='status' aria-live='polite'>Draf otomatis di tab ini, tidak menerbitkan dokumen.</span><button type='button' class='docs-btn' id='docsDiscardDraft'>Kosongkan draf</button></div>"+
-    "<div class='docs-work-summary' aria-label='Ringkasan persiapan'><div><small>Tujuan dipilih</small><strong id='docsSummaryRecipients'>0</strong></div><div><small>Total porsi</small><strong id='docsSummaryPortions'>0</strong></div><div><small>SJ / BAST</small><strong id='docsSummaryDocuments'>0</strong></div></div>"+
     "<button type='button' class='docs-btn' id='docsAiMenuAssist'>Bantu isi dengan AI</button>"+
     "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Jadwal distribusi</h4></div></div>"+
 
@@ -352,6 +350,8 @@ function renderCreateForm(){
       "<p class='docs-field-hint'>Data baru akan disimpan ke Data Master setelah dokumen berhasil diterbitkan.</p>"+
      "</div></details>"+
     "</section>"+
+    "<div class='docs-draft-line'><span id='docsDraftStatus' role='status' aria-live='polite'>Draf otomatis di tab ini, tidak menerbitkan dokumen.</span><button type='button' class='docs-btn' id='docsDiscardDraft'>Kosongkan draf</button></div>"+
+    "<div class='docs-work-summary' aria-label='Ringkasan persiapan'><div><small>Tujuan dipilih</small><strong id='docsSummaryRecipients'>0</strong></div><div><small>Total porsi</small><strong id='docsSummaryPortions'>0</strong></div><div><small>SJ / BAST</small><strong id='docsSummaryDocuments'>0</strong></div></div>"+
     "<div class='docs-submit-bar'><div class='docs-submit-meta'><strong id='docsSubmitCount' aria-live='polite'>0 penerima · 0 porsi</strong><p id='docsPreflightSummary' data-state='incomplete' role='status' aria-live='polite'>Pilih minimal satu penerima untuk melanjutkan.</p></div><div class='docs-submit-actions'><button class='docs-btn primary' id='docsCreateButton' type='submit' disabled>Terbitkan dokumen</button></div></div>"+
    "</form><div id='docsCreateResult'></div>"+
   "</section>"+

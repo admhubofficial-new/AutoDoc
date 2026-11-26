@@ -674,3 +674,11 @@ body .workspace-pages .workspace-page .docs-submit-bar{position:static;backgroun
 .ai-composer{display:grid;gap:8px;border:1px solid var(--color-border);border-radius:var(--radius-card);padding:12px;margin-top:16px;background:var(--color-surface)}
 .ai-composer textarea{width:100%;min-height:96px;border:0;padding:8px;font:inherit;resize:vertical}
 .ai-composer .ai-action-row{display:flex;justify-content:space-between;margin:0}
+
+/* The preview reads as one stack of paper in the main page scroll. */
+.docs-preview-pages{gap:12px}
+.docs-preview-pages .docs-preview-paper{display:block;padding:0}
+.docs-preview-pages iframe{border:0;background:var(--color-surface)}
+@media(max-width:720px){
+ .home-page .workspace-page:has(.docs-create-layout) .docs-head{padding-inline-start:36px}
+}
