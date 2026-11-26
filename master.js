@@ -19,7 +19,7 @@ const categoryGroups=[
 let contextualAi=false,loadSequence=0,saving=false;
 function isBusy(){return saving}
 function notifyBusy(){msg("Penyimpanan Data Master sedang berlangsung.",false,"loading")}
-let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null,aiInitialMode="both",suspendedDocumentOverlay=null;
+let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null,aiInitialMode="both",aiDate="",suspendedDocumentOverlay=null;
 async function api(path,body){const h={"apikey":KEY,"Accept":"application/json"};const r=await fetch(API+"/"+path,{method:body?"POST":"GET",headers:body?{...h,"Content-Type":"application/json"}:h,body:body?JSON.stringify(body):undefined,credentials:"include",cache:"no-store"});let d={};try{d=await r.json()}catch(_){}if(!r.ok)throw Error(d.message||"Permintaan gagal.");return d;}
 function msg(text,bad=false,state){
  const output=modal?.querySelector(".dm-msg");
@@ -100,6 +100,8 @@ function init(){
   const requestedSearch=String(initialSearch||"");
   returnFocusEl=document.activeElement;
   contextualAi=options?.mode==="menus";
+  aiDate=options.date||"";
+  modal.classList.toggle("dm-contextual-ai",contextualAi);
   if(contextualAi){
    suspendDocumentOverlay();
    document.body.append(modal);
@@ -149,7 +151,7 @@ function init(){
   if(entity==="ai"){
    intro.textContent="Tempel teks atau unggah dokumen. AI akan menyiapkan usulan menu per sekolah dan perbandingan penerima manfaat. Tidak ada perubahan tersimpan sebelum Anda mengonfirmasi.";
    search.hidden=true;table.hidden=true;formSlot.innerHTML="";
-   if(aiController)aiController.render(formSlot,{mode:aiInitialMode});
+   if(aiController)aiController.render(formSlot,{mode:aiInitialMode,compact:contextualAi,date:aiDate});
    else formSlot.textContent="Modul Asisten AI belum siap.";
    return;
   }

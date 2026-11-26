@@ -87,7 +87,7 @@ test("bulk history deletion requires a session, a valid PIN, and bounded unique 
 test("document creation is a single-page flow with explicit recipient selection", () => {
   assert.match(documentsUi, /docs-create-layout/);
   assert.doesNotMatch(documentsUi, /data-wizard-step|function goWizardStep|docsReviewSummary/);
-  assert.match(documentsUi, /check\.checked=false/);
+  assert.match(documentsUi, /check\.checked=true/);
   assert.match(documentsUi, /Pilih minimal satu penerima/);
   assert.match(documentsUi, /docsPreviewPages/);
 });

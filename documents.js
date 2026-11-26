@@ -336,7 +336,7 @@ function renderCreateForm(){
      "<details class='docs-recipient-subsection'"+(recipients.length<=3?" open":"")+"><summary class='docs-subsection-head'><div><strong>Atur penerima <span id='docsSelectedCount' aria-live='polite'>(0 dipilih)</span></strong></div><span id='docsRecipientResultCount' class='docs-recipient-result-count' aria-live='polite'>"+recipients.length+" tujuan</span></summary>"+
       "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari nama penerima...' aria-label='Cari penerima' autocomplete='off'><select id='docsRecipientGroup' aria-label='Filter kelompok penerima'><option value=''>Semua kelompok</option>"+groupOptions+"</select><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua hasil</button><button type='button' class='docs-btn' id='docsClearAll'>Hapus pilihan</button></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
      "</details>"+
-    "<fieldset class='docs-kind-group'><legend>Jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label><label class='docs-kind-choice'><input id='docsIncludeOrganoleptic' type='checkbox'> Organoleptik</label></fieldset>"+
+    "<fieldset class='docs-kind-group'><legend>Jenis dokumen</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label><label class='docs-kind-choice'><input id='docsIncludeOrganoleptic' type='checkbox' checked> Organoleptik</label></fieldset>"+
      "<div id='docsAiMenuPlanNotice' class='docs-ai-menu-plan' hidden></div>"+
      "<details class='docs-menu-disclosure'><summary>Menu harian</summary>"+
      "<div class='docs-subsection-head'><div><strong>Menu distribusi</strong></div><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div>"+
@@ -373,7 +373,7 @@ function renderCreateForm(){
  $("#docsAddMenuItem",target).onclick=()=>addMenuComponent();
  $("#docsCopyLastMenu",target).onclick=copyLastMenu;
  $("#docsAiMenuAssist",target).addEventListener("click",()=>{
-  if(window.AutoDocMaster?.open)window.AutoDocMaster.open("ai","",{mode:"menus"});
+  if(window.AutoDocMaster?.open)window.AutoDocMaster.open("ai","",{mode:"menus",date:$("#docsDate",target).value});
   else status("Asisten AI belum siap. Muat ulang halaman dan coba kembali.",true,"error");
  });
  $("#docsDate",target).addEventListener("change",()=>{renderAiMenuPlanNotice();previewController?.updateLivePreview()});
@@ -424,7 +424,7 @@ function renderRecipients(recipients){
   const label=node("label","docs-recipient");
   label.dataset.group=String(r.kelompok||"");
   label.dataset.search=(String(r.nama||"")+" "+String(r.kelompok||"")+" "+String(r.jenjang||"")).toLocaleLowerCase("id-ID");
-  const check=node("input");check.type="checkbox";check.name="recipient";check.value=r.id;check.checked=false;
+  const check=node("input");check.type="checkbox";check.name="recipient";check.value=r.id;check.checked=true;
   const content=node("span");
   const warning=r.perlu_verifikasi?" <span class='docs-verify'>Perlu verifikasi</span>":"";
   content.innerHTML="<strong>"+esc(r.nama)+warning+"</strong><small>"+esc(r.kelompok)+" · "+esc(r.jenjang)+" · "+Number(r.total_porsi||0).toLocaleString("id-ID")+" porsi</small>";

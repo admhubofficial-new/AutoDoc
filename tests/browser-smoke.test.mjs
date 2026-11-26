@@ -311,14 +311,10 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     assert.equal(previewLayout.position, "static");
     assert.equal(previewLayout.beside, true);
     assert.equal(await page.locator("#docsShippingDisclosure").evaluate(element => element.open), false);
-    assert.equal(await page.locator("#docsCreateButton").isDisabled(), true);
-    assert.match(await page.locator("#docsPreflightSummary").textContent(), /minimal satu penerima/);
-
-    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
-    const emptyPreview = page.frameLocator("#docsPreviewFrame").locator("body");
-    await emptyPreview.getByText("Pratinjau belum tersedia").waitFor();
-
-    await page.locator("input[name='recipient']").check();
+    assert.equal(await page.locator("#docsCreateButton").isDisabled(), false);
+    assert.equal(await page.locator("#docsIncludeOrganoleptic").isChecked(), true);
+    assert.equal(await page.locator("#docsTime").inputValue(), "");
+    assert.equal(await page.locator("input[name='recipient']").isChecked(), true);
     const summary = await page.locator("#docsPreflightSummary").innerText();
     assert.match(summary, /Siap diterbitkan/);
     assert.match(await page.locator("#docsSubmitCount").textContent(), /1 penerima/);
@@ -850,7 +846,7 @@ test("phase 3 distribution draft survives reload, can be discarded, and never is
   assert.equal(app.writes.some(item=>item.route==="docs/create"),false);
   page.once("dialog",dialog=>dialog.accept());
   await page.locator("#docsDiscardDraft").click();
-  assert.equal(await page.locator("input[name='recipient']").isChecked(),false);
+  assert.equal(await page.locator("input[name='recipient']").isChecked(),true);
   assert.equal(await page.evaluate(()=>sessionStorage.getItem("autodoc:distribution-draft:v1")),null);
   await page.locator("input[name='recipient']").check();
   await page.locator("#logoutButton").click();
