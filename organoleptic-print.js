@@ -170,9 +170,6 @@ function organolepticSheet(doc,data,recipient){
 window.AutoDocOrganolepticPrint=Object.freeze({
  get styles(){return STYLES+window.AutoDocPrintRenderer.letterheadStyles},
  organolepticElement,
- organolepticInfoRow,
- organolepticMealNode,
- organolepticTable,
  organolepticSheet
 });
 })();
