@@ -817,7 +817,9 @@ function printOrganolepticForms(recipients,menuByRecipient={}){
   const ownMenu=Array.isArray(menuByRecipient?.[recipientId])?menuByRecipient[recipientId].map(item=>typeof item==="string"?item:String(item?.nama_komponen||"").trim()).filter(Boolean).slice(0,8):[];
   const source=currentDocs.find(doc=>doc.jenis==="SJ"&&String(doc.recipient_id||doc.snapshot_json?.penerima?.id)===recipientId);
   const nomor=/\/SJ\//i.test(source?.nomor_lengkap||"")?source.nomor_lengkap.replace(/\/SJ\//i,"/ORG/"):"";
-  return organolepticSheet(printDoc,{...data,menu:ownMenu.length?ownMenu:menu,nomor},recipient);
+  const archived=source||currentDocs.find(doc=>String(doc.recipient_id||doc.snapshot_json?.penerima?.id)===recipientId);
+  const sppg=archived?.snapshot_json?.sppg||(Array.isArray(master.settings)?master.settings[0]:master.settings);
+  return organolepticSheet(printDoc,{...data,sppg,logoUrl:LETTERHEAD_LOGO_URL,escapeHtml:esc,menu:ownMenu.length?ownMenu:menu,nomor},recipient);
  }));
  setTimeout(()=>{if(!win.closed){win.focus();win.print()}},250);
 }
