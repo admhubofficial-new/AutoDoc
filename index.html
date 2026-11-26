@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2-phase2-phase3">
-  <link rel="stylesheet" href="./theme.css?v=p2-p3-admin-visual-audit-20261124-workspace-v2-phase2-phase3">
+  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2-phase2-phase3-phase4">
+  <link rel="stylesheet" href="./theme.css?v=p2-p3-admin-visual-audit-20261124-workspace-v2-phase2-phase3-phase4">
 </head>
 <body class="auth-pending">
   <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
@@ -100,7 +100,7 @@
         <div><div class="home-brand-name">AutoDoc</div><div class="home-brand-sub">SPPG Darmaraja 01</div></div>
       </div>
       <button type="button" class="home-menu-toggle" id="homeMenuToggle" aria-label="Ciutkan sidebar" aria-expanded="true" aria-controls="homeSidebar" title="Ciutkan sidebar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Ciutkan sidebar</span></button>
-      <div class="home-nav-caption">MENU UTAMA</div>
+      <div class="home-nav-caption">OPERASIONAL</div>
       <nav class="home-nav" id="homeNav" aria-label="Navigasi utama">
         <button type="button" data-home-nav="home" aria-label="Beranda" aria-current="page">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5M9 21v-7h6v7"/></svg></span>
@@ -118,6 +118,7 @@
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
           <span>Arsip</span>
         </button>
+        <span class="home-nav-group-label" aria-hidden="true">ADMINISTRASI</span>
         <button type="button" data-home-nav="master" aria-label="Data Master">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span>
           <span>Data Master</span>
@@ -204,7 +205,8 @@
 
       function showLogin() {
         finishAuthBootstrap();
-        window.AutoDocMaster?.close(false);
+        if(window.AutoDocMaster?.resetSession)window.AutoDocMaster.resetSession();
+        else window.AutoDocMaster?.close(false);
         if(window.AutoDocDocuments?.resetSession)window.AutoDocDocuments.resetSession();
         else try{sessionStorage.removeItem("autodoc:distribution-draft:v1")}catch(_){} 
         homePage.hidden = true;
@@ -482,14 +484,14 @@
   </script>
   <script src="./master-utils.js?v=master-csv-hardening-20261121" defer></script>
   <script src="./ai-assistant.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
-  <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2" defer></script>
+  <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2-phase4-r2" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123" defer></script>
   <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
   <script src="./document-preview.js?v=p4-simplified-document-flow-20261124" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
   <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
-  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3-r2" defer></script>
+  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3-r2-phase4" defer></script>
   <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2-stability2-phase2-phase3" defer></script>
 </body>
 </html>

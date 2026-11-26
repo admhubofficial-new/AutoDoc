@@ -890,3 +890,38 @@ test("phase 3 BAST history scan retries without claiming incomplete history is c
   assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
 });
+
+
+test("phase 4 groups administration categories and keeps identity editing accessible", async () => {
+ const app=await openApp();
+ try{
+  const page=app.page;
+  await page.locator('[data-home-nav="master"]').click();
+  await page.locator(".dm-data-row").waitFor();
+  assert.deepEqual(await page.locator(".dm-category-heading").allTextContents(),["Data operasional","Pengaturan","Bantuan input"]);
+  assert.equal(await page.locator("#dmCategorySelect optgroup").count(),3);
+  await page.getByRole("button",{name:"Identitas SPPG",exact:true}).click();
+  assert.equal(await page.locator(".dm-form-group").count(),3);
+  assert.equal(await page.locator(".dm-table-wrap").isVisible(),false);
+  await page.locator("#dmField_nama_kepala_sppg").fill("Belum disimpan");
+  await page.getByRole("button",{name:"Batal",exact:true}).click();
+  assert.equal(await page.locator("#dmField_nama_kepala_sppg").inputValue(),"Kepala SPPG");
+  await page.getByRole("button",{name:"Penerima manfaat",exact:true}).click();
+  await page.locator(".dm-data-row").waitFor();
+  assert.equal(app.writes.some(item=>item.route==="master/save"),false);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+ const mobile=await openApp({viewport:{width:390,height:844}});
+ try{
+  const page=mobile.page;
+  await page.locator('[data-mobile-nav="more"]').click();
+  await page.locator('[data-home-nav="master"]').click();
+  await page.locator(".dm-data-row").waitFor();
+  assert.equal(await page.locator("#dmCategorySelect").isVisible(),true);
+  await page.locator("#dmCategorySelect").selectOption("settings");
+  assert.equal(await page.locator(".dm-form-group").count(),3);
+  assert.equal(await page.locator(".dm-table-wrap").isVisible(),false);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1));
+  assert.deepEqual(mobile.errors,[]);
+ }finally{await mobile.context.close()}
+});

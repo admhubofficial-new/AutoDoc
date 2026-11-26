@@ -445,7 +445,8 @@ test("organoleptic meal options remain normal text for manual marking", () => {
 
 
 test("Data Master exposes the AI assistant as an internal tab without adding a new primary navigation item", () => {
-  assert.match(masterSource, /\["ai",\{title:"Asisten AI"\}\]/);
+  assert.match(masterSource, /\{label:"Bantuan input",keys:\["ai"\]\}/);
+  assert.match(masterSource, /key==="ai"\?\{title:"Asisten AI"\}:defs\[key\]/);
   assert.match(masterSource, /const tabButton=el\("button",null,definition\.title\)/);
   assert.match(masterSource, /function suspendDocumentOverlay\(\)/);
   assert.match(masterSource, /overlay\.inert=true;overlay\.setAttribute\("aria-hidden","true"\)/);
@@ -622,4 +623,11 @@ test("P3 visual audit styles cover vertical desktop navigation, mobile dropdown,
   assert.match(stylesSource, /\.docs-danger-zone\{display:grid/);
   assert.match(stylesSource, /\.dm-overlay\{z-index:10001\}/);
   assert.match(stylesSource, /\.ai-review-queue\{display:grid/);
+});
+
+
+test("phase 4 obsolete hidden document tabs are removed while main navigation stays intact", () => {
+  assert.doesNotMatch(source, /drawTabs|switchTab|docs-tabs/);
+  assert.match(masterSource, /function resetSession\(\)/);
+  assert.match(masterSource, /request!==loadSequence\|\|modal.hidden/);
 });
