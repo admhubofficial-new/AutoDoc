@@ -721,3 +721,18 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{
  body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{grid-column:1;grid-row:2;position:static;border:1px solid var(--color-border);border-radius:var(--radius-card)}
  .docs-create-layout .docs-submit-actions{width:100%}
 }
+
+/* The active navigation item provides the workspace title. */
+.workspace-page:has(.docs-create-layout) .docs-head{
+ position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);border:0;
+}
+.workspace-page:has(.docs-create-layout) .docs-head:focus-within{
+ clip-path:none;width:auto;height:auto;padding:8px;z-index:10;
+}
+.workspace-page:has(.docs-create-layout) .docs-create-form-panel .docs-form-section:first-child{padding-top:0}
+.docs-create-layout .docs-recipient-subsection>summary{margin-top:0}
+.docs-create-layout .docs-preview-content>.docs-page-count,
+.docs-create-layout #docsPreviewNumberStatus{margin-inline:16px}
+@media(max-width:720px){
+ .workspace-page:has(.docs-create-layout) .docs-mobile-switch{margin-inline-start:44px}
+}

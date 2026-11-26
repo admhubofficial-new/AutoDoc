@@ -226,11 +226,11 @@ function renderCreateForm(){
  target.innerHTML="<div class='docs-mobile-switch' aria-label='Tampilan dokumen'><button type='button' class='docs-btn' id='docsEditToggle' aria-controls='docsCreateForm' aria-pressed='true'>Isi</button><button type='button' class='docs-btn' id='docsPreviewToggle' aria-controls='docsPreviewDisclosure' aria-pressed='false'>Lihat Surat</button></div><div class='docs-create-layout'>"+
   "<section class='docs-create-form-panel'>"+
    "<form id='docsCreateForm' autocomplete='off'>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Jadwal distribusi</h4></div></div>"+
+    "<section class='docs-form-section'>"+
 
      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div><div class='docs-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
     "</section>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Penerima</h4></div></div>"+
+    "<section class='docs-form-section'>"+
      "<details class='docs-recipient-subsection'"+(recipients.length<=3?" open":"")+"><summary class='docs-subsection-head'><div><strong><span id='docsSelectedCount' aria-live='polite'>0 tujuan dipilih</span></strong></div><span class='docs-edit-recipients'>Ubah</span><span id='docsRecipientResultCount' class='docs-recipient-result-count' aria-live='polite'>"+recipients.length+" tujuan</span></summary>"+
       "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari nama penerima...' aria-label='Cari penerima' autocomplete='off'><select id='docsRecipientGroup' aria-label='Filter kelompok penerima'><option value=''>Semua kelompok</option>"+groupOptions+"</select><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua hasil</button><button type='button' class='docs-btn' id='docsClearAll'>Hapus pilihan</button></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
      "</details>"+
@@ -241,13 +241,13 @@ function renderCreateForm(){
      "<div class='docs-menu-actions'><button type='button' class='docs-btn primary' id='docsAddMenuItem'>+ Tambah komponen</button></div>"+
      "</details>"+
     "</section>"+
-    "<section class='docs-form-section'><div class='docs-form-section-head'><div><h4>Pengiriman</h4></div></div>"+
+    "<section class='docs-form-section'>"+
      "<details class='docs-shipping-details' id='docsShippingDisclosure'><summary><span>Rincian pengiriman</span></summary><div class='docs-shipping-fields'>"+
       "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas</label><input id='docsStaff' type='text' list='docsStaffSuggestions' maxlength='180' placeholder='Pilih atau ketik nama petugas' autocomplete='off'><datalist id='docsStaffSuggestions'>"+masterSuggestions(master.staff,"nama")+"</datalist></div><div class='docs-field'><label for='docsDriver'>Pengemudi</label><input id='docsDriver' type='text' list='docsDriverSuggestions' maxlength='180' placeholder='Pilih atau ketik nama pengemudi' autocomplete='off'><datalist id='docsDriverSuggestions'>"+masterSuggestions(master.drivers,"nama")+"</datalist></div><div class='docs-field'><label for='docsVehicle'>Kendaraan</label><input id='docsVehicle' type='text' list='docsVehicleSuggestions' maxlength='80' placeholder='Pilih atau ketik nomor kendaraan' autocomplete='off'><datalist id='docsVehicleSuggestions'>"+masterSuggestions(master.vehicles,"no_kendaraan")+"</datalist></div></div>"+
       "<p class='docs-field-hint'>Data baru akan disimpan ke Data Master setelah dokumen berhasil diterbitkan.</p>"+
      "</div></details>"+
     "</section>"+
-    "<div class='docs-draft-line'><span id='docsDraftStatus' role='status' aria-live='polite'>Draf disimpan di tab ini.</span><button type='button' class='docs-btn' id='docsDiscardDraft'>Atur ulang draf</button></div>"+
+    "<div class='docs-draft-line'><span id='docsDraftStatus' role='status' aria-live='polite'></span><button type='button' class='docs-btn' id='docsDiscardDraft'>Atur ulang draf</button></div>"+
    "</form><div id='docsCreateResult'></div>"+
   "</section>"+
   "<details class='docs-preview-panel' id='docsPreviewDisclosure' open><summary class='docs-preview-summary'>Pratinjau dokumen</summary><div class='docs-preview-content'><div class='docs-preview-head'><div class='docs-preview-selects'><div class='docs-preview-kinds' aria-label='Jenis dokumen pratinjau'></div><select hidden id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><span id='docsPreviewPageCount' class='docs-page-count'></span><p id='docsPreviewNumberStatus' class='docs-note' role='status'></p><div id='docsPreviewPages' class='docs-preview-pages'></div></div></details>"+

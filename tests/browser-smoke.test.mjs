@@ -242,12 +242,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
 
     await page.locator('[data-dashboard-action="create"]').click();
     await page.locator("#docsCreateForm").waitFor();
-    const headings = await page.locator("#docsCreateForm .docs-form-section-head h4").allTextContents();
-    assert.deepEqual(headings, [
-      "Jadwal distribusi",
-      "Penerima",
-      "Pengiriman"
-    ]);
+    assert.equal(await page.locator("#docsCreateForm .docs-form-section-head").count(), 0);
     assert.equal(await page.locator("#docsPreviewDisclosure").isVisible(), true);
     const previewLayout = await page.evaluate(() => {
       const layout = document.querySelector(".docs-create-layout");
