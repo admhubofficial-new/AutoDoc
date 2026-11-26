@@ -520,18 +520,18 @@ test("mobile recipient selection stays in the page flow and offers clear grouped
   assert.ok(source.includes("Hapus pilihan"));
 });
 
-test("desktop live preview opens beside the form and stays collapsible on narrow screens", () => {
+test("v3 preview remains closed until explicitly opened at every viewport", () => {
   const stylesSource = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   assert.ok(source.includes("<details class='docs-preview-panel' id='docsPreviewDisclosure'>"));
-  assert.ok(source.includes('const desktopPreview=window.matchMedia("(min-width: 1120px)")'));
-  assert.ok(source.includes("previewDisclosure.open=desktopPreview.matches"));
+  assert.ok(source.includes("previewDisclosure.open=false"));
+  assert.doesNotMatch(source,/desktopPreview\.matches/);
   assert.ok(source.includes('const previewSummaryToggle=$(".docs-preview-toggle",previewDisclosure)'));
   assert.ok(source.includes('previewSummaryToggle.textContent=expanded?"Tutup":"Buka"'));
-  assert.ok(source.includes("if(!desktopPreview.matches)"));
+  assert.ok(source.includes('previewDisclosure.scrollIntoView({behavior:"auto",block:"start"})'));
   assert.ok(source.includes("id='docsPreviewToggle'"));
   assert.ok(source.includes("aria-controls='docsPreviewDisclosure'"));
-  assert.match(stylesSource, /grid-template-columns:\s*minmax\(0, 1\.08fr\) minmax\(400px, \.92fr\)/);
-  assert.match(stylesSource, /@media \(min-width: 1120px\)[\s\S]*?\.docs-preview-panel\s*\{[^}]*position:\s*sticky/);
+  assert.match(stylesSource, /grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(stylesSource, /\.docs-preview-panel\s*\{[^}]*position:\s*static/);
   assert.doesNotMatch(stylesSource, /docs-preview-caption|docs-create-intro|docs-section-number/);
   assert.ok(previewSource.includes('disclosure.addEventListener("toggle",fitPreviewFrame)'));
   assert.ok(!previewSource.includes("mobilePreview"));

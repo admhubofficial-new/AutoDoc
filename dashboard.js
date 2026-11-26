@@ -111,7 +111,7 @@
     panel.append(heading);
 
     if (warnings.length) {
-      panel.append(el("p", "home-panel-description", "Periksa data berikut agar dokumen distribusi tetap lengkap."));
+
       const list = el("div", "home-warning-list");
       warnings.forEach(warning => {
         const row = el("div", "home-warning-row");
@@ -198,14 +198,12 @@
     const date = el("time", "home-operational-date", dateLabel(activeDate));
     date.dateTime = activeDate;
     dateBlock.append(
-      el("span", "home-dashboard-eyebrow", "TANGGAL OPERASIONAL AKTIF"),
-      date,
-      el("p", "home-operator-description", "Siapkan distribusi, terbitkan dokumen, lalu selesaikan realisasi penerimaan.")
+      date
     );
     const todayRow=rows.find(row=>row.tanggal===activeDate);
     const todayStatus=el("p","home-today-status",todayRow
-      ? number(todayRow.documents_count)+" dokumen tercatat hari ini · "+number(todayRow.bast_pending)+" BAST menunggu realisasi"
-      : "Distribusi hari ini belum terlihat dalam daftar terbaru.");
+      ? number(todayRow.documents_count)+" dokumen hari ini"
+      : "Distribusi hari ini belum tercatat");
     dateBlock.append(todayStatus);
     const createButton = todayRow
       ? action("Buka distribusi hari ini",true,()=>window.AutoDocOpenArchive?.(activeDate),"today")
@@ -216,8 +214,13 @@
     if(todayRow)heroActions.append(action("Buat / lengkapi dokumen",false,()=>window.AutoDocOpenDocs?.("create"),"create"));
     hero.append(dateBlock, heroActions);
     host.append(hero);
+    const metrics=el("div","home-v3-metrics");
+    for(const [label,value] of [["Distribusi hari ini",todayRow?"Tercatat":"Belum dibuat"],["BAST tertunda",number(pendingBast)],["Dokumen terakhir",rows.length?number(rows[0].documents_count):"0"]]){
+      const item=el("div");item.append(el("span",null,label),el("strong",null,value));metrics.append(item);
+    }
+    host.append(metrics,el("h2","home-v3-section-title","Perlu ditindaklanjuti"));
 
-    const workGrid = el("div", "home-work-grid");
+    const workGrid = el("div", "home-work-grid home-v3-task-list");
     const bast = el("section", "home-work-card home-bast-queue");
     bast.setAttribute("aria-labelledby", "homeBastQueueTitle");
     const bastHeading = el("h2", null, "BAST menunggu realisasi");
@@ -225,15 +228,11 @@
     bast.append(
       bastHeading,
       el("strong", "home-bast-count", number(pendingBast)),
-      el("p", "home-card-description", pendingBast > 0
-        ? "Dokumen BAST yang belum selesai dicatat realisasinya."
-        : "Tidak ada BAST yang perlu ditindaklanjuti saat ini."),
       action("Lihat semua BAST tertunda", false, () => window.AutoDocOpenRealization?.("all"))
     );
     const pendingDates=rows.filter(row=>Number(row.bast_pending)>0);
     if(pendingDates.length){
       const dates=el("div","home-pending-dates");
-      dates.append(el("p","home-card-description","Tanggal dengan BAST tertunda (5 distribusi terbaru)"));
       pendingDates.forEach(row=>{
         const line=el("div","home-pending-date-row");
         line.append(el("span",null,dateLabel(row.tanggal)+" · "+number(row.bast_pending)+" BAST"),action("Isi",false,()=>window.AutoDocOpenRealization?.(row.tanggal)));

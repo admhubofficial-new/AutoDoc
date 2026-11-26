@@ -66,7 +66,9 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga", jenjang: "SD", alamat: "Alamat Uji",
         aktif: true, urutan: 10, total_porsi: 16, siswa_kecil: 16, siswa_besar: 0, tendik: 0,
         ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0
-      }], staff: [], drivers: [], vehicles: [], menus: [] } };
+      }], staff: [], drivers: [], vehicles: [], menus: [], numbering:[{jenis:"SJ",start_number:1000,next_number:1053,locked:true},{jenis:"BAST",start_number:1000,next_number:1055,locked:true}] } };
+    } else if (routeName === "master/numbering") {
+      writes.push({route:routeName,body:request.postDataJSON()});payload={success:true};
     } else if (routeName === "ai/analyze") {
       writes.push({ route: routeName, body: request.postDataJSON() });
       const aiBody = request.postDataJSON();
@@ -166,11 +168,8 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
   const app = await openApp();
   try {
     const page = app.page;
-    await page.locator("#homeMenuToggle").click();
-    await page.locator("#homePage.sidebar-collapsed").waitFor();
-    assert.equal(await page.locator("#homeMenuToggle").getAttribute("aria-expanded"), "false");
-    await page.locator("#homeMenuToggle").click();
-    await page.locator("#homePage:not(.sidebar-collapsed)").waitFor();
+    assert.equal(await page.locator("#homeMenuToggle").isVisible(),false);
+    assert.equal(await page.locator("#homeNav").evaluate(el=>getComputedStyle(el).flexDirection),"row");
 
     await page.locator('[data-home-nav="print"]').click();
     await page.locator("#docsCreateForm").waitFor();
@@ -286,11 +285,11 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     await page.locator("#docsCreateForm").waitFor();
     const headings = await page.locator("#docsCreateForm .docs-form-section-head h4").allTextContents();
     assert.deepEqual(headings, [
-      "Distribusi",
+      "Jadwal distribusi",
       "Menu & penerima",
       "Pengiriman"
     ]);
-    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
+    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
     const previewLayout = await page.evaluate(() => {
       const layout = document.querySelector(".docs-create-layout");
       const form = document.querySelector(".docs-create-form-panel");
@@ -305,15 +304,13 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
       };
     });
     assert.equal(previewLayout.display, "grid");
-    assert.equal(previewLayout.columns, 2);
-    assert.equal(previewLayout.position, "sticky");
-    assert.equal(previewLayout.beside, true);
+    assert.equal(previewLayout.columns, 1);
+    assert.equal(previewLayout.position, "static");
+    assert.equal(previewLayout.beside, false);
     assert.equal(await page.locator("#docsShippingDisclosure").evaluate(element => element.open), false);
     assert.equal(await page.locator("#docsCreateButton").isDisabled(), true);
     assert.match(await page.locator("#docsPreflightSummary").textContent(), /minimal satu penerima/);
 
-    await page.locator("#docsPreviewToggle").click();
-    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
     await page.locator("#docsPreviewToggle").click();
     assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
     const emptyPreview = page.frameLocator("#docsPreviewFrame").locator("body");
@@ -475,7 +472,8 @@ test("AI assistant applies school menu and preselects mapped recipients before i
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("Nasi Putih", { exact: false }).waitFor();
     assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
-    await page.getByRole("button", { name: "Terbitkan dokumen" }).click();
+    page.once("dialog",dialog=>dialog.accept());
+    await page.getByRole("button", { name: "Periksa & terbitkan" }).click();
     const createRequest = app.writes.find(item => item.route === "docs/create");
     assert.ok(createRequest, "document creation should use the mocked local API");
     assert.deepEqual(createRequest.body.recipient_menu_items[recipientId], ["Nasi Putih", "Ayam Kecap"]);
@@ -974,6 +972,27 @@ test("audit: stale AI response cannot show a proposal for changed input", async 
   await page.getByRole("button",{name:"Baca dan klasifikasikan"}).click();
   await page.locator(".ai-review-panel:not([hidden])").waitFor();
   assert.equal(app.writes.filter(item=>item.route==="ai/analyze").length,2);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});
+
+test("v3 number configuration requires explicit PIN and confirmation", async () => {
+ const app=await openApp();
+ try{
+  const page=app.page;
+  await page.locator('[data-home-nav="master"]').click();
+  await page.locator(".dm-data-row").waitFor();
+  await page.getByRole("button",{name:"Nomor dokumen",exact:true}).click();
+  assert.equal(await page.locator("#numberNext_SJ").inputValue(),"1053");
+  assert.equal(await page.locator("#numberNext_BAST").inputValue(),"1055");
+  await page.locator("#numberNext_SJ").fill("1052");
+  assert.equal(await page.locator("#numberNext_SJ").evaluate(input=>input.checkValidity()),false);
+  await page.locator("#numberNext_SJ").fill("1100");
+  await page.locator("#numberPin_SJ").fill("123456");
+  page.once("dialog",dialog=>dialog.accept());
+  await page.getByRole("button",{name:"Simpan nomor SJ"}).click();
+  await page.waitForFunction(()=>document.querySelector(".dm-msg")?.textContent.includes("Nomor berikutnya berhasil"));
+  assert.deepEqual(app.writes.find(item=>item.route==="master/numbering").body,{jenis:"SJ",next_number:1100,token:"123456"});
   assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
 });
