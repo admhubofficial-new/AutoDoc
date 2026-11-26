@@ -156,11 +156,10 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     await mobile.page.locator('[data-mobile-nav="print"]').click();
     await mobile.page.locator("#docsCreateForm").waitFor();
     await mobile.page.locator("input[name='recipient']").check();
-    assert.equal(await mobile.page.locator("#docsSummaryRecipients").textContent(),"1");
-    assert.equal(await mobile.page.locator("#docsSummaryPortions").textContent(),"16");
-    assert.equal(await mobile.page.locator("#docsSummaryDocuments").textContent(),"2");
+    assert.match(await mobile.page.locator("#docsSubmitCount").textContent(), /1 tujuan · 16 porsi/);
+    assert.match(await mobile.page.locator("#docsOutputCount").textContent(),/^2 surat/);
     await mobile.page.locator("#docsKindBast").uncheck();
-    assert.equal(await mobile.page.locator("#docsSummaryDocuments").textContent(),"1");
+    assert.match(await mobile.page.locator("#docsOutputCount").textContent(),/^1 surat/);
     assert.equal(await mobile.page.locator("#docsKindSj").isChecked(),true);
     await mobile.page.locator('[data-mobile-nav="more"]').click();
     await mobile.page.locator("#homePage.mobile-nav-open").waitFor();

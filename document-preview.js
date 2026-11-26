@@ -2,17 +2,18 @@
 "use strict";
 function create(dependencies){
  const { $, esc, getModal, getMaster, api, readMenuComponents, selectedDocumentKinds, today, logoUrl } = dependencies;
- let numberDate="", numberContext=null, numberRequest=0;
+ let numberDate="", numberContext=null, numberRequest=0, numberError=false;
  function loadNumbers(date){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date===numberDate)return;
   numberDate=date;
   numberContext=null;
+  numberError=false;
   const request=++numberRequest;
   Promise.all([api("master/list?preview=true"),api("docs/list?tanggal="+encodeURIComponent(date)+"&preview=true")]).then(([master,history])=>{
    if(request!==numberRequest)return;
    numberContext={counters:master.data?.numbering||[],existing:history.documents||[]};
    updateLivePreview();
-  }).catch(()=>{});
+  }).catch(()=>{if(request===numberRequest){numberError=true;updateLivePreview()}});
  }
  window.addEventListener("autodoc:data-changed",()=>{numberDate="";numberContext=null;updateLivePreview()});
  let boundDisclosure=null;
@@ -85,7 +86,11 @@ function updateLivePreview(){
  const next=Object.fromEntries((numberContext?.counters||[]).filter(row=>row.locked).map(row=>[row.jenis,Number(row.next_number)]));
  const month=["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][Number(date.slice(5,7))-1];
  const previewStatus=$("#docsPreviewNumberStatus",getModal());
- if(previewStatus)previewStatus.textContent=recipients.length?"Nomor baru mengikuti urutan saat diterbitkan.":"";
+ const waiting=recipients.length>0&&!numberContext&&!numberError;
+ pages.setAttribute("aria-busy",String(waiting));
+ if(previewStatus)previewStatus.textContent=!recipients.length?"":numberError
+  ?"Nomor belum bisa dimuat. Ubah tanggal atau muat ulang untuk mencoba lagi."
+  :waiting?"Memuat nomor surat…":"Nomor baru mengikuti urutan saat diterbitkan.";
  pages.replaceChildren();
  const makeFrame=(title)=>{
   const paper=document.createElement("div");
