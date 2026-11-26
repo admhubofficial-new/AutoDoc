@@ -388,6 +388,7 @@
         else window.AutoDocDocuments.open();
       }
       function canNavigate() {
+        if(window.AutoDocMaster?.isBusy?.()){window.AutoDocMaster.notifyBusy();return false}
         if (window.AutoDocDocuments?.isBusy?.()) {
           window.AutoDocDocuments.notifyBusy();
           return false;
@@ -485,8 +486,8 @@
     })();
   </script>
   <script src="./master-utils.js?v=master-csv-hardening-20261121" defer></script>
-  <script src="./ai-assistant.js?v=p2-p3-admin-visual-audit-20261124" defer></script>
-  <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2-phase4-r2" defer></script>
+  <script src="./ai-assistant.js?v=p2-p3-admin-visual-audit-20261124-audit2" defer></script>
+  <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2-phase4-r2-audit2" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123" defer></script>
   <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124-cleanup-r2" defer></script>

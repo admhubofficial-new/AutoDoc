@@ -958,3 +958,22 @@ test("audit: leaving archive clears PIN confirmation and pending requests cannot
   assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
 });
+
+
+test("audit: stale AI response cannot show a proposal for changed input", async () => {
+ const app=await openApp({apiDelays:{"ai/analyze":500}});
+ try{
+  const page=app.page;
+  await page.locator('[data-home-nav="master"]').click();
+  await page.getByRole("button",{name:"Asisten AI",exact:true}).click();
+  await page.locator("#aiSourceText").fill("Menu awal");
+  await page.getByRole("button",{name:"Baca dan klasifikasikan"}).click();
+  await page.locator("#aiSourceText").fill("Menu baru");
+  await page.getByRole("button",{name:"Baca dan klasifikasikan"}).waitFor();
+  assert.equal(await page.locator(".ai-review-panel").isVisible(),false);
+  await page.getByRole("button",{name:"Baca dan klasifikasikan"}).click();
+  await page.locator(".ai-review-panel:not([hidden])").waitFor();
+  assert.equal(app.writes.filter(item=>item.route==="ai/analyze").length,2);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});
