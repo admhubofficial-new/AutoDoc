@@ -11,7 +11,6 @@ const realizationSource = readFileSync(new URL("../bast-realization.js", import.
 const previewSource = readFileSync(new URL("../document-preview.js", import.meta.url), "utf8");
 const menuSource = readFileSync(new URL("../document-menu.js", import.meta.url), "utf8");
 const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-const aiSource = readFileSync(new URL("../ai-assistant.js", import.meta.url), "utf8");
 const masterSource = readFileSync(new URL("../master.js", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
@@ -261,38 +260,8 @@ test("organoleptic meal options remain normal text for manual marking", () => {
 });
 
 
-test("Data Master exposes the AI assistant as an internal tab without adding a new primary navigation item", () => {
-  assert.match(masterSource, /\{label:"Bantuan input",keys:\["ai"\]\}/);
-  assert.match(masterSource, /key==="ai"\?\{title:"Asisten AI"\}:defs\[key\]/);
-  assert.match(masterSource, /const tabButton=el\("button",null,definition\.title\)/);
-  assert.match(masterSource, /function suspendDocumentOverlay\(\)/);
-  assert.match(masterSource, /overlay\.inert=true;overlay\.setAttribute\("aria-hidden","true"\)/);
-  assert.match(masterSource, /restoreDocumentOverlay\(\)/);
-  assert.match(masterSource, /entity==="ai"/);
-  assert.match(masterSource, /window\.AutoDocAiAssistant\?\.create/);
-  assert.match(htmlSource, /ai-assistant\.js\?v=composer-r1/);
-  assert.doesNotMatch(htmlSource, /data-home-nav="ai"/);
-});
 
-test("AI assistant always previews proposed changes and requires explicit confirmation before importing recipients", () => {
-  assert.match(aiSource, /api\("ai\/analyze"/);
-  assert.match(aiSource, /PENTING: AI hanya memberi usulan/);
-  assert.match(aiSource, /Perlu konfirmasi:/);
-  assert.match(aiSource, /Konfirmasi & simpan penerima/);
-  assert.match(aiSource, /if\(!confirm\("Konfirmasi penyimpanan/);
-  assert.match(aiSource, /api\("ai\/recipient-apply"/);
-  assert.match(aiSource, /action==="review"/);
-});
 
-test("AI menu plans map one recipient to one unique menu and block unmapped recipients before issuance", () => {
-  assert.match(aiSource, /Terapkan menu ke Buat Dokumen/);
-  assert.match(source, /Satu penerima tidak boleh berada pada dua kelompok menu/);
-  assert.match(source, /recipient_menu_items:recipientMenuMap/);
-  assert.match(source, /belum dipetakan ke kelompok menu AI/);
-  assert.match(source, /function menuItemsForRecipient/);
-  assert.match(previewSource, /readMenuComponentsForRecipient/);
-  assert.ok(previewSource.includes("readMenuComponentsForRecipient(recipient.id,date)"));
-});
 
 test("organoleptic archive and creation printing use recipient-specific snapshot menu items", () => {
   assert.match(source, /function getArchiveRecipientMenus/);
@@ -322,10 +291,6 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
   assert.match(source, /Pilih minimal satu penerima untuk melanjutkan/);
   assert.ok(source.includes("button.disabled=publishing||!ready"));
   assert.ok(source.includes('status("Memuat daftar penerima dan data pendukung...",false,"loading")'));
-  assert.ok(source.includes("hasAiMenuPlanDateMismatch(dateValue)"));
-  assert.ok(source.includes("Penerbitan diblokir: rencana menu AI dibuat untuk"));
-  assert.ok(source.includes("Samakan tanggal distribusi atau lepaskan rencana sebelum menerbitkan."));
-  assert.ok(source.includes("recipientNames.get(id)"));
 });
 
 test("mobile recipient selection stays in the page flow and offers clear grouped filters", () => {
@@ -382,15 +347,6 @@ test("P2 Data Master search, loading/error recovery, and form controls are acces
   assert.doesNotMatch(masterSource, /message\.style\.color/);
 });
 
-test("P2 AI review labels analysis states and keeps the user-confirmed apply boundary", () => {
-  assert.match(aiSource, /output\.setAttribute\("aria-busy",String\(state==="loading"\)\)/);
-  assert.match(aiSource, /results\.dataset\.state="loading"/);
-  assert.match(aiSource, /ai-review-counts/);
-  assert.match(aiSource, /ai-empty-state/);
-  assert.match(aiSource, /api\("ai\/recipient-apply"/);
-  assert.match(aiSource, /api\("ai\/master-apply"/);
-  assert.match(aiSource, /confirm:true/);
-});
 
 
 test("P2 archive separates distribution list, detail context, and destructive confirmation area", () => {
@@ -414,14 +370,6 @@ test("P2 Data Master provides desktop category navigation, mobile selection, gro
   assert.doesNotMatch(masterSource, /if\(!confirm\("Impor /);
 });
 
-test("P2 quick AI menu shortcut opens menu mode and analysis results are organized as a review queue", () => {
-  assert.match(source, /docsAiMenuAssist/);
-  assert.match(source, /window\.AutoDocMaster\.open\("ai","",\{mode:"menus",date:/);
-  assert.match(aiSource, /render\(container,options=\{\}\)/);
-  assert.match(aiSource, /Antrean pemeriksaan/);
-  assert.match(aiSource, /ai-review-status/);
-  assert.match(aiSource, /confirm:true/);
-});
 
 test("P3 visual audit styles cover vertical desktop navigation, mobile dropdown, recipient cards, and paired realization", () => {
   const stylesSource = readFileSync(new URL("../theme.css", import.meta.url), "utf8");

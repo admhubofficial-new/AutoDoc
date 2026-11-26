@@ -14,12 +14,11 @@ const defs={
 const categoryGroups=[
  {label:"Data operasional",keys:["recipients","staff","drivers","vehicles","menus"]},
  {label:"Pengaturan",keys:["settings","numbering"]},
- {label:"Bantuan input",keys:["ai"]}
 ];
-let contextualAi=false,loadSequence=0,saving=false;
+let loadSequence=0,saving=false;
 function isBusy(){return saving}
 function notifyBusy(){msg("Penyimpanan Data Master sedang berlangsung.",false,"loading")}
-let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null,aiInitialMode="both",aiDate="",suspendedDocumentOverlay=null;
+let modal=null,entity="recipients",cache={},returnFocusEl=null;
 async function api(path,body){const h={"apikey":KEY,"Accept":"application/json"};const r=await fetch(API+"/"+path,{method:body?"POST":"GET",headers:body?{...h,"Content-Type":"application/json"}:h,body:body?JSON.stringify(body):undefined,credentials:"include",cache:"no-store"});let d={};try{d=await r.json()}catch(_){}if(!r.ok)throw Error(d.message||"Permintaan gagal.");return d;}
 function msg(text,bad=false,state){
  const output=modal?.querySelector(".dm-msg");
@@ -30,23 +29,7 @@ function msg(text,bad=false,state){
  output.setAttribute("aria-live",bad?"assertive":"polite");
  output.classList.toggle("error",!!bad);
 }
-function suspendDocumentOverlay(){
- const overlay=document.querySelector(".docs-overlay");
- if(!overlay||overlay.hidden||suspendedDocumentOverlay)return;
- const home=document.getElementById("homePage");
- suspendedDocumentOverlay={element:overlay,inert:overlay.inert,ariaHidden:overlay.getAttribute("aria-hidden"),home,homeInert:home?.inert};
- if(home)home.inert=true;
- overlay.inert=true;overlay.setAttribute("aria-hidden","true");
-}
-function restoreDocumentOverlay(){
- if(!suspendedDocumentOverlay)return;
- const {element,inert,ariaHidden,home,homeInert}=suspendedDocumentOverlay;
- if(home)home.inert=homeInert;
- element.inert=inert;
- if(ariaHidden===null)element.removeAttribute("aria-hidden");else element.setAttribute("aria-hidden",ariaHidden);
- suspendedDocumentOverlay=null;
-}
-function close(returnHome=true){if(!modal)return;if(returnHome&&isBusy()){notifyBusy();return}loadSequence++;const wasContextual=contextualAi;const wasOpen=!modal.hidden;modal.hidden=true;restoreDocumentOverlay();document.body.style.overflow="";if(returnHome&&wasOpen){if(!wasContextual)window.AutoDocSetHomeNav?.("home");if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}}
+function close(returnHome=true){if(!modal)return;if(returnHome&&isBusy()){notifyBusy();return}loadSequence++;const wasOpen=!modal.hidden;modal.hidden=true;document.body.style.overflow="";if(returnHome&&wasOpen){window.AutoDocSetHomeNav?.("home");if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}}
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function init(){
  const home=document.querySelector(".home-content");if(!home)return;
@@ -57,29 +40,7 @@ function init(){
  const search=el("input","dm-search");search.type="search";search.placeholder="Cari nama, lokasi, status, atau informasi…";search.setAttribute("aria-label","Cari data master");search.autocomplete="off";
  const formSlot=el("div");const table=el("div","dm-table-wrap");const message=el("p","dm-msg");
  content.append(toolbar,intro,search,formSlot,table,message);dialog.append(head,tabs,content);modal.append(dialog);document.getElementById("workspacePages").append(modal);
- aiController=window.AutoDocAiAssistant?.create({
-  api,el,getRecipients:()=>Array.isArray(cache.recipients)?cache.recipients:[],
-  isActive:()=>!modal.hidden&&entity==="ai",
-  onBusyChange:value=>{saving=value},
-  onApplyMenuPlan:plan=>{
-   close();
-   if(window.AutoDocDocuments?.applyAiMenuPlan)window.AutoDocDocuments.applyAiMenuPlan(plan);
-   else{modal.hidden=false;document.body.style.overflow="hidden";entity="ai";render();msg("Modul Buat Dokumen belum siap. Muat ulang halaman dan coba kembali.",true)}
-  },
-  onMasterChanged:async()=>{const updated=await api("master/list");cache=updated.data||{};window.dispatchEvent(new Event("autodoc:data-changed"))},
-  setMessage:msg
- })||null;
- modal.addEventListener("click",e=>{if(contextualAi&&e.target===modal)close()});document.addEventListener("keydown",e=>{
-  if(modal.hidden||(!contextualAi&&!modal.contains(document.activeElement)))return;
-  if(e.key==="Escape"){close();return}
-  if(contextualAi&&e.key==="Tab"){
-   const focusable=Array.from(modal.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])")).filter(item=>!item.closest("[hidden]")&&item.getClientRects().length>0);
-   if(!focusable.length)return;
-   const first=focusable[0],last=focusable[focusable.length-1];
-   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
-   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
-  }
- });
+ document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!modal.hidden&&modal.contains(document.activeElement))close()});
  function applySearch(){
   const query=search.value.trim().toLocaleLowerCase("id-ID");
   const rows=Array.from(table.querySelectorAll("tbody tr.dm-data-row"));
@@ -93,29 +54,17 @@ function init(){
   else table.dataset.state=rows.length?"success":"empty";
  }
  search.addEventListener("input",applySearch);
- function open(nextEntity,initialSearch,options={}){
+ function open(nextEntity,initialSearch){
   if(isBusy()){notifyBusy();return}
-  if(nextEntity==="ai"||(nextEntity&&Object.prototype.hasOwnProperty.call(defs,nextEntity)))entity=nextEntity;
-  aiInitialMode=options?.mode==="menus"?"menus":"both";
+  if(nextEntity&&Object.prototype.hasOwnProperty.call(defs,nextEntity))entity=nextEntity;
   const requestedSearch=String(initialSearch||"");
   returnFocusEl=document.activeElement;
-  contextualAi=options?.mode==="menus";
-  aiDate=options.date||"";
-  modal.classList.toggle("dm-contextual-ai",contextualAi);
-  if(contextualAi){
-   suspendDocumentOverlay();
-   document.body.append(modal);
-   modal.classList.remove("workspace-page");
-   dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");
-   document.body.style.overflow="hidden";
-  }else{
    window.AutoDocDocuments?.close(false);
    window.AutoDocSetHomeNav?.("master");
    document.getElementById("workspacePages").append(modal);
    modal.classList.add("workspace-page");
    dialog.setAttribute("role","region");dialog.removeAttribute("aria-modal");
    document.body.style.overflow="";
-  }
   modal.hidden=false;search.value="";render();
   closeBtn.focus();
   const selectedEntity=entity;
@@ -123,7 +72,7 @@ function init(){
   pendingLoad.then(()=>{if(request===loadSequence&&!modal.hidden&&entity===selectedEntity){search.value=requestedSearch;applySearch()}});
  }
  function resetSession(){
-  close(false);cache={};entity="recipients";aiInitialMode="both";
+  close(false);cache={};entity="recipients";
   search.value="";formSlot.replaceChildren();table.replaceChildren();msg("");
  }
  window.AutoDocMaster=Object.freeze({open,close,resetSession,isBusy,notifyBusy});
@@ -133,27 +82,20 @@ function init(){
    const caption=el("span","dm-category-heading",group.label);caption.setAttribute("aria-hidden","true");tabs.insertBefore(caption,categorySelect);
    const optgroup=el("optgroup");optgroup.label=group.label;
    for(const key of group.keys){
-    const definition=key==="ai"?{title:"Asisten AI"}:defs[key];
+    const definition=defs[key];
     const option=el("option",null,definition.title);option.value=key;optgroup.append(option);
     const tabButton=el("button",null,definition.title);tabButton.type="button";tabButton.setAttribute("aria-selected",String(key===entity));tabButton.setAttribute("aria-label",definition.title);
-    tabButton.addEventListener("click",()=>{if(isBusy()){notifyBusy();return}entity=key;if(key==="ai")aiInitialMode="both";render()});tabs.insertBefore(tabButton,categorySelect);
+    tabButton.addEventListener("click",()=>{if(isBusy()){notifyBusy();return}entity=key;render()});tabs.insertBefore(tabButton,categorySelect);
    }
    categorySelect.append(optgroup);
   }
   categorySelect.value=entity;
-  h.textContent=contextualAi?"Bantuan input AI":"Data Master & Pengaturan";
-  title.textContent=entity==="ai"?"Asisten AI AutoDoc":defs[entity].title;actions.innerHTML="";search.value="";
+  h.textContent="Data Master & Pengaturan";
+  title.textContent=defs[entity].title;actions.innerHTML="";search.value="";
   if(entity==="numbering"){
    intro.textContent="Atur nomor berikutnya untuk setiap jenis dokumen. Nomor yang telah digunakan tidak dapat dipakai ulang.";
    search.hidden=true;table.hidden=true;formSlot.replaceChildren();
    renderNumbering();return;
-  }
-  if(entity==="ai"){
-   intro.textContent="Tempel teks atau unggah dokumen. AI akan menyiapkan usulan menu per sekolah dan perbandingan penerima manfaat. Tidak ada perubahan tersimpan sebelum Anda mengonfirmasi.";
-   search.hidden=true;table.hidden=true;formSlot.innerHTML="";
-   if(aiController)aiController.render(formSlot,{mode:aiInitialMode,compact:contextualAi,date:aiDate});
-   else formSlot.textContent="Modul Asisten AI belum siap.";
-   return;
   }
   intro.textContent="Data master dipakai untuk dokumen baru. Dokumen yang sudah diterbitkan tetap menyimpan snapshot lama.";
   search.hidden=false;table.hidden=false;
@@ -243,13 +185,8 @@ function init(){
   try{
    const d=await api("master/list");if(request!==loadSequence||modal.hidden)return;cache=d.data||{};
    table.setAttribute("aria-busy","false");
-   if(entity!=="ai"){
     render();
     msg((cache[entity]||[]).length+" data "+defs[entity].title.toLocaleLowerCase("id-ID")+" dimuat.",false,(cache[entity]||[]).length?"success":"empty");
-   }else{
-    table.hidden=true;table.dataset.state="success";
-    msg("Data Master siap untuk pencocokan AI.",false,"success");
-   }
   }catch(error){
    if(request!==loadSequence||modal.hidden)return;
    table.hidden=false;table.dataset.state="error";table.setAttribute("aria-busy","false");table.replaceChildren();
