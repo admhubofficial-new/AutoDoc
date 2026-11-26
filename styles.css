@@ -200,11 +200,6 @@
     .home-nav-caption{margin:0 10px 9px;color:#98a39b;font-size:9px;font-weight:750;letter-spacing:1.1px}
     .home-nav{display:grid;gap:5px}
     .home-nav button{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:#66746b;text-align:left;font:inherit;font-size:12px;font-weight:600;transition:background .15s ease,color .15s ease}
-    .home-nav button:hover{background:#f3f6f3;color:#254a36}
-    .home-nav button[aria-current=page]{background:#edf3ee;color:#1e5a43;font-weight:700}
-    .home-nav button[data-home-nav=print]{margin:5px 0 3px;background:#1e5a43;color:#fff;box-shadow:0 3px 8px rgba(30,90,67,.12)}
-    .home-nav button[data-home-nav=print]:hover{background:#194d3a}
-    .home-nav button[data-home-nav=print][aria-current=page]{background:#174b39;color:#fff}
     .home-nav-icon{display:grid;place-items:center;flex:0 0 19px;width:19px;height:19px;color:currentColor}
     .home-nav-icon svg{display:block;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
     .home-sidebar-footer{display:flex;align-items:center;gap:10px;margin-top:auto;padding:16px 9px 13px;border-top:1px solid #edf0ec}
@@ -313,12 +308,12 @@
     body .docs-overlay,body .dm-overlay{padding:0;align-items:stretch;justify-content:stretch;background:#f6f7f5}
     body .docs-overlay .docs-dialog,body .dm-overlay .dm-dialog{width:100%;max-width:none;height:100vh;height:100svh;max-height:100vh;max-height:100svh;min-height:100vh;min-height:100svh;border-radius:0;box-shadow:none;background:#f6f7f5}
     body .docs-overlay .docs-head,body .dm-overlay .dm-head{padding:17px clamp(18px,4vw,52px)}
-    body .docs-overlay .docs-tabs,body .dm-overlay .dm-tabs{padding:12px clamp(18px,4vw,52px)}
+    body .dm-overlay .dm-tabs{padding:12px clamp(18px,4vw,52px)}
     body .docs-overlay .docs-body,body .dm-overlay .dm-content{width:min(1160px,calc(100% - 64px));margin:0 auto;padding:26px 0 50px}
     @media(max-width:720px){
       body .docs-overlay .docs-body,body .dm-overlay .dm-content{width:calc(100% - 32px);padding:20px 0 40px}
       body .docs-overlay .docs-head,body .dm-overlay .dm-head{padding:14px 16px}
-      body .docs-overlay .docs-tabs,body .dm-overlay .dm-tabs{padding:10px 16px}
+      body .dm-overlay .dm-tabs{padding:10px 16px}
     }
     [hidden] { display: none !important; }
 
@@ -1013,3 +1008,10 @@ body .workspace-pages .workspace-page .dm-tabs{padding:12px;align-self:start;bor
 .workspace-queue-intro p{margin:0}
 #docsRealizationQueue+.docs-btn{margin-top:16px}
 @media(max-width:480px){.docs-draft-line>.docs-btn{width:100%}.workspace-queue-toolbar>.docs-btn{width:100%}}
+
+/* Phase 4: visual hierarchy for administration. */
+.home-nav-group-label{display:block;padding:14px 12px 2px}
+.home-page.sidebar-collapsed .home-nav-group-label{display:none}
+.dm-category-heading{display:block;padding:9px 8px 3px}
+@media(max-width:820px){.dm-category-heading{display:none}}
+@media(max-width:720px){.home-page.mobile-nav-open .home-nav-group-label{display:block}.home-page:not(.mobile-nav-open) .home-nav-group-label{visibility:hidden}}

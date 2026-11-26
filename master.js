@@ -10,8 +10,12 @@ const defs={
  staff:{title:"Petugas",fields:[["nama","Nama petugas","text",1],["jabatan","Jabatan","text"],["urutan","Urutan","number"],["aktif","Aktif","checkbox"]]},
  menus:{title:"Menu makanan",fields:[["teks_menu","Nama/menu makanan","text",1],["urutan","Urutan","number"],["aktif","Aktif","checkbox"]]}
 };
-const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let contextualAi=false;
+const categoryGroups=[
+ {label:"Data operasional",keys:["recipients","staff","drivers","vehicles","menus"]},
+ {label:"Pengaturan",keys:["settings"]},
+ {label:"Bantuan input",keys:["ai"]}
+];
+let contextualAi=false,loadSequence=0;
 let modal=null,entity="recipients",cache={},returnFocusEl=null,aiController=null,aiInitialMode="both",suspendedDocumentOverlay=null;
 async function api(path,body){const h={"apikey":KEY,"Accept":"application/json"};const r=await fetch(API+"/"+path,{method:body?"POST":"GET",headers:body?{...h,"Content-Type":"application/json"}:h,body:body?JSON.stringify(body):undefined,credentials:"include",cache:"no-store"});let d={};try{d=await r.json()}catch(_){}if(!r.ok)throw Error(d.message||"Permintaan gagal.");return d;}
 function msg(text,bad=false,state){
@@ -39,7 +43,7 @@ function restoreDocumentOverlay(){
  if(ariaHidden===null)element.removeAttribute("aria-hidden");else element.setAttribute("aria-hidden",ariaHidden);
  suspendedDocumentOverlay=null;
 }
-function close(returnHome=true){if(!modal)return;const wasContextual=contextualAi;const wasOpen=!modal.hidden;modal.hidden=true;restoreDocumentOverlay();document.body.style.overflow="";if(returnHome&&wasOpen){if(!wasContextual)window.AutoDocSetHomeNav?.("home");if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}}
+function close(returnHome=true){if(!modal)return;loadSequence++;const wasContextual=contextualAi;const wasOpen=!modal.hidden;modal.hidden=true;restoreDocumentOverlay();document.body.style.overflow="";if(returnHome&&wasOpen){if(!wasContextual)window.AutoDocSetHomeNav?.("home");if(returnFocusEl&&returnFocusEl.isConnected)returnFocusEl.focus();}}
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function init(){
  const home=document.querySelector(".home-content");if(!home)return;
@@ -106,16 +110,28 @@ function init(){
   }
   modal.hidden=false;search.value="";render();
   closeBtn.focus();
-  load().then(()=>{search.value=requestedSearch;applySearch()});
+  load().then(()=>{if(!modal.hidden&&entity===nextEntity){search.value=requestedSearch;applySearch()}});
  }
- window.AutoDocMaster=Object.freeze({open,close});
+ function resetSession(){
+  close(false);cache={};entity="recipients";aiInitialMode="both";
+  search.value="";formSlot.replaceChildren();table.replaceChildren();msg("");
+ }
+ window.AutoDocMaster=Object.freeze({open,close,resetSession});
  function render(){
-  tabs.querySelectorAll("button").forEach(button=>button.remove());categorySelect.replaceChildren();
-  [...Object.entries(defs),["ai",{title:"Asisten AI"}]].forEach(([key,definition])=>{
-   const option=el("option",null,definition.title);option.value=key;categorySelect.append(option);
-   const tabButton=el("button",null,definition.title);tabButton.type="button";tabButton.setAttribute("aria-selected",String(key===entity));tabButton.setAttribute("aria-label",definition.title);tabButton.addEventListener("click",()=>{entity=key;if(key==="ai")aiInitialMode="both";render()});tabs.insertBefore(tabButton,categorySelect);
-  });
+  tabs.querySelectorAll("button,.dm-category-heading").forEach(item=>item.remove());categorySelect.replaceChildren();
+  for(const group of categoryGroups){
+   const caption=el("span","dm-category-heading",group.label);caption.setAttribute("aria-hidden","true");tabs.insertBefore(caption,categorySelect);
+   const optgroup=el("optgroup");optgroup.label=group.label;
+   for(const key of group.keys){
+    const definition=key==="ai"?{title:"Asisten AI"}:defs[key];
+    const option=el("option",null,definition.title);option.value=key;optgroup.append(option);
+    const tabButton=el("button",null,definition.title);tabButton.type="button";tabButton.setAttribute("aria-selected",String(key===entity));tabButton.setAttribute("aria-label",definition.title);
+    tabButton.addEventListener("click",()=>{entity=key;if(key==="ai")aiInitialMode="both";render()});tabs.insertBefore(tabButton,categorySelect);
+   }
+   categorySelect.append(optgroup);
+  }
   categorySelect.value=entity;
+  h.textContent=contextualAi?"Bantuan input AI":"Data Master & Pengaturan";
   title.textContent=entity==="ai"?"Asisten AI AutoDoc":defs[entity].title;actions.innerHTML="";search.value="";
   if(entity==="ai"){
    intro.textContent="Tempel teks atau unggah dokumen. AI akan menyiapkan usulan menu per sekolah dan perbandingan penerima manfaat. Tidak ada perubahan tersimpan sebelum Anda mengonfirmasi.";
@@ -141,14 +157,24 @@ function init(){
   const filterCell=el("td",null,"Tidak ada data yang cocok dengan pencarian. Ubah kata kunci atau bersihkan pencarian.");
   filterCell.colSpan=cols.length+1;filterRow.append(filterCell);tb.append(filterRow);
   t.append(thead,tb);table.innerHTML="";table.append(t);table.dataset.state=(cache[entity]||[]).length?"success":"empty";formSlot.innerHTML="";applySearch();
-  if(entity==="settings"&&(cache.settings||[])[0])form(cache.settings[0]);
+  if(entity==="settings"&&(cache.settings||[])[0]){
+   const row=cache.settings[0];
+   search.hidden=true;table.hidden=true;
+   const edit=el("button","dm-btn","Ubah identitas");edit.type="button";edit.onclick=()=>form(row);actions.append(edit);
+   intro.textContent="Identitas, penanggung jawab, dan informasi tanda tangan yang digunakan pada dokumen baru.";
+   form(row);
+  }
  }
  function form(row){
   formSlot.innerHTML="";const f=el("form","dm-form");
   const recipientGroups=new Map();
+  if(entity==="settings"){
+   [["identity","Identitas dan alamat SPPG","Informasi kop surat dan lokasi."],["signatories","Penanggung jawab","Nama yang dicantumkan pada dokumen baru."],["verification","Verifikasi alamat","Catatan pemeriksaan wilayah administratif."]].forEach(([key,title,description])=>{const group=el("section","dm-form-group");group.append(el("h4",null,title),el("p","dm-form-group-description",description));recipientGroups.set(key,group);f.append(group)});
+  }
   if(entity==="recipients"){
    [["identity","Identitas penerima","Kelompok, nama, jenjang, dan alamat tujuan distribusi."],["portions","Rincian jumlah","Isi kategori penerima dan jumlahnya. Gunakan angka nol hanya untuk kategori yang memang tidak ada."],["verification","Status & verifikasi","Catatan operasional dan penanda yang perlu diperiksa sebelum dokumen dibuat."]].forEach(([key,title,description])=>{const group=el("section","dm-form-group");group.append(el("h4",null,title),el("p","dm-form-group-description",description));recipientGroups.set(key,group);f.append(group)});
   }
+  const settingsFieldGroup={nama_sppg:"identity",kode_sppg:"identity",alamat:"identity",kecamatan:"identity",kabupaten:"identity",nama_kepala_sppg:"signatories",nama_kepala_sppi:"signatories",nama_ahli_gizi:"signatories",kabupaten_perlu_verifikasi:"verification",kabupaten_catatan_verifikasi:"verification"};
   const recipientFieldGroup={kelompok:"identity",nama:"identity",jenjang:"identity",alamat:"identity",siswa_kecil:"portions",siswa_besar:"portions",tendik:"portions",ibu_hamil:"portions",ibu_menyusui:"portions",balita:"portions",putus_sekolah:"portions",kader:"portions",urutan:"portions",keterangan:"verification",perlu_verifikasi:"verification",catatan_verifikasi:"verification",aktif:"verification"};
   defs[entity].fields.forEach(([key,label,type,required,options])=>{const wrap=el("div","dm-field"+(type==="textarea"?" wide":""));
    const inputId="dmField_"+key;
@@ -156,13 +182,15 @@ function init(){
    else{const lab=el("label",null,label);let input;if(type==="textarea")input=el("textarea");else if(type==="select"){input=el("select");options.forEach(o=>{const op=el("option",null,o);op.value=o;input.append(op)})}else{input=el("input");input.type=type}input.id=inputId;lab.htmlFor=inputId;input.dataset.key=key;input.required=!!required;if(["nama_kepala_sppg","nama_kepala_sppi","nama_ahli_gizi"].includes(key))input.maxLength=150;if(row?.[key]!==undefined&&row[key]!==null)input.value=row[key];else if(type==="number")input.value=key==="urutan"?"100":"0";if(type==="number"){input.min=key==="urutan"?"1":"0";input.step="1"}wrap.append(lab,input)}
    if(entity==="settings"&&key==="nama_kepala_sppi")wrap.append(el("small","dm-hint","Nama ini digunakan pada bagian tanda tangan Kepala SPPI di BAST."));
    if(entity==="settings"&&key==="nama_ahli_gizi")wrap.append(el("small","dm-hint","Nama ini dicetak pada bagian Mengetahui di Formulir Uji Organoleptik."));
-   (recipientGroups.get(recipientFieldGroup[key])||f).append(wrap);
+   (recipientGroups.get((entity==="settings"?settingsFieldGroup:recipientFieldGroup)[key])||f).append(wrap);
   });
   if(row?.id){const id=el("input");id.type="hidden";id.dataset.key="id";id.value=row.id;f.append(id)}
-  const buttons=el("div","dm-form-actions");const cancel=el("button","dm-btn","Batal");cancel.type="button";cancel.onclick=()=>formSlot.innerHTML="";const save=el("button","dm-btn primary","Simpan");save.type="submit";buttons.append(cancel,save);f.append(buttons);f.onsubmit=async e=>{e.preventDefault();const data={};f.querySelectorAll("[data-key]").forEach(x=>data[x.dataset.key]=x.type==="checkbox"?x.checked:x.value);save.disabled=true;save.textContent="Menyimpan…";msg("Menyimpan data "+defs[entity].title.toLocaleLowerCase("id-ID")+"…",false,"loading");try{await api("master/save",{entity,data});await load();msg("Data berhasil disimpan.",false,"success");window.dispatchEvent(new Event("autodoc:data-changed"))}catch(err){msg(err.message||"Data gagal disimpan.",true,"error");save.disabled=false;save.textContent="Simpan"}};formSlot.append(f);f.scrollIntoView({behavior:"smooth",block:"nearest"});
+  const buttons=el("div","dm-form-actions");const cancel=el("button","dm-btn","Batal");cancel.type="button";cancel.onclick=()=>{if(entity==="settings"&&row){form(row);msg("Isian dikembalikan ke data terakhir yang dimuat.")}else formSlot.innerHTML=""};const save=el("button","dm-btn primary","Simpan");save.type="submit";buttons.append(cancel,save);f.append(buttons);f.onsubmit=async e=>{e.preventDefault();const data={};f.querySelectorAll("[data-key]").forEach(x=>data[x.dataset.key]=x.type==="checkbox"?x.checked:x.value);save.disabled=true;save.textContent="Menyimpan…";msg("Menyimpan data "+defs[entity].title.toLocaleLowerCase("id-ID")+"…",false,"loading");try{await api("master/save",{entity,data});await load();msg("Data berhasil disimpan.",false,"success");window.dispatchEvent(new Event("autodoc:data-changed"))}catch(err){msg(err.message||"Data gagal disimpan.",true,"error");save.disabled=false;save.textContent="Simpan"}};formSlot.append(f);f.scrollIntoView({behavior:"smooth",block:"nearest"});
  }
  async function load(){
+  const request=++loadSequence;
   msg("Memuat Data Master…",false,"loading");
+  table.hidden=false;
   table.dataset.state="loading";
   table.setAttribute("aria-busy","true");
   table.replaceChildren();
@@ -171,17 +199,18 @@ function init(){
   skeleton.append(el("span","ui-skeleton dm-skeleton-line"),el("span","ui-skeleton dm-skeleton-line wide"),el("span","ui-skeleton dm-skeleton-line"));
   table.append(skeleton);
   try{
-   const d=await api("master/list");cache=d.data||{};
+   const d=await api("master/list");if(request!==loadSequence||modal.hidden)return;cache=d.data||{};
    table.setAttribute("aria-busy","false");
    if(entity!=="ai"){
     render();
     msg((cache[entity]||[]).length+" data "+defs[entity].title.toLocaleLowerCase("id-ID")+" dimuat.",false,(cache[entity]||[]).length?"success":"empty");
    }else{
-    table.dataset.state="success";
+    table.hidden=true;table.dataset.state="success";
     msg("Data Master siap untuk pencocokan AI.",false,"success");
    }
   }catch(error){
-   table.dataset.state="error";table.setAttribute("aria-busy","false");table.replaceChildren();
+   if(request!==loadSequence||modal.hidden)return;
+   table.hidden=false;table.dataset.state="error";table.setAttribute("aria-busy","false");table.replaceChildren();
    const panel=el("div","ui-error-banner dm-load-error");
    const content=el("div","ui-error-banner__content");
    content.append(el("strong","ui-error-banner__title","Data Master gagal dimuat"),el("span",null,error.message||"Periksa sesi dan koneksi, lalu coba lagi."));

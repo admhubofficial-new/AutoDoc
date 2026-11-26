@@ -102,31 +102,15 @@ function build(){
  const head=node("header","docs-head");
  const title=node("div");title.innerHTML="<h2 id='docsTitle'>Surat Jalan &amp; BAST MBG</h2><p>Buat dokumen distribusi, cetak, dan catat realisasi penerimaan.</p>";
  const closeBtn=node("button","docs-close","×");closeBtn.type="button";closeBtn.setAttribute("aria-label","Kembali ke Beranda");closeBtn.onclick=()=>close();head.append(title,closeBtn);
- const tabs=node("nav","docs-tabs");
- tabs.hidden=true;
  const body=node("div","docs-body");
  body.innerHTML="<div class='docs-view-create'></div><div class='docs-view-history' hidden></div><p class='docs-msg' role='status' aria-live='polite'></p>";
- dialog.append(head,tabs,body);modal.append(dialog);document.getElementById("workspacePages").append(modal);
+ dialog.append(head,body);modal.append(dialog);document.getElementById("workspacePages").append(modal);
  // Main workspace is not a dismissible backdrop.
  document.addEventListener("keydown",e=>{
   if(modal.hidden||modal.inert||!modal.contains(document.activeElement))return;
   if(e.key==="Escape"){close();return}
  });
- drawTabs();renderCreate();
-}
-function drawTabs(){
- const tabs=$(".docs-tabs",modal);tabs.innerHTML="";
- [["create","Buat dokumen"],["history","Arsip distribusi"]].forEach(pair=>{
-  const b=node("button","docs-tab",pair[1]);b.type="button";b.setAttribute("aria-selected",String(tab===pair[0]));b.onclick=()=>switchTab(pair[0]);tabs.append(b);
- });
-}
-function switchTab(next){
- tab=next;drawTabs();
- $(".docs-view-create",modal).hidden=tab!=="create";
- $(".docs-view-history",modal).hidden=tab!=="history";
- status("");
- if(tab==="history")loadDistributions().catch(e=>status(e.message,true));
- else if(!masterLoaded)loadMaster().catch(e=>status(e.message,true));
+ renderCreate();
 }
 function options(items,valueKey,labelKey,label){
  let html="<option value=''>"+esc(label)+"</option>";
@@ -268,7 +252,7 @@ function applyAiMenuPlan(plan){
  activeAiMenuPlan={tanggal:plan.tanggal,groups:normalized};formDirty=true;
  realizationMode=false;queueRequest++;
  window.AutoDocSetHomeNav?.("print");
- show(false);tab="create";drawTabs();
+ show(false);tab="create";
  $("#docsTitle",modal).textContent="Buat Dokumen";
  $(".docs-head p",modal).textContent="Menu sudah dikelompokkan oleh AI. Periksa penerima dan data sebelum menerbitkan.";
  $(".docs-view-create",modal).hidden=false;$(".docs-view-history",modal).hidden=true;
@@ -574,7 +558,7 @@ async function createDocs(event){
   window.AutoDocSetHomeNav?.("archive");
   $("#docsTitle",modal).textContent="Dokumen distribusi";
   $(".docs-head p",modal).textContent="Periksa hasil penerbitan dan gunakan aksi cetak."
-  tab="history";drawTabs();
+  tab="history";
   $(".docs-view-create",modal).hidden=true;$(".docs-view-history",modal).hidden=false;
  }catch(e){status(e.message,true)}
  finally{publishing=false;button.textContent="Terbitkan dokumen";syncPreflightSummary()}
@@ -964,7 +948,7 @@ function init(){
   open(){
    realizationMode=false;queueRequest++;historyRequest++;
    show();
-   tab="create";drawTabs();
+   tab="create";
    $("#docsTitle",modal).textContent="Distribusi harian";
    $(".docs-head p",modal).textContent="Lengkapi menu dan penerima, periksa ringkasan, lalu terbitkan dokumen.";
    $(".docs-view-create",modal).hidden=false;
@@ -976,7 +960,7 @@ function init(){
   applyAiMenuPlan,
   openRealization(date){
    realizationMode=true;masterRequest++;
-   show(false);tab="history";drawTabs();
+   show(false);tab="history";
    $("#docsTitle",modal).textContent="Realisasi BAST";
    $(".docs-head p",modal).textContent="Pilih tanggal dan selesaikan pencatatan penerimaan makanan.";
    $(".docs-view-create",modal).hidden=true;
@@ -986,7 +970,7 @@ function init(){
   openArchive(date){
    realizationMode=false;queueRequest++;masterRequest++;
    show(false);
-   tab="history";drawTabs();
+   tab="history";
    $("#docsTitle",modal).textContent="Arsip Dokumen";
    $(".docs-head p",modal).textContent="Cari distribusi, lihat dokumen terbit, cetak ulang, dan catat realisasi BAST.";
    $(".docs-view-create",modal).hidden=true;
