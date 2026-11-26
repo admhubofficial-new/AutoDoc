@@ -851,6 +851,10 @@ test("phase 3 distribution draft survives reload, can be discarded, and never is
   await page.locator("#docsDiscardDraft").click();
   assert.equal(await page.locator("input[name='recipient']").isChecked(),false);
   assert.equal(await page.evaluate(()=>sessionStorage.getItem("autodoc:distribution-draft:v1")),null);
+  await page.locator("input[name='recipient']").check();
+  await page.locator("#logoutButton").click();
+  await page.locator("#loginPanel:not([hidden])").waitFor();
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem("autodoc:distribution-draft:v1")),null);
   assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
 });
@@ -867,6 +871,22 @@ test("phase 3 all-date BAST queue uses archived dates and opens the existing rea
   await page.locator(".docs-realization").waitFor();
   assert.equal(await page.locator("#docsHistoryDate").inputValue(),"2026-11-23");
   assert.equal(app.writes.some(item=>item.route==="docs/realization"),false);
+  assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});
+
+
+test("phase 3 BAST history scan retries without claiming incomplete history is complete", async () => {
+ const app=await openApp({apiFailures:{"docs/list":1}});
+ try{
+  const page=app.page;
+  await page.getByRole("button",{name:"Lihat semua BAST tertunda"}).click();
+  const more=page.getByRole("button",{name:"Coba lagi",exact:true});
+  await more.waitFor();
+  assert.match(await page.locator(".workspace-queue-totals").textContent(),/riwayat belum selesai/);
+  await more.click();
+  await page.locator("#docsRealizationQueue").getByRole("button",{name:"Input realisasi"}).waitFor();
+  assert.match(await page.locator(".workspace-queue-totals").textContent(),/1 tanggal diperiksa/);
   assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
 });

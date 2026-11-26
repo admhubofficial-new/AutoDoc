@@ -20,6 +20,7 @@ function clearStoredDraft(){try{sessionStorage.removeItem(DRAFT_KEY)}catch(_){}}
 function readStoredDraft(){
  try{
   const raw=sessionStorage.getItem(DRAFT_KEY);if(!raw)return null;
+  if(raw.length>200000){clearStoredDraft();return null}
   const saved=JSON.parse(raw);
   if(saved.version!==1||!Number.isFinite(saved.savedAt)||saved.savedAt>Date.now()||Date.now()-saved.savedAt>DRAFT_TTL||!Array.isArray(saved.fields)||!Array.isArray(saved.menu)||!Array.isArray(saved.recipients)){clearStoredDraft();return null}
   const validId=id=>typeof id==="string"&&/^[0-9a-f-]{36}$/i.test(id);
@@ -250,7 +251,7 @@ function renderAiMenuPlanNotice(){
  target.append(list);
  const remove=node("button","docs-btn","Lepas penerapan AI");
  remove.type="button";
- remove.onclick=()=>{activeAiMenuPlan=null;renderAiMenuPlanNotice();status("Penerapan menu AI dilepas. Tidak ada data tersimpan.");previewController?.updateLivePreview()};
+ remove.onclick=()=>{activeAiMenuPlan=null;formDirty=true;renderAiMenuPlanNotice();syncPreflightSummary();saveDraft();status("Penerapan menu AI dilepas. Belum ada dokumen diterbitkan.");previewController?.updateLivePreview()};
  target.append(remove);
 }
 function applyAiMenuPlan(plan){

@@ -205,7 +205,8 @@
       function showLogin() {
         finishAuthBootstrap();
         window.AutoDocMaster?.close(false);
-        window.AutoDocDocuments?.resetSession?.();
+        if(window.AutoDocDocuments?.resetSession)window.AutoDocDocuments.resetSession();
+        else try{sessionStorage.removeItem("autodoc:distribution-draft:v1")}catch(_){} 
         homePage.hidden = true;
         authPage.hidden = false;
         loginPanel.hidden = false;
@@ -488,7 +489,7 @@
   <script src="./document-preview.js?v=p4-simplified-document-flow-20261124" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
   <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
-  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3" defer></script>
+  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3-r2" defer></script>
   <script src="./dashboard.js?v=p1-operator-workspace-20261124-workspace-v2-stability2-phase2-phase3" defer></script>
 </body>
 </html>
