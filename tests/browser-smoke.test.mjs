@@ -759,7 +759,7 @@ test("desktop paper accepts wheel input and reflows into scrollable rows on zoom
     await page.waitForFunction(() => {
       const pages = document.querySelector("#docsPreviewPages");
       const [a, b] = pages.children;
-      return a.offsetTop === b.offsetTop && b.offsetLeft > a.offsetLeft && pages.scrollHeight > pages.clientHeight;
+      return a.offsetTop === b.offsetTop && b.offsetLeft > a.offsetLeft && pages.children[3].getBoundingClientRect().top >= a.getBoundingClientRect().bottom && a.clientHeight >= a.clientWidth * 1.4 && pages.scrollHeight > pages.clientHeight;
     });
     assert.deepEqual(app.errors, []);
   } finally {

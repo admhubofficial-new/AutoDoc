@@ -63,6 +63,7 @@ function fitPage(frame){
  body.style.transformOrigin="top left";
  body.style.transform="scale("+scale+")";
  frame.style.height=Math.ceil(Math.max(1123,body.scrollHeight)*scale)+"px";
+ host.style.height=frame.style.height;
 }
 function renderOrganolepticPreview(frame,recipient,date,menu,settings,number){
  const renderer=window.AutoDocOrganolepticPrint;
@@ -135,7 +136,7 @@ function updateLivePreview(){
  frame.parentElement.dataset.recipient=recipient.nama;
  frame.dataset.documentPage="";
  if(pages.children.length>1)frame.loading="lazy";
- frame.style.aspectRatio="794 / 1123";
+ frame.parentElement.classList.add("docs-document-sheet");
  const settings=Array.isArray(getMaster().settings)?(getMaster().settings[0]||{}):(getMaster().settings||{});
  const menu=readMenuComponents();
  const issueKind=kind==="ORGANOLEPTIC"?"SJ":kind;
