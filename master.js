@@ -199,7 +199,7 @@ function init(){
     if(next===current){pin.value="";msg("Nomor tidak berubah.");return}
     if(!confirm("Ubah nomor berikutnya "+counter.jenis+" dari "+current+" menjadi "+next+"? Nomor yang dilewati tidak akan dipakai ulang."))return;
     const token=pin.value;pin.value="";saving=true;f.inert=true;save.disabled=true;
-    try{await api("master/numbering",{jenis:counter.jenis,next_number:next,token});await load();msg("Nomor berikutnya berhasil diperbarui.");window.dispatchEvent(new Event("autodoc:data-changed"))}
+    try{await api("master/numbering",{jenis:counter.jenis,next_number:next,token});await load();if(table.dataset.state==="error")msg("Nomor tersimpan, tetapi daftar belum dapat diperbarui. Coba lagi.",true,"error");else msg("Nomor berikutnya berhasil diperbarui.");window.dispatchEvent(new Event("autodoc:data-changed"))}
     catch(error){msg(error.message||"Nomor gagal diperbarui. Muat ulang dan coba lagi.",true);save.disabled=false}
     finally{saving=false;f.inert=false}
    };

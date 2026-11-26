@@ -614,7 +614,8 @@ body .workspace-pages .workspace-page .docs-head h2,body .workspace-pages .works
 .workspace-page .docs-output-options,.workspace-page .docs-shipping-details{border:0;background:transparent;border-radius:0;padding:4px 0}
 .workspace-page .docs-grid-compact{grid-template-columns:repeat(2,minmax(0,1fr))}
 .workspace-page .docs-preview-panel{position:static;max-height:none;height:auto;overflow:visible;box-shadow:none;margin-top:0}
-.workspace-page .docs-preview-paper{max-height:none;height:auto;overflow:hidden}
+.workspace-page .docs-preview-content,.workspace-page .docs-preview-paper{max-height:none;height:auto;overflow:visible}
+.workspace-page .docs-preview-paper iframe{display:block;width:100%;overflow:hidden}
 .workspace-page .docs-preview-paper iframe{max-height:none}
 body .workspace-pages .workspace-page .docs-submit-bar{position:static;background:transparent;border:0;border-radius:0;box-shadow:none;padding:16px 0}
 .workspace-page .docs-btn,.workspace-page .dm-btn{min-height:36px;font-size:13px;border-radius:7px}
