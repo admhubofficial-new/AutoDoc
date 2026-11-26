@@ -1005,3 +1005,11 @@ body .workspace-pages .workspace-page .dm-tabs{padding:12px;align-self:start;bor
   .home-hero-actions{width:100%}
   .docs-work-summary>div{padding:10px 7px}
 }
+
+/* Phase 3: draft and cross-date queue controls. */
+.docs-draft-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.workspace-queue-intro{flex:1 1 100%;min-width:0}
+.workspace-queue-intro h3{margin:0 0 4px}
+.workspace-queue-intro p{margin:0}
+#docsRealizationQueue+.docs-btn{margin-top:16px}
+@media(max-width:480px){.docs-draft-line>.docs-btn{width:100%}.workspace-queue-toolbar>.docs-btn{width:100%}}

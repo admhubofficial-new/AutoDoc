@@ -226,7 +226,7 @@
       el("p", "home-card-description", pendingBast > 0
         ? "Dokumen BAST yang belum selesai dicatat realisasinya."
         : "Tidak ada BAST yang perlu ditindaklanjuti saat ini."),
-      action("Buka antrean realisasi", false, () => window.AutoDocOpenRealization?.(rows.find(row=>Number(row.bast_pending)>0)?.tanggal))
+      action("Lihat semua BAST tertunda", false, () => window.AutoDocOpenRealization?.("all"))
     );
     const pendingDates=rows.filter(row=>Number(row.bast_pending)>0);
     if(pendingDates.length){
@@ -240,7 +240,7 @@
       bast.append(dates);
     }
     const recentPending=pendingDates.reduce((sum,row)=>sum+Number(row.bast_pending),0);
-    if(pendingBast>recentPending)bast.append(el("p","home-card-description","Ada "+number(pendingBast-recentPending)+" BAST tertunda di luar lima distribusi terbaru. Pilih tanggal melalui Realisasi BAST atau cari di Arsip."));
+    if(pendingBast>recentPending)bast.append(el("p","home-card-description","Ada "+number(pendingBast-recentPending)+" BAST tertunda di luar lima distribusi terbaru. Gunakan antrean semua tanggal."));
     workGrid.append(bast, renderMasterCheck(counts));
     host.append(workGrid, renderRecentArchive(rows));
   }
