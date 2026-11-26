@@ -75,7 +75,7 @@ function renderOrganolepticPreview(frame,recipient,date,menu,settings,number){
   doc.body.dataset.previewType="organoleptic";
   doc.body.style.width="794px";doc.body.style.margin="0";doc.body.style.padding="0";
   const root=doc.getElementById("previewRoot");
-  root.append(renderer.organolepticSheet(doc,{tanggalLabel:dateLabel,nomor:number,waktuMakan:$("#docsMealTime",getModal())?.value||"siang",ahliGizi:String(settings.nama_ahli_gizi||""),menu},recipient));
+  root.append(renderer.organolepticSheet(doc,{sppg:settings,logoUrl:logoUrl(),escapeHtml:esc,tanggalLabel:dateLabel,nomor:number,waktuMakan:$("#docsMealTime",getModal())?.value||"siang",ahliGizi:String(settings.nama_ahli_gizi||""),menu},recipient));
   fitPage(frame);
  };
  frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>"+css+"</style></head><body data-preview-type='organoleptic'><main id='previewRoot'></main></body></html>";

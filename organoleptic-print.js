@@ -19,7 +19,7 @@ body{background:#e8ebe9;color:#000;font-family:"Times New Roman","Liberation Ser
 .info .lbl{white-space:nowrap}
 .info .sep{text-align:center}
 .info .val{font-weight:400;overflow-wrap:anywhere}
-.caption{margin:14mm 0 1.5mm;text-align:center;font-size:10pt;line-height:1.25;font-weight:700}
+.caption{margin:5mm 0 1.5mm;text-align:center;font-size:10pt;line-height:1.25;font-weight:700}
 table.grid{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10.5pt;line-height:1.2}
 table.grid col.menu{width:25.3%}
 table.grid col.aspect{width:7.47%}
@@ -33,7 +33,7 @@ table.grid tbody td{height:10mm}
 .note{margin:3mm 0 0;font-size:10pt;line-height:1.3}
 .note p{margin:0}
 .note .row{display:grid;grid-template-columns:12mm minmax(0,1fr)}
-.followup{height:60mm;min-height:60mm;margin-top:3mm;padding:2.5mm 3mm;border:1px solid #000;font-size:12pt;font-weight:700;flex:none}
+.followup{height:40mm;min-height:40mm;margin-top:3mm;padding:2.5mm 3mm;border:1px solid #000;font-size:12pt;font-weight:700;flex:none}
 .signs{display:flex;justify-content:space-between;gap:18mm;margin-top:8mm;font-size:11.5pt;line-height:1.25}
 .sign{display:flex;width:72mm;min-width:0;flex-direction:column;text-align:center}
 .sign-heading{height:10mm;display:flex;flex-direction:column;justify-content:flex-start}
@@ -128,6 +128,8 @@ function organolepticSheet(doc,data,recipient){
  const sheet=organolepticElement(doc,"section","sheet");
  const menu=Array.isArray(data.menu)?data.menu.slice(0,8):[];
  sheet.dataset.menuCount=String(Math.max(5,menu.length));
+ const header=doc.createRange().createContextualFragment(window.AutoDocPrintRenderer.letterhead(data.sppg||{},data.logoUrl,data.escapeHtml));
+ sheet.append(header);
  sheet.append(organolepticElement(doc,"h1","sheet-title","FORMULIR UJI ORGANOLEPTIK"));
  sheet.append(organolepticElement(doc,"p","sheet-number","Nomor: "+(data.nomor||"..............................")));
 
@@ -166,7 +168,7 @@ function organolepticSheet(doc,data,recipient){
 }
 
 window.AutoDocOrganolepticPrint=Object.freeze({
- styles:STYLES,
+ get styles(){return STYLES+window.AutoDocPrintRenderer.letterheadStyles},
  organolepticElement,
  organolepticInfoRow,
  organolepticMealNode,

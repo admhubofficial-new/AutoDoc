@@ -210,19 +210,21 @@ function buildBast(snapshot,doc,logoUrl,escapeHtml){
     bastSignatures(sppg,escapeHtml)+"</main>";
 }
 
-const PRINT_STYLES=`
-@page{size:A4 portrait;margin:0}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:10pt;line-height:1.25;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.sheet{width:210mm;min-height:297mm;margin:18px auto;padding:15mm 20mm;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18)}
-.letterhead{display:grid;grid-template-columns:24.65mm minmax(0,1fr) 19.4mm;align-items:center;min-height:27mm;padding:0 0 4mm;border-bottom:3px double #111}
+const letterheadStyles=`.letterhead{font-family:Arial,Helvetica,sans-serif;display:grid;grid-template-columns:24.65mm minmax(0,1fr) 19.4mm;align-items:center;min-height:27mm;padding:0 0 4mm;border-bottom:3px double #111}
 .letterhead-logo{display:flex;align-items:center;justify-content:flex-start}
 .top-logo{display:block;width:20.6mm;height:20.4mm;object-fit:contain}
 .letterhead-copy{text-align:center;min-width:0}
 .letterhead-main{font-size:14pt;font-weight:700;line-height:1.15}
 .letterhead-place{font-size:15pt;font-weight:700;line-height:1.2}
 .letterhead-address{margin-top:1mm;font-size:9pt;line-height:1.25}
+`;
+const PRINT_STYLES=`
+@page{size:A4 portrait;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#e8ebe9;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:10pt;line-height:1.25;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet{width:210mm;min-height:297mm;margin:18px auto;padding:15mm 20mm;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18)}
+${letterheadStyles}
 .document-heading{text-align:center}
 .document-heading h1,.document-heading h2,.document-heading p{margin:0}
 .sj-heading{margin:7mm 0 4mm}
@@ -291,5 +293,5 @@ function buildPrintHtml(doc,escapeHtml,logoUrl){
     safe(escapeHtml,doc.nomor_lengkap)+"</title><style>"+PRINT_STYLES+"</style></head><body>"+body+"</body></html>";
 }
 
-window.AutoDocPrintRenderer=Object.freeze({buildPrintHtml,formatDateParts});
+window.AutoDocPrintRenderer=Object.freeze({buildPrintHtml,formatDateParts,letterheadStyles,letterhead});
 })();
