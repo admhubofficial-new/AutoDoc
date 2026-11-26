@@ -347,3 +347,11 @@ test("AI analysis has per-session admission control, bounded concurrency, timeou
   assert.match(body, /parseRetryAfterSeconds\(openAiResponse\.headers\.get\("retry-after"\)\)/);
   assert.match(body, /status === 429 \|\| status === 503/);
 });
+
+test("number settings require session, safe integer and mutation PIN",()=>{
+ const body=functionBody("handleNumberingSave","handleMasterSave");
+ assert.match(body,/validSession\(request\)/);
+ assert.match(body,/Number\.isSafeInteger/);
+ assert.match(body,/verifyMutationPin\(request, body\.token, "ubah_nomor_dokumen"\)/);
+ assert.match(body,/rpc<unknown>\("ubah_nomor_awal"/);
+});

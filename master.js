@@ -3,6 +3,7 @@
 const { apiUrl: API, publishableKey: KEY } = window.AutoDocConfig;
 const { parseCsv, parseCsvBoolean } = window.AutoDocMasterUtils;
 const defs={
+ numbering:{title:"Nomor dokumen",fields:[]},
  settings:{title:"Identitas SPPG",fields:[["nama_sppg","Nama SPPG","text",1],["kode_sppg","Kode SPPG","text",1],["alamat","Alamat","textarea"],["kecamatan","Kecamatan","text",1],["kabupaten","Kabupaten","text",1],["nama_kepala_sppg","Nama Kepala SPPG","text"],["nama_kepala_sppi","Nama Kepala SPPI","text"],["nama_ahli_gizi","Nama Ahli Gizi Dapur","text"],["kabupaten_perlu_verifikasi","Kabupaten perlu diverifikasi","checkbox"],["kabupaten_catatan_verifikasi","Catatan verifikasi","textarea"]]},
  recipients:{title:"Penerima manfaat",fields:[["kelompok","Kelompok","select",1,["Sekolah/Lembaga","Posyandu"]],["nama","Nama penerima","text",1],["jenjang","Jenjang","text",1],["alamat","Alamat","textarea"],["siswa_kecil","Siswa kecil","number"],["siswa_besar","Siswa besar","number"],["tendik","Tenaga pendidik","number"],["ibu_hamil","Ibu hamil","number"],["ibu_menyusui","Ibu menyusui","number"],["balita","Balita","number"],["putus_sekolah","Putus sekolah","number"],["kader","Kader","number"],["urutan","Urutan","number"],["keterangan","Keterangan","textarea"],["perlu_verifikasi","Perlu verifikasi","checkbox"],["catatan_verifikasi","Catatan verifikasi","textarea"],["aktif","Aktif","checkbox"]]},
  drivers:{title:"Pengemudi",fields:[["nama","Nama pengemudi","text",1],["urutan","Urutan","number"],["aktif","Aktif","checkbox"]]},
@@ -12,7 +13,7 @@ const defs={
 };
 const categoryGroups=[
  {label:"Data operasional",keys:["recipients","staff","drivers","vehicles","menus"]},
- {label:"Pengaturan",keys:["settings"]},
+ {label:"Pengaturan",keys:["settings","numbering"]},
  {label:"Bantuan input",keys:["ai"]}
 ];
 let contextualAi=false,loadSequence=0,saving=false;
@@ -140,6 +141,11 @@ function init(){
   categorySelect.value=entity;
   h.textContent=contextualAi?"Bantuan input AI":"Data Master & Pengaturan";
   title.textContent=entity==="ai"?"Asisten AI AutoDoc":defs[entity].title;actions.innerHTML="";search.value="";
+  if(entity==="numbering"){
+   intro.textContent="Atur nomor berikutnya untuk setiap jenis dokumen. Nomor yang telah digunakan tidak dapat dipakai ulang.";
+   search.hidden=true;table.hidden=true;formSlot.replaceChildren();
+   renderNumbering();return;
+  }
   if(entity==="ai"){
    intro.textContent="Tempel teks atau unggah dokumen. AI akan menyiapkan usulan menu per sekolah dan perbandingan penerima manfaat. Tidak ada perubahan tersimpan sebelum Anda mengonfirmasi.";
    search.hidden=true;table.hidden=true;formSlot.innerHTML="";
@@ -170,6 +176,33 @@ function init(){
    const edit=el("button","dm-btn","Ubah identitas");edit.type="button";edit.onclick=()=>form(row);actions.append(edit);
    intro.textContent="Identitas, penanggung jawab, dan informasi tanda tangan yang digunakan pada dokumen baru.";
    form(row);
+  }
+ }
+ function renderNumbering(){
+  const counters=Array.isArray(cache.numbering)?cache.numbering:[];
+  if(!counters.length){formSlot.append(el("p","dm-hint","Nomor dokumen belum dapat dimuat. Buka ulang Pengaturan untuk mencoba lagi."));return}
+  for(const counter of counters){
+   if(!["SJ","BAST"].includes(counter.jenis))continue;
+   const current=Number(counter.next_number);
+   if(!Number.isSafeInteger(current)||current<1)continue;
+   const f=el("form","dm-form number-settings-form");f.dataset.kind=counter.jenis;
+   const heading=el("h4",null,counter.jenis==="SJ"?"Surat Jalan":"BAST");
+   const info=el("p","dm-form-group-description","Nomor awal terakhir: "+counter.start_number+" · Nomor berikutnya: "+current);
+   const field=el("div","dm-field"),label=el("label",null,"Nomor berikutnya"),input=el("input");
+   input.id="numberNext_"+counter.jenis;label.htmlFor=input.id;input.type="number";input.min=String(current);input.max="999999999";input.step="1";input.required=true;input.value=String(current);field.append(label,input);
+   const pinField=el("div","dm-field"),pinLabel=el("label",null,"PIN konfirmasi"),pin=el("input");pin.id="numberPin_"+counter.jenis;pinLabel.htmlFor=pin.id;pin.type="password";pin.autocomplete="current-password";pin.required=true;pin.minLength=6;pin.maxLength=128;pinField.append(pinLabel,pin);
+   const save=el("button","dm-btn primary","Simpan nomor "+counter.jenis);save.type="submit";
+   f.append(heading,info,field,pinField,save);formSlot.append(f);
+   f.onsubmit=async event=>{
+    event.preventDefault();if(isBusy()||!f.reportValidity())return;
+    const next=Number(input.value);if(!Number.isSafeInteger(next)||next<current||next>999999999){msg("Nomor tidak boleh lebih rendah dari "+current,true);return}
+    if(next===current){pin.value="";msg("Nomor tidak berubah.");return}
+    if(!confirm("Ubah nomor berikutnya "+counter.jenis+" dari "+current+" menjadi "+next+"? Nomor yang dilewati tidak akan dipakai ulang."))return;
+    const token=pin.value;pin.value="";saving=true;f.inert=true;save.disabled=true;
+    try{await api("master/numbering",{jenis:counter.jenis,next_number:next,token});await load();msg("Nomor berikutnya berhasil diperbarui.");window.dispatchEvent(new Event("autodoc:data-changed"))}
+    catch(error){msg(error.message||"Nomor gagal diperbarui. Muat ulang dan coba lagi.",true);save.disabled=false}
+    finally{saving=false;f.inert=false}
+   };
   }
  }
  function form(row){

@@ -18,10 +18,10 @@ test("dashboard offers direct access to create documents and the archive", () =>
   assert.match(dashboard, /AutoDocOpenDocs/);
   assert.match(dashboard, /AutoDocOpenArchive/);
   assert.doesNotMatch(index, /homeCreateShortcut/);
-  assert.match(index, /Pusat pekerjaan operator/);
+  assert.match(index, /Ruang kerja/);
 });
 
-test("primary navigation is a responsive workspace sidebar", () => {
+test("primary navigation supports a horizontal desktop workspace and a mobile drawer", () => {
   assert.match(css, /grid-template-columns:248px minmax\(0,1fr\)/);
   assert.match(css, /@media\(max-width:720px\)/);
   assert.match(index, /homeNav/);

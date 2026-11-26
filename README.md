@@ -159,3 +159,6 @@ Data Master tetap tersedia sebagai menu utama dalam kelompok Administrasi. Kateg
 
 ### Audit stabilitas dan cleanup
 Kontrol cetak arsip dinonaktifkan selama detail tanggal dimuat, state dokumen lama dibersihkan; konfirmasi hapus hanya berlaku untuk pilihan yang sama, PIN dihapus dari DOM saat meninggalkan halaman, navigasi ditahan saat penghapusan berlangsung. Dashboard mengosongkan cache saat sesi ditutup, respons arsip lama dan hasil salin menu yang sudah kedaluwarsa diabaikan. Helper pilihan dan styling dari markup yang tidak lagi digunakan dihapus, render menu ganda dihilangkan. Backend, skema dan renderer cetak tetap utuh. Pengujian menggunakan mock, tidak ada mutasi produksi.
+
+### AutoDoc 3.0 — tahap awal
+Header horizontal desktop, dashboard tanpa kartu besar, formulir distribusi satu kolom dengan pratinjau tertutup awal dan konfirmasi penerbitan eksplisit. Pemilihan penerima banyak dibuka sesuai kebutuhan. Pengaturan > Nomor dokumen membaca counter SJ/BAST dan mengubah nomor berikutnya melalui sesi dan verifikasi PIN. RPC dikunci pada high-water mark, termasuk riwayat terhapus, serta mengaudit perubahan dalam transaksi. Terapkan migrasi dan deploy Edge Function sebelum merilis frontend. Nomor historis tidak diubah. Panel pemeriksaan terpisah dan tabel realisasi penuh masih tahap berikutnya.

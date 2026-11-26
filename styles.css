@@ -817,7 +817,7 @@
 
 @media (min-width: 1120px) {
   .docs-create-layout {
-    grid-template-columns: minmax(0, 1.08fr) minmax(400px, .92fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
 

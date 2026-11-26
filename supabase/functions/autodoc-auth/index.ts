@@ -514,7 +514,19 @@ async function handleMasterList(request: Request): Promise<Response> {
     if (entity === "settings") query.set("id", "eq.1");
     data[entity] = await supabaseRequest<unknown[]>(config.table + "?" + query.toString());
   }
+  if(includeRecipients) data.numbering = await supabaseRequest<unknown[]>("counters?select=jenis,start_number,next_number,locked&order=jenis");
   return respond(request, { data });
+}
+
+async function handleNumberingSave(request: Request): Promise<Response> {
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const body = await readJson(request);
+  if (body.jenis !== "SJ" && body.jenis !== "BAST") throw new AppError(400, "Jenis dokumen tidak valid.");
+  if (typeof body.next_number !== "number" || !Number.isSafeInteger(body.next_number) || body.next_number < 1 || body.next_number > 999999999) throw new AppError(400, "Nomor harus bilangan bulat 1 sampai 999999999.");
+  await verifyMutationPin(request, body.token, "ubah_nomor_dokumen");
+  const data = await rpc<unknown>("ubah_nomor_awal", { p_jenis: body.jenis, p_nomor_awal_baru: body.next_number });
+  return respond(request, { success: true, data });
 }
 
 async function handleMasterSave(request: Request): Promise<Response> {
@@ -2306,6 +2318,7 @@ Deno.serve(async (request: Request) => {
       case "master/list": return await handleMasterList(request);
       case "master/recipients": return await handleMasterRecipients(request);
       case "master/save": return await handleMasterSave(request);
+      case "master/numbering": return await handleNumberingSave(request);
       case "master/import": return await handleMasterImport(request);
       case "ai/recipient-apply": return await handleAiRecipientApply(request);
       case "ai/master-apply": return await handleAiMasterApply(request);
