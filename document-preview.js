@@ -1,7 +1,20 @@
 (() => {
 "use strict";
 function create(dependencies){
- const { $, esc, getModal, getMaster, readMenuComponents, selectedDocumentKinds, today, logoUrl } = dependencies;
+ const { $, esc, getModal, getMaster, api, readMenuComponents, selectedDocumentKinds, today, logoUrl } = dependencies;
+ let numberDate="", numberContext=null, numberRequest=0;
+ function loadNumbers(date){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date===numberDate)return;
+  numberDate=date;
+  numberContext=null;
+  const request=++numberRequest;
+  Promise.all([api("master/list?preview=true"),api("docs/list?tanggal="+encodeURIComponent(date)+"&preview=true")]).then(([master,history])=>{
+   if(request!==numberRequest)return;
+   numberContext={counters:master.data?.numbering||[],existing:history.documents||[]};
+   updateLivePreview();
+  }).catch(()=>{});
+ }
+ window.addEventListener("autodoc:data-changed",()=>{numberDate="";numberContext=null;updateLivePreview()});
  let boundDisclosure=null;
  window.addEventListener("resize",fitPreviewFrame);
  function bindPreviewDisclosure(){
@@ -34,7 +47,7 @@ function fitPage(frame){
  body.style.transform="scale("+scale+")";
  frame.style.height=Math.ceil(Math.max(1123,body.scrollHeight)*scale)+"px";
 }
-function renderOrganolepticPreview(frame,recipient,date,menu,settings){
+function renderOrganolepticPreview(frame,recipient,date,menu,settings,number){
  const renderer=window.AutoDocOrganolepticPrint;
  if(!renderer?.organolepticSheet)return;
  const css=renderer.styles+"body{background:#fff}.sheet{margin:0;box-shadow:none}";
@@ -44,7 +57,7 @@ function renderOrganolepticPreview(frame,recipient,date,menu,settings){
   doc.body.dataset.previewType="organoleptic";
   doc.body.style.width="794px";doc.body.style.margin="0";doc.body.style.padding="0";
   const root=doc.getElementById("previewRoot");
-  root.append(renderer.organolepticSheet(doc,{tanggalLabel:dateLabel,nomor:"Belum terbit",waktuMakan:$("#docsMealTime",getModal())?.value||"siang",ahliGizi:String(settings.nama_ahli_gizi||""),menu},recipient));
+  root.append(renderer.organolepticSheet(doc,{tanggalLabel:dateLabel,nomor:number,waktuMakan:$("#docsMealTime",getModal())?.value||"siang",ahliGizi:String(settings.nama_ahli_gizi||""),menu},recipient));
   fitPage(frame);
  };
  frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>"+css+"</style></head><body data-preview-type='organoleptic'><main id='previewRoot'></main></body></html>";
@@ -67,6 +80,12 @@ function updateLivePreview(){
   button.setAttribute("aria-pressed",String(button.dataset.previewKind===kind && !button.disabled));
  }
  const date=$("#docsDate",form)?.value||today();
+ if(recipients.length)loadNumbers(date);
+ const existing=new Map((numberContext?.existing||[]).map(doc=>[doc.jenis+":"+String(doc.recipient_id||doc.snapshot_json?.penerima?.id),doc]));
+ const next=Object.fromEntries((numberContext?.counters||[]).filter(row=>row.locked).map(row=>[row.jenis,Number(row.next_number)]));
+ const month=["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][Number(date.slice(5,7))-1];
+ const previewStatus=$("#docsPreviewNumberStatus",getModal());
+ if(previewStatus)previewStatus.textContent=recipients.length?"Nomor baru mengikuti urutan saat diterbitkan.":"";
  pages.replaceChildren();
  const makeFrame=(title)=>{
   const paper=document.createElement("div");
@@ -92,8 +111,14 @@ function updateLivePreview(){
  frame.style.aspectRatio="794 / 1123";
  const settings=Array.isArray(getMaster().settings)?(getMaster().settings[0]||{}):(getMaster().settings||{});
  const menu=readMenuComponents();
+ const issueKind=kind==="ORGANOLEPTIC"?"SJ":kind;
+ const issued=existing.get(issueKind+":"+String(recipient.id));
+ let number=issued?.nomor_lengkap||"";
+ if(!number&&kinds.includes(issueKind)&&month&&settings.kode_sppg&&Number.isSafeInteger(next[issueKind])&&next[issueKind]>0){
+  number=String(next[issueKind]++).padStart(3,"0")+"/"+issueKind+"/"+settings.kode_sppg+"/"+month+"/"+date.slice(0,4);
+ }
  if(kind==="ORGANOLEPTIC"){
-  renderOrganolepticPreview(frame,recipient,date,menu,settings);
+  renderOrganolepticPreview(frame,recipient,date,menu,settings,number.replace(/\/SJ\//i,"/ORG/"));
   continue;
  }
  const snapshot={
@@ -102,11 +127,10 @@ function updateLivePreview(){
   penerima:recipient,rincian_porsi:previewPortionRows(recipient),
   ringkasan:{porsi_kecil:Number(recipient.porsi_kecil||0),porsi_besar:Number(recipient.porsi_besar||0),total_porsi:Number(recipient.total_porsi||0)}
  };
- const doc={jenis:kind,nomor_lengkap:"PRATINJAU",snapshot_json:snapshot,created_at:"Pratinjau langsung"};
+ const doc=issued||{jenis:kind,nomor_lengkap:number,snapshot_json:snapshot};
  const renderer=window.AutoDocPrintRenderer;if(!renderer?.buildPrintHtml)return;
  let html=renderer.buildPrintHtml(doc,esc,logoUrl());
- html=html.replace("</style>","@page{margin:0}html,body{margin:0!important;background:#fff!important}.sheet{margin:0!important;box-shadow:none!important}.preview-ribbon{position:absolute;top:12px;right:16px;padding:4px 8px;border:1px solid #d6dfd6;border-radius:4px;color:#56705e;background:#f4f8f3;font:700 9px Arial;letter-spacing:.7px}</style>");
- html=html.replace("<body>","<body><div class='preview-ribbon'>PRATINJAU · BELUM DITERBITKAN</div>");
+ html=html.replace("</style>","@page{margin:0}html,body{margin:0!important;background:#fff!important}.sheet{margin:0!important;box-shadow:none!important}</style>");
  frame.onload=()=>fitPage(frame);frame.srcdoc=html;
  }
 }

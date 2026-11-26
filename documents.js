@@ -252,7 +252,7 @@ function renderCreateForm(){
     "<div class='docs-submit-bar'><div class='docs-submit-meta'><strong id='docsSubmitCount' aria-live='polite'>0 penerima · 0 porsi</strong><p id='docsPreflightSummary' data-state='incomplete' role='status' aria-live='polite'>Pilih minimal satu penerima untuk melanjutkan.</p></div><div class='docs-submit-actions'><button class='docs-btn primary' id='docsCreateButton' type='submit' disabled>Terbitkan dokumen</button></div></div>"+
    "</form><div id='docsCreateResult'></div>"+
   "</section>"+
-  "<details class='docs-preview-panel' id='docsPreviewDisclosure' open><summary class='docs-preview-summary'>Pratinjau dokumen</summary><div class='docs-preview-content'><div class='docs-preview-head'><div class='docs-preview-selects'><div class='docs-preview-kinds' aria-label='Jenis dokumen pratinjau'></div><select hidden id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><div id='docsPreviewPages' class='docs-preview-pages'></div></div></details>"+
+  "<details class='docs-preview-panel' id='docsPreviewDisclosure' open><summary class='docs-preview-summary'>Pratinjau dokumen</summary><div class='docs-preview-content'><div class='docs-preview-head'><div class='docs-preview-selects'><div class='docs-preview-kinds' aria-label='Jenis dokumen pratinjau'></div><select hidden id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div></div><p id='docsPreviewNumberStatus' class='docs-note' role='status'></p><div id='docsPreviewPages' class='docs-preview-pages'></div></div></details>"+
  "</div>";
  menuController?.render();
 
@@ -837,7 +837,7 @@ function init(){
  menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{menuRevision++;syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored){formDirty=true;saveDraft()}}});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
- previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,readMenuComponents,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
+ previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
  window.AutoDocDocuments=Object.freeze({
   open(){
    realizationMode=false;queueRequest++;historyRequest++;copyMenuRequest++;clearHistory();
