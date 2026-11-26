@@ -800,6 +800,8 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
   if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
 
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta" }).format(new Date());
+  const distributionFields = "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan";
   const [
     distributionsTotal,
     documentsTotal,
@@ -820,6 +822,7 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
     staffActive,
     menusActive,
     settings,
+    todayRow,
     recentRows,
   ] = await Promise.all([
     countRows("distributions"),
@@ -845,9 +848,10 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
       "nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,nama_kepala_sppg,nama_kepala_sppi,nama_ahli_gizi",
       { id: "eq.1" },
     ),
+    selectOne<Record<string, unknown>>("distributions", distributionFields, { tanggal: "eq." + today }),
     supabaseRequest<Array<Record<string, unknown>>>(
       "distributions?" + new URLSearchParams({
-        select: "id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan",
+        select: distributionFields,
         order: "tanggal.desc",
         limit: "5",
       }).toString(),
@@ -867,7 +871,7 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
     menusActive === 0,
   ].filter(Boolean).length;
 
-  const recentDistributions = await Promise.all(recentRows.map(async (row) => {
+  async function summarizeDistribution(row: Record<string, unknown>) {
     const distributionId = String(row.id);
     const [documentsCount, bastPendingCount] = await Promise.all([
       countRows("documents", { distribution_id: "eq." + distributionId }),
@@ -887,7 +891,10 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
       documents_count: documentsCount,
       bast_pending: bastPendingCount,
     };
-  }));
+  }
+  const recentDistributions = await Promise.all(recentRows.map(summarizeDistribution));
+  const todayDistribution = recentDistributions.find(row => row.tanggal === today)
+    ?? (todayRow ? await summarizeDistribution(todayRow) : null);
 
   return respond(request, {
     generated_at: new Date().toISOString(),
@@ -915,6 +922,7 @@ async function handleDashboardSummary(request: Request): Promise<Response> {
       ahli_gizi_missing: ahliGiziMissing ? 1 : 0,
     },
     recent_distributions: recentDistributions,
+    today_distribution: todayDistribution,
   });
 }
 

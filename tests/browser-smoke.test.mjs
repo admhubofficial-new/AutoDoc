@@ -44,8 +44,11 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     const url = new URL(request.url());
     const routeName = url.pathname.split("/autodoc-auth/")[1] || "";
     if (apiDelays[routeName]) await new Promise(resolve => setTimeout(resolve, apiDelays[routeName]));
-    if (apiFailures[routeName] > 0) {
-      apiFailures[routeName] -= 1;
+    const failureKey = routeName === "master/list" && url.searchParams.has("include_recipients")
+      ? "master/list?include_recipients=false"
+      : routeName;
+    if (apiFailures[failureKey] > 0) {
+      apiFailures[failureKey] -= 1;
       await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Simulasi gangguan layanan." }) });
       return;
     }
@@ -179,7 +182,6 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     }
     await page.locator("#docsShippingDisclosure > summary").click();
     await page.locator("input[name='recipient']").check();
-    await page.locator("#docsPreviewToggle").click();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("PRATINJAU · BELUM DITERBITKAN").waitFor();
     await page.locator("#docsStaff").fill("Petugas Browser Test");
@@ -199,10 +201,9 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     assert.equal(await mobile.page.locator("#docsSummaryRecipients").textContent(),"1");
     assert.equal(await mobile.page.locator("#docsSummaryPortions").textContent(),"16");
     assert.equal(await mobile.page.locator("#docsSummaryDocuments").textContent(),"2");
-    await mobile.page.locator(".docs-output-options summary").click();
     await mobile.page.locator("#docsKindBast").uncheck();
     assert.equal(await mobile.page.locator("#docsSummaryDocuments").textContent(),"1");
-    assert.match(await mobile.page.locator("#docsOutputLabel").textContent(),/Surat Jalan/);
+    assert.equal(await mobile.page.locator("#docsKindSj").isChecked(),true);
     await mobile.page.locator('[data-mobile-nav="more"]').click();
     await mobile.page.locator("#homePage.mobile-nav-open").waitFor();
     await mobile.page.locator('[data-home-nav="archive"]').click();
@@ -220,7 +221,7 @@ test("P0 shared design system and active navigation context work without runtime
   try {
     const page = app.page;
     const context = page.locator(".home-pagebar-text");
-    assert.equal((await context.textContent()).trim(), "Beranda");
+    assert.equal((await context.textContent()).trim(), "Buat Dokumen");
     for (const [key,label] of [["home","Beranda"],["print","Buat Dokumen"],["archive","Arsip"],["master","Data Master"]]) {
       assert.equal(await page.locator('[data-home-nav="' + key + '"]').getAttribute("aria-label"), label);
     }
@@ -274,6 +275,8 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
   const desktop = await openApp();
   try {
     const page = desktop.page;
+    await page.locator("#docsCreateForm").waitFor();
+    await page.locator('[data-home-nav="home"]').click();
     await page.locator(".home-operator-hero").waitFor();
     assert.equal(await page.locator("#opsDashboard").getAttribute("data-state"), "success");
     assert.notEqual((await page.locator(".home-operational-date").getAttribute("datetime")) || "", "");
@@ -286,10 +289,10 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     const headings = await page.locator("#docsCreateForm .docs-form-section-head h4").allTextContents();
     assert.deepEqual(headings, [
       "Jadwal distribusi",
-      "Menu & penerima",
+      "Penerima",
       "Pengiriman"
     ]);
-    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
+    assert.equal(await page.locator("#docsPreviewDisclosure").isVisible(), true);
     const previewLayout = await page.evaluate(() => {
       const layout = document.querySelector(".docs-create-layout");
       const form = document.querySelector(".docs-create-form-panel");
@@ -304,14 +307,13 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
       };
     });
     assert.equal(previewLayout.display, "grid");
-    assert.equal(previewLayout.columns, 1);
+    assert.equal(previewLayout.columns, 2);
     assert.equal(previewLayout.position, "static");
-    assert.equal(previewLayout.beside, false);
+    assert.equal(previewLayout.beside, true);
     assert.equal(await page.locator("#docsShippingDisclosure").evaluate(element => element.open), false);
     assert.equal(await page.locator("#docsCreateButton").isDisabled(), true);
     assert.match(await page.locator("#docsPreflightSummary").textContent(), /minimal satu penerima/);
 
-    await page.locator("#docsPreviewToggle").click();
     assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
     const emptyPreview = page.frameLocator("#docsPreviewFrame").locator("body");
     await emptyPreview.getByText("Pratinjau belum tersedia").waitFor();
@@ -337,16 +339,17 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
   const mobile = await openApp({ viewport: { width: 390, height: 844 } });
   try {
     const page = mobile.page;
-    await page.locator('[data-dashboard-action="create"]').click();
     await page.locator("#docsCreateForm").waitFor();
-    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), false);
+    assert.equal(await page.locator("#docsPreviewDisclosure").isVisible(), false);
     const recipientTools = page.locator(".docs-recipient-tools");
     assert.equal(await recipientTools.evaluate(element => getComputedStyle(element).position), "static");
     assert.equal(await page.locator("#docsRecipientList").evaluate(element => getComputedStyle(element).overflowY), "visible");
     await page.locator("input[name='recipient']").check();
     assert.match(await page.locator("#docsSubmitCount").textContent(), /16 porsi/);
     await page.locator("#docsPreviewToggle").click();
-    assert.equal(await page.locator("#docsPreviewDisclosure").evaluate(element => element.open), true);
+    assert.equal(await page.locator("#docsPreviewDisclosure").isVisible(), true);
+    await page.locator("#docsEditToggle").click();
+    assert.equal(await page.locator("input[name=recipient]").isChecked(), true);
     const noOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
     assert.equal(noOverflow, true);
     assert.deepEqual(mobile.errors, []);
@@ -468,12 +471,11 @@ test("AI assistant applies school menu and preselects mapped recipients before i
     await recipientCheckbox.waitFor();
     assert.equal(await recipientCheckbox.isChecked(), true, "AI should preselect the mapped recipient");
     assert.equal(await page.locator("#docsSelectedCount").textContent(), "(1 dipilih)");
-    await page.locator("#docsPreviewToggle").click();
     const preview = page.frameLocator("#docsPreviewFrame").locator("body");
     await preview.getByText("Nasi Putih", { exact: false }).waitFor();
     assert.equal(await page.locator("#docsAiMenuPlanNotice").isVisible(), true);
     page.once("dialog",dialog=>dialog.accept());
-    await page.getByRole("button", { name: "Periksa & terbitkan" }).click();
+    await page.getByRole("button", { name: "Terbitkan dokumen" }).click();
     const createRequest = app.writes.find(item => item.route === "docs/create");
     assert.ok(createRequest, "document creation should use the mocked local API");
     assert.deepEqual(createRequest.body.recipient_menu_items[recipientId], ["Nasi Putih", "Ayam Kecap"]);
@@ -667,6 +669,7 @@ test("P2 Menu section quick action opens AI directly in menu mode and shows a re
     const page = app.page;
     await page.locator('[data-home-nav="print"]').click();
     await page.locator("#docsCreateForm").waitFor();
+    await page.locator(".docs-menu-disclosure > summary").click();
     await page.getByRole("button", { name: "Bantu isi dengan AI" }).click();
     await page.locator(".dm-dialog").waitFor();
     assert.equal(await page.locator(".docs-overlay").evaluate(element => element.inert), true, "the underlying document workspace should be inert while the AI dialog is open");
@@ -835,6 +838,7 @@ test("phase 3 distribution draft survives reload, can be discarded, and never is
   await page.locator('[data-home-nav="print"]').click();
   await page.locator("input[name='recipient']").check();
   await page.locator("#docsMealTime").selectOption("pagi");
+  await page.locator(".docs-menu-disclosure > summary").click();
   await page.locator("#docsAddMenuItem").click();
   await page.locator(".docs-menu-input").fill("Nasi uji draf");
   await page.locator("#docsDraftStatus").getByText(/Draf tersimpan/).waitFor();
@@ -861,6 +865,7 @@ test("phase 3 all-date BAST queue uses archived dates and opens the existing rea
  const app=await openApp();
  try{
   const page=app.page;
+  await page.locator('[data-home-nav="home"]').click();
   await page.getByRole("button",{name:"Lihat semua BAST tertunda"}).click();
   const queue=page.locator("#docsRealizationQueue");
   await queue.getByText("2026-11-23",{exact:false}).waitFor();
@@ -878,6 +883,7 @@ test("phase 3 BAST history scan retries without claiming incomplete history is c
  const app=await openApp({apiFailures:{"docs/list":1}});
  try{
   const page=app.page;
+  await page.locator('[data-home-nav="home"]').click();
   await page.getByRole("button",{name:"Lihat semua BAST tertunda"}).click();
   const more=page.getByRole("button",{name:"Coba lagi",exact:true});
   await more.waitFor();

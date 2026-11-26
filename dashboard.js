@@ -145,8 +145,7 @@
       const empty = el("div", "home-dashboard-empty");
       empty.append(
         el("strong", null, "Belum ada distribusi tercatat"),
-        el("p", null, "Distribusi yang diterbitkan akan muncul di sini agar mudah dibuka kembali."),
-        action("＋ Buat dokumen pertama", true, () => window.AutoDocOpenDocs?.("create"), "create")
+        el("p", null, "Dokumen yang diterbitkan dapat dibuka kembali di sini.")
       );
       panel.append(empty);
       return panel;
@@ -200,11 +199,19 @@
     dateBlock.append(
       date
     );
-    const todayRow=rows.find(row=>row.tanggal===activeDate);
+    const todayRow = Object.hasOwn(data ?? {}, "today_distribution")
+      ? data.today_distribution
+      : rows.find(row => row.tanggal === activeDate);
     const todayStatus=el("p","home-today-status",todayRow
       ? number(todayRow.documents_count)+" dokumen hari ini"
-      : "Distribusi hari ini belum tercatat");
-    dateBlock.append(todayStatus);
+      : Object.hasOwn(data ?? {}, "today_distribution")
+        ? "Distribusi hari ini belum tercatat"
+        : "Siapkan dokumen distribusi");
+    dateBlock.append(
+      el("h2", "home-hero-title", "Distribusi makanan"),
+      todayStatus,
+      el("p", "home-hero-description", "Surat Jalan, BAST, dan formulir uji organoleptik.")
+    );
     const createButton = todayRow
       ? action("Buka distribusi hari ini",true,()=>window.AutoDocOpenArchive?.(activeDate),"today")
       : action("＋ Buat Dokumen", true, () => window.AutoDocOpenDocs?.("create"), "create");
@@ -214,13 +221,7 @@
     if(todayRow)heroActions.append(action("Buat / lengkapi dokumen",false,()=>window.AutoDocOpenDocs?.("create"),"create"));
     hero.append(dateBlock, heroActions);
     host.append(hero);
-    const metrics=el("div","home-v3-metrics");
-    for(const [label,value] of [["Distribusi hari ini",todayRow?"Tercatat":"Belum dibuat"],["BAST tertunda",number(pendingBast)],["Dokumen terakhir",rows.length?number(rows[0].documents_count):"0"]]){
-      const item=el("div");item.append(el("span",null,label),el("strong",null,value));metrics.append(item);
-    }
-    host.append(metrics,el("h2","home-v3-section-title","Perlu ditindaklanjuti"));
-
-    const workGrid = el("div", "home-work-grid home-v3-task-list");
+    const workGrid = el("div", "home-work-grid home-task-list");
     const bast = el("section", "home-work-card home-bast-queue");
     bast.setAttribute("aria-labelledby", "homeBastQueueTitle");
     const bastHeading = el("h2", null, "BAST menunggu realisasi");
@@ -242,8 +243,8 @@
     }
     const recentPending=pendingDates.reduce((sum,row)=>sum+Number(row.bast_pending),0);
     if(pendingBast>recentPending)bast.append(el("p","home-card-description","Ada "+number(pendingBast-recentPending)+" BAST tertunda di luar lima distribusi terbaru. Gunakan antrean semua tanggal."));
-    workGrid.append(bast, renderMasterCheck(counts));
-    host.append(workGrid, renderRecentArchive(rows));
+    workGrid.append(bast, renderRecentArchive(rows));
+    host.append(workGrid, renderMasterCheck(counts));
   }
 
   async function load() {

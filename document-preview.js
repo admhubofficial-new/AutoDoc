@@ -56,12 +56,17 @@ function updateLivePreview(){
  const available=[...kinds,...(includeOrganoleptic?["ORGANOLEPTIC"]:[])];
  const kind=available.includes(currentKind)?currentKind:(available[0]||"SJ");
  if(kindSelect){kindSelect.value=kind;Array.from(kindSelect.options).forEach(option=>{option.disabled=!available.includes(option.value)});}
+ for(const button of getModal().querySelectorAll("[data-preview-kind]")){
+  button.disabled=!available.includes(button.dataset.previewKind);
+  button.setAttribute("aria-pressed",String(button.dataset.previewKind===kind && !button.disabled));
+ }
  const date=$("#docsDate",form)?.value||today();
  const frame=$("#docsPreviewFrame",getModal());
  const label=$("#docsPreviewRecipient",getModal());
  if(!selected.length){
   if(label)label.textContent="Belum ada penerima dipilih.";
   frame.onload=null;
+  frame.style.height="220px";
   frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:32px;background:#fff;color:#647269;font:14px/1.6 Inter,Arial,sans-serif;text-align:center}main{max-width:420px}h2{margin:0 0 8px;color:#1f2a23;font-size:19px}p{margin:0}</style></head><body><main><h2>Pratinjau belum tersedia</h2><p>Pilih penerima pada formulir untuk melihat dokumen dengan data sebenarnya.</p></main></body></html>";
   return;
  }

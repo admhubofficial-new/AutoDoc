@@ -144,7 +144,7 @@ test("home dashboard separates the global BAST queue and exposes latest distribu
   assert.match(dashboardUi, /Arsip distribusi terakhir/);
   assert.match(dashboardUi, /action\("＋ Buat Dokumen", true/);
   assert.match(dashboardUi, /action\("Buka arsip terakhir", false/);
-  assert.match(indexHtml, /dashboard\.js\?v=p1-operator-workspace-20261124/);
+  assert.match(indexHtml, /dashboard\.js\?v=ruang-kerja-20261126/);
 });
 
 test("SPPG identity exposes separate Kepala SPPG, Kepala SPPI, and Ahli Gizi Dapur fields", () => {
