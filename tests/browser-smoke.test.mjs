@@ -152,8 +152,8 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
 
   const mobile = await openApp({ viewport: { width: 390, height: 844 } });
   try {
-    await mobile.page.locator("#homeBottomNav").waitFor();
-    await mobile.page.locator('[data-mobile-nav="print"]').click();
+    await mobile.page.locator("#homeMenuToggle").click();
+    await mobile.page.locator('[data-home-nav="print"]').click();
     await mobile.page.locator("#docsCreateForm").waitFor();
     await mobile.page.locator("input[name='recipient']").check();
     assert.match(await mobile.page.locator("#docsSubmitCount").textContent(), /1 tujuan · 16 porsi/);
@@ -161,12 +161,12 @@ test("desktop and mobile sidebar controls work, and creation preview follows rec
     await mobile.page.locator("#docsKindBast").uncheck();
     assert.match(await mobile.page.locator("#docsOutputCount").textContent(),/^1 surat/);
     assert.equal(await mobile.page.locator("#docsKindSj").isChecked(),true);
-    await mobile.page.locator('[data-mobile-nav="more"]').click();
+    await mobile.page.locator("#homeMenuToggle").click();
     await mobile.page.locator("#homePage.mobile-nav-open").waitFor();
     await mobile.page.locator('[data-home-nav="archive"]').click();
     await mobile.page.locator("#homePage:not(.mobile-nav-open)").waitFor();
     await mobile.page.locator("#docsDaysList").waitFor();
-    assert.equal(await mobile.page.locator('[data-mobile-nav="archive"]').getAttribute("aria-current"),"page");
+    assert.equal(await mobile.page.locator('[data-home-nav="archive"]').getAttribute("aria-current"),"page");
     assert.deepEqual(mobile.errors, []);
   } finally {
     await mobile.context.close();
@@ -267,7 +267,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     assert.equal(await page.locator("#docsTime").inputValue(), "");
     assert.equal(await page.locator("input[name='recipient']").isChecked(), true);
     const summary = await page.locator("#docsPreflightSummary").innerText();
-    assert.match(summary, /Siap diterbitkan/);
+    assert.match(summary, /Menu harian belum diisi/);
     assert.match(await page.locator("#docsSubmitCount").textContent(), /1 tujuan/);
     assert.match(await page.locator("#docsSubmitCount").textContent(), /16 porsi/);
     assert.equal(await page.locator("#docsCreateButton").isDisabled(), false);
@@ -667,7 +667,7 @@ test("phase 4 groups administration categories and keeps identity editing access
  const mobile=await openApp({viewport:{width:390,height:844}});
  try{
   const page=mobile.page;
-  await page.locator('[data-mobile-nav="more"]').click();
+  await page.locator("#homeMenuToggle").click();
   await page.locator('[data-home-nav="master"]').click();
   await page.locator(".dm-data-row").waitFor();
   assert.equal(await page.locator("#dmCategorySelect").isVisible(),true);

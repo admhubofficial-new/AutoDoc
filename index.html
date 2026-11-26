@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2-phase2-phase3-phase4-cleanup-v3-r2">
-  <link rel="stylesheet" href="./theme.css?v=ruang-kerja-20261126-mockup-r4-no-ai-r1-workspace-r4">
+  <link rel="stylesheet" href="./theme.css?v=dossier-20261127">
 </head>
 <body class="auth-pending">
   <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
@@ -95,28 +95,24 @@
 
   <main id="homePage" class="home-page" hidden>
     <aside class="home-topbar" id="homeSidebar" aria-label="Navigasi AutoDoc">
-      <div class="home-brand">
+      <button type="button" class="home-brand" data-home-nav="home" aria-label="Beranda">
         <img src="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png" alt="Logo BGN" width="40" height="40">
         <div><div class="home-brand-name">AutoDoc</div><div class="home-brand-sub">SPPG Darmaraja 01</div></div>
-      </div>
+      </button>
       <button type="button" class="home-menu-toggle" id="homeMenuToggle" aria-label="Ciutkan sidebar" aria-expanded="true" aria-controls="homeSidebar" title="Ciutkan sidebar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Ciutkan sidebar</span></button>
       <div class="home-nav-caption">OPERASIONAL</div>
       <nav class="home-nav" id="homeNav" aria-label="Navigasi utama">
-        <button type="button" data-home-nav="home" aria-label="Beranda" aria-current="page">
-          <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5M9 21v-7h6v7"/></svg></span>
-          <span>Beranda</span>
-        </button>
         <button type="button" data-home-nav="print" aria-label="Buat Dokumen">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
           <span>Buat Dokumen</span>
         </button>
-        <button type="button" data-home-nav="realization" aria-label="Realisasi BAST">
-          <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 13l3 3 5-6"/></svg></span>
-          <span>Realisasi BAST</span>
-        </button>
         <button type="button" data-home-nav="archive" aria-label="Arsip">
           <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
           <span>Arsip</span>
+        </button>
+        <button type="button" data-home-nav="realization" aria-label="Realisasi BAST">
+          <span class="home-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 13l3 3 5-6"/></svg></span>
+          <span>Realisasi BAST</span>
         </button>
         <span class="home-nav-group-label" aria-hidden="true">ADMINISTRASI</span>
         <button type="button" data-home-nav="master" aria-label="Data Master">
@@ -149,13 +145,6 @@
       </section>
       <div id="workspacePages" class="workspace-pages" hidden></div>
     </div>
-    <nav class="home-bottom-nav" id="homeBottomNav" aria-label="Navigasi cepat mobile">
-      <button type="button" data-mobile-nav="home" aria-label="Beranda" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 10v11h14V10M9 21v-7h6v7"/></svg><span>Beranda</span></button>
-      <button type="button" data-mobile-nav="print" aria-label="Buat Dokumen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg><span>Buat Dokumen</span></button>
-      <button type="button" data-mobile-nav="realization" aria-label="Realisasi BAST"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 13l3 3 5-6"/></svg><span>Realisasi</span></button>
-      <button type="button" data-mobile-nav="archive" aria-label="Arsip"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Arsip</span></button>
-      <button type="button" data-mobile-nav="more" aria-label="Menu lainnya" aria-controls="homeSidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Lainnya</span></button>
-    </nav>
   </main>
 
   <script src="./config.js?v=shared-config-20261121"></script>
@@ -331,16 +320,12 @@
         }
       });
 
-      const homeNav = document.getElementById("homeNav");
-      const bottomNav = document.getElementById("homeBottomNav");
-      const moreNav = bottomNav.querySelector('[data-mobile-nav="more"]');
       const menuToggle = document.getElementById("homeMenuToggle");
       const homeToday = document.getElementById("homeToday");
       const sidebarBackdrop = document.getElementById("homeSidebarBackdrop");
       const isMobileSidebar = () => window.matchMedia("(max-width: 720px)").matches;
       function closeHomeNav() {
         homePage.classList.remove("mobile-nav-open");
-        moreNav.setAttribute("aria-expanded","false");
         const expanded = isMobileSidebar() ? false : !homePage.classList.contains("sidebar-collapsed");
         menuToggle.setAttribute("aria-expanded", String(expanded));
         menuToggle.setAttribute("aria-label", expanded ? "Ciutkan sidebar" : "Buka sidebar");
@@ -350,7 +335,6 @@
         if (isMobileSidebar()) {
           const open = !homePage.classList.contains("mobile-nav-open");
           homePage.classList.toggle("mobile-nav-open", open);
-          moreNav.setAttribute("aria-expanded",String(open));
           menuToggle.setAttribute("aria-expanded", String(open));
           menuToggle.setAttribute("aria-label", open ? "Tutup sidebar" : "Buka sidebar");
           menuToggle.title = open ? "Tutup sidebar" : "Buka sidebar";
@@ -372,13 +356,8 @@
         homePage.querySelector(".home-content").hidden = active !== "home";
         document.getElementById("workspacePages").hidden = active === "home";
         const label = labels[active] || labels.home;
-        homeNav.querySelectorAll("button").forEach(item => {
+        homePage.querySelectorAll("[data-home-nav]").forEach(item => {
           if (item.dataset.homeNav === active) item.setAttribute("aria-current", "page");
-          else item.removeAttribute("aria-current");
-        });
-        bottomNav.querySelectorAll("[data-mobile-nav]").forEach(item => {
-          const key=item.dataset.mobileNav;
-          if(key===active||(key==="more"&&active==="master")) item.setAttribute("aria-current","page");
           else item.removeAttribute("aria-current");
         });
         const context = document.querySelector(".home-pagebar-text");
@@ -425,7 +404,7 @@
       window.addEventListener("resize", () => {
         if (!isMobileSidebar()) closeHomeNav();
       });
-      homeNav.addEventListener("click", (event) => {
+      document.getElementById("homeSidebar").addEventListener("click", (event) => {
         const button = event.target.closest("[data-home-nav]");
         if (!button || !canNavigate()) return;
         const action = button.dataset.homeNav;
@@ -442,12 +421,6 @@
           window.AutoDocDocuments?.close(false);
           window.AutoDocMaster?.open("recipients");
         }
-      });
-      bottomNav.addEventListener("click", (event) => {
-        const item=event.target.closest("[data-mobile-nav]");
-        if(!item)return;
-        if(item.dataset.mobileNav==="more"){toggleSidebar();if(homePage.classList.contains("mobile-nav-open"))menuToggle.focus();return}
-        homeNav.querySelector('[data-home-nav="'+item.dataset.mobileNav+'"]')?.click();
       });
       updateHomeDate();
 
@@ -493,11 +466,11 @@
   <script src="./master.js?v=p2-p3-admin-visual-audit-20261124-workspace-v2-stability2-phase4-r2-audit2-v3-r2-no-ai-r1" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123-word-template-r2" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123-word-template-r2" defer></script>
-  <script src="./archive.js?v=p2-p3-admin-visual-audit-20261124-cleanup-r2" defer></script>
-  <script src="./document-preview.js?v=p4-simplified-document-flow-20261124-mockup-r4-word-template-r2-number-r1-workspace-r4" defer></script>
+  <script src="./archive.js?v=dossier-20261127" defer></script>
+  <script src="./document-preview.js?v=dossier-20261127" defer></script>
   <script src="./document-menu.js?v=p1-operator-workspace-20261124" defer></script>
   <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
-  <script src="./documents.js?v=p4-simplified-document-flow-20261124-workspace-v2-stability2-r2-phase2-phase3-r2-phase4-cleanup-v3-mockup-r4-word-template-r2-no-ai-r1-number-r1-workspace-r4" defer></script>
+  <script src="./documents.js?v=dossier-20261127" defer></script>
   <script src="./dashboard.js?v=ruang-kerja-20261126" defer></script>
 </body>
 </html>
