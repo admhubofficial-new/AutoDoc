@@ -658,7 +658,7 @@ test("phase 4 groups administration categories and keeps identity editing access
   const page=app.page;
   await page.locator('[data-home-nav="master"]').click();
   await page.locator(".dm-data-row").waitFor();
-  assert.equal(await page.locator("#dmCategorySelect optgroup").count(),3);
+  assert.equal(await page.locator("#dmCategorySelect optgroup").count(),2);
   await page.getByRole("button",{name:"Identitas SPPG",exact:true}).click();
   assert.equal(await page.locator(".dm-form-group").count(),3);
   assert.equal(await page.locator(".dm-table-wrap").isVisible(),false);

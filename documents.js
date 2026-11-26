@@ -28,8 +28,8 @@ function readStoredDraft(){
   const fields=saved.fields.filter(item=>Array.isArray(item)&&draftFields.includes(item[0])&&(typeof item[1]==="boolean"||typeof item[1]==="string"&&item[1].length<=180));
   const menu=saved.menu.filter(item=>typeof item==="string"&&item.length<=180).slice(0,8);
   const recipients=saved.recipients.filter(validId).slice(0,100);
-  if(saved.plan){clearStoredDraft();return null}
-  return {fields,menu,recipients};
+
+  return {fields,menu,recipients,needsMenuReview:!!saved.plan};
  }catch(_){clearStoredDraft();return null}
 }
 function saveDraft(){
@@ -158,6 +158,7 @@ async function loadMaster(){
   restoreDraft(draft);formDirty=true;saveDraft();
   const unavailable=draft.recipients.filter(id=>!recipients.some(r=>String(r.id)===String(id)));
   if(unavailable.length)draftMessage("Draf dipulihkan. "+unavailable.length+" penerima tidak lagi aktif; periksa pilihan sebelum terbit.");
+  else if(stored?.needsMenuReview)draftMessage("Draf dipulihkan. Periksa menu sebelum menerbitkan karena pemetaan menu per penerima sudah dihapus.");
   else if(stored)draftMessage("Draf dari tab ini berhasil dipulihkan. Periksa kembali sebelum menerbitkan.");
  }
  const activeCount=recipients.length;
