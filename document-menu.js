@@ -16,7 +16,7 @@
       list.replaceChildren();
 
       if (!items.length) {
-        list.append(node("div", "docs-menu-empty", "Belum ada komponen menu. Menu boleh dikosongkan untuk penerbitan SJ/BAST."));
+        list.append(node("div", "docs-menu-empty", "Belum ada menu"));
       }
 
       items.forEach((value, index) => {

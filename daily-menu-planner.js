@@ -10,23 +10,23 @@ function create({getModal,api,today,readMenu,setMenu,onState,onDateChange}){
  const active=()=>root?.isConnected&&!getModal().hidden&&!root.closest(".docs-view-create")?.hidden;
  function msg(id,text,bad=false){const n=q(id);if(n){n.textContent=text;n.dataset.error=String(bad)}}
  function buttons(){const main=mq("#docsDate"),menu=q("#docsMenuDate");if(main)main.disabled=saving;if(menu)menu.disabled=saving;const quick=q("#docsSaveDailyMenu"),save=q("#docsSavePlans"),add=q("#docsAddPlanDate");if(quick)quick.disabled=saving||loading||!valid(date)||date<today()||!readMenu().length;if(save){save.hidden=!editing;save.disabled=saving||!rows.some(r=>r.dirty)}if(add)add.disabled=saving||rows.filter(r=>r.dirty).length>=20}
- function banner(){const n=mq("#docsActiveMenu");if(n){n.textContent="Menu aktif: "+(readMenu().join(", ")||"belum diisi");n.title=n.textContent}const title=q("#docsMenuForDate");if(title)title.textContent="Menu untuk "+label(date);buttons()}
- function apply(items){applying=true;try{setMenu(items)}finally{applying=false}banner()}
- function menuChanged(){if(!root?.isConnected)return;if(!applying){revision++;if(valid(date))drafts.set(date,readMenu().slice())}banner()}
+ function syncMenuLabel(){const title=q("#docsMenuForDate");if(title)title.textContent="Komponen menu";buttons()}
+ function apply(items){applying=true;try{setMenu(items)}finally{applying=false}syncMenuLabel()}
+ function menuChanged(){if(!root?.isConnected)return;if(!applying){revision++;if(valid(date))drafts.set(date,readMenu().slice())}syncMenuLabel()}
  function syncDate(preserve=false){
   if(!root?.isConnected)return;const next=mq("#docsDate").value;
   if(next===date&&!preserve)return;
   date=next;q("#docsMenuDate").value=date;const seq=++request;loading=false;
   if(!preserve)apply(drafts.get(date)||[]);else if(readMenu().length)drafts.set(date,readMenu().slice());
-  banner();renderRows();
-  if(!valid(date)||date<today()){msg("#docsDailyStatus",date?"Tanggal lampau: lihat riwayat di Arsip. Isi manual bila diperlukan.":"Pilih tanggal menu.");onState();return}
+  syncMenuLabel();renderRows();
+  if(!valid(date)||date<today()){msg("#docsDailyStatus",date?"Tanggal lampau · lihat Arsip.":"Pilih tanggal menu.");onState();return}
   if(!active()){onState();return}
   const form=root,selected=date,rev=revision;loading=true;msg("#docsDailyStatus","Memuat menu tanggal terpilih…");buttons();onState();
   api("menus/plans?tanggal="+encodeURIComponent(selected)).then(data=>{
    if(seq!==request||root!==form||!active())return;
    const saved=data.plans?.find(p=>p.tanggal===selected);
    if(saved&&revision===rev&&!drafts.has(selected))apply(saved.menu_items)
-   msg("#docsDailyStatus",saved?"Rencana tanggal ini tersimpan.":"Belum ada rencana; isi menu langsung.");
+   msg("#docsDailyStatus","");
   }).catch(e=>{if(seq===request&&root===form&&active())msg("#docsDailyStatus","Gagal memuat rencana: "+e.message,true)})
   .finally(()=>{if(seq===request&&root===form){loading=false;buttons();onState()}});
  }
@@ -34,7 +34,7 @@ function create({getModal,api,today,readMenu,setMenu,onState,onDateChange}){
  function mode(value){editing=value;const help=q("#docsPlanHelp");if(help)help.hidden=!value;q("#docsQuickMode").setAttribute("aria-pressed",String(!value));q("#docsPlannerMode").setAttribute("aria-pressed",String(value));renderRows()}
  function renderRows(){
   const host=q("#docsPlanRows");if(!host)return;host.replaceChildren();
-  if(!rows.length)host.append(el("p","daily-plan-empty","Belum ada rencana. Tambahkan tanggal."));
+  if(!rows.length)host.append(el("p","daily-plan-empty","Belum ada rencana."));
   for(const row of rows){
    const wrap=el("div","daily-plan-row"+(row.tanggal===date?" is-current":""));
    if(editing){
@@ -51,7 +51,7 @@ function create({getModal,api,today,readMenu,setMenu,onState,onDateChange}){
  }
  async function loadRows(){
   if(!active())return;const seq=++listRequest,form=root;
-  try{const data=await api("menus/plans");if(seq!==listRequest||form!==root||!active())return;const dirty=rows.filter(r=>r.dirty),changed=new Set(dirty.map(r=>r.tanggal));rows=[...(data.plans||[]).filter(r=>r.tanggal>=today()&&!changed.has(r.tanggal)).map(r=>({tanggal:r.tanggal,text:r.menu_items.join("; "),saved:true,dirty:false})),...dirty].sort((a,b)=>a.tanggal.localeCompare(b.tanggal));renderRows();if(data.has_more)msg("#docsPlannerStatus","Menampilkan 30 rencana terdekat. Tanggal lain dapat dipilih dari kalender.")}
+  try{const data=await api("menus/plans");if(seq!==listRequest||form!==root||!active())return;const dirty=rows.filter(r=>r.dirty),changed=new Set(dirty.map(r=>r.tanggal));rows=[...(data.plans||[]).filter(r=>r.tanggal>=today()&&!changed.has(r.tanggal)).map(r=>({tanggal:r.tanggal,text:r.menu_items.join("; "),saved:true,dirty:false})),...dirty].sort((a,b)=>a.tanggal.localeCompare(b.tanggal));renderRows();if(data.has_more)msg("#docsPlannerStatus","30 rencana terdekat.")}
   catch(e){if(seq===listRequest&&form===root&&active())msg("#docsPlannerStatus","Daftar gagal dimuat: "+e.message,true)}
  }
  function addDate(){if(saving)return;mode(true);let next=new Date((valid(date)&&date>=today()?date:today())+"T00:00:00Z");const existing=new Set(rows.map(r=>r.tanggal));while(existing.has(next.toISOString().slice(0,10)))next.setUTCDate(next.getUTCDate()+1);rows.push({tanggal:next.toISOString().slice(0,10),text:"",saved:false,dirty:true});renderRows();q(".daily-plan-row:last-child .daily-plan-menu")?.focus()}

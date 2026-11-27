@@ -801,6 +801,6 @@ test("daily menu planner isolates dates and saves a batch without issuing docume
  await page.locator("#docsAddMenuItem").click();await page.locator(".docs-menu-input").fill("Menu hari ini");await page.locator("#docsSaveDailyMenu").click();await page.locator("#docsDailyStatus").getByText(/tersimpan/).waitFor();
  await page.locator("#docsMenuDate").fill(tomorrow);await page.waitForFunction(()=>document.querySelector("#docsDate").value===document.querySelector("#docsMenuDate").value&&!document.querySelector(".docs-menu-input"));
  await page.locator("#docsPlannerMode").click();await page.locator("#docsAddPlanDate").click();await page.locator(".daily-plan-date").last().fill(tomorrow);await page.locator(".daily-plan-menu").last().fill("Nasi; Ayam");page.once("dialog",dialog=>dialog.accept());await page.locator("#docsSavePlans").click();await page.locator("#docsPlannerStatus").getByText(/tersimpan/).waitFor();
- await page.locator("#docsActiveMenu").getByText(/Nasi, Ayam/).waitFor();assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll("#docsMenuItems .docs-menu-input"),input=>input.value).join(", ")==="Nasi, Ayam");assert.equal(await page.locator(".daily-active-menu, .daily-menu-note").count(),0);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
 });
