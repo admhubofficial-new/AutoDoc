@@ -32,7 +32,7 @@ after(async () => {
   server?.kill("SIGTERM");
 });
 
-async function openApp({ authenticated = true, viewport = { width: 1365, height: 900 }, apiFailures = {}, apiDelays = {}, recipientCount = 1, initialPlans = [], lockedDistribution = null } = {}) {
+async function openApp({ authenticated = true, viewport = { width: 1365, height: 900 }, apiFailures = {}, apiDelays = {}, recipientCount = 1, initialPlans = [], lockedDistribution = null, transportDefaults = {nama_pengemudi:"Budi Supriadi / Elzar Rifandanu",no_kendaraan:"Z 8734 HS / Z 8952 AI"} } = {}) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const writes = [];
@@ -70,7 +70,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga", jenjang: "SD", alamat: "Alamat Uji",
         aktif: true, urutan: 10, total_porsi: 16, siswa_kecil: 16, siswa_besar: 0, tendik: 0,
         ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0
-      }], staff: [], drivers: [{id:"driver-1",nama:"Budi Supriadi",aktif:true,urutan:10,default_pengiriman:true},{id:"driver-2",nama:"Elzar Rifandanu",aktif:true,urutan:20,default_pengiriman:true}], vehicles: [{id:"vehicle-1",no_kendaraan:"Z 8734 HS",aktif:true,urutan:10,default_pengiriman:true},{id:"vehicle-2",no_kendaraan:"Z 8952 AI",aktif:true,urutan:20,default_pengiriman:true}], transport_defaults:{nama_pengemudi:"Budi Supriadi / Elzar Rifandanu",no_kendaraan:"Z 8734 HS / Z 8952 AI"}, menus: [], numbering:[{jenis:"SJ",start_number:1000,next_number:1053,locked:true},{jenis:"BAST",start_number:1000,next_number:1055,locked:true}] } };
+      }], staff: [], drivers: [{id:"driver-1",nama:"Budi Supriadi",aktif:true,urutan:10,default_pengiriman:true},{id:"driver-2",nama:"Elzar Rifandanu",aktif:true,urutan:20,default_pengiriman:true}], vehicles: [{id:"vehicle-1",no_kendaraan:"Z 8734 HS",aktif:true,urutan:10,default_pengiriman:true},{id:"vehicle-2",no_kendaraan:"Z 8952 AI",aktif:true,urutan:20,default_pengiriman:true}], transport_defaults:transportDefaults, menus: [], numbering:[{jenis:"SJ",start_number:1000,next_number:1053,locked:true},{jenis:"BAST",start_number:1000,next_number:1055,locked:true}] } };
     } else if (routeName === "master/numbering") {
       writes.push({route:routeName,body:request.postDataJSON()});payload={success:true};
     } else if (routeName === "master/recipients") {
@@ -849,4 +849,9 @@ test("P0: failed date context blocks issuance and retry restores the menu",async
 test("P0: a locked date uses archived transport and menu, never stale defaults",async()=>{
  const date="2026-11-23",lockedDistribution={id:distributionId,tanggal:date,menu_items:["Menu arsip"],nama_pengemudi:"Pengemudi arsip",no_kendaraan:"BE 1234 XX",waktu_makan:"pagi",jam_berangkat:"08:00:00"};
  const app=await openApp({lockedDistribution});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.locator("#docsMenuDate").fill(date);await page.locator("#docsDailyStatus").getByText(/terkunci/).waitFor();assert.equal(await page.locator("#docsDriver").inputValue(),"Pengemudi arsip");assert.equal(await page.locator("#docsVehicle").inputValue(),"BE 1234 XX");assert.equal(await page.locator("#docsDriver").isDisabled(),true);assert.equal(await page.locator(".docs-menu-input").inputValue(),"Menu arsip");assert.equal(await page.locator("#docsAddMenuItem").isDisabled(),true);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
+});
+
+
+test("P1: database defaults replace untouched draft values and preserve manual overrides",async()=>{
+ const app=await openApp({transportDefaults:{nama_pengemudi:"Pengemudi DB",no_kendaraan:"Z 2222 AA"}});try{const page=app.page;await page.evaluate(recipientId=>sessionStorage.setItem("autodoc:distribution-draft:v1",JSON.stringify({version:4,savedAt:Date.now(),fields:[["docsDriver","Default lama"],["docsVehicle","Z 1111 AA"]],transportOverrides:{docsDriver:false,docsVehicle:true},menu:[],recipients:[recipientId]})),recipientId);await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.waitForFunction(()=>document.querySelector("#docsDriver")?.value==="Pengemudi DB");assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 1111 AA");await page.frameLocator("#docsPreviewFrame").getByText("Pengemudi DB",{exact:false}).waitFor();assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
 });

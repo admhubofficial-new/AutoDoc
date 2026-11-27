@@ -38,7 +38,7 @@ function readStoredDraft(){
  }catch(_){clearStoredDraft();return null}
 }
 function saveDraft(){
- if(renderingForm||restoringDraft||!draftRestored||!formDirty||publishing||!$("#docsCreateForm",modal)||plannerController&&!plannerController.isReady())return;
+ if(renderingForm||restoringDraft||!draftRestored||!formDirty||publishing||!$("#docsCreateForm",modal)||!masterLoaded||plannerController&&!plannerController.isReady())return;
  try{
   sessionStorage.setItem(DRAFT_KEY,JSON.stringify({savedAt:Date.now(),...captureDraft()}));
   draftMessage("Draf tersimpan");
@@ -77,7 +77,7 @@ function status(message,bad,state){
 function close(returnHome=true){
  if(!modal)return;
  if(returnHome&&!leaveHistory())return
- queueRequest++;historyRequest++;masterRequest++;
+ queueRequest++;historyRequest++;masterRequest++;masterLoaded=false;
  clearHistory();
  modal.hidden=true;modal.setAttribute("aria-hidden","true");
  if(returnHome){
@@ -143,7 +143,7 @@ async function rememberCreationInputs(body){
  for(const value of allMenus)await rememberMasterValue("menus","teks_menu",value);
 }
 async function loadMaster(){
- const request=++masterRequest;
+ const request=++masterRequest;masterLoaded=false;syncPreflightSummary();previewController?.updateLivePreview();
  status("Memuat daftar penerima dan data pendukung...",false,"loading");
  const [masterResult,recipientResult]=await Promise.allSettled([
   api("master/list?include_recipients=false"),
@@ -367,7 +367,7 @@ function syncPreflightSummary(){
  const kinds=selectedDocumentKinds();
  const menuCount=typeof menuController?.count==="function"?menuController.count():modal.querySelectorAll("#docsMenuItems .docs-menu-input").length;
  const missing=[];
- if(!transportReady())missing.push("Data Master");
+ if(!masterLoaded||!transportReady())missing.push("Data Master");
   if(!validDate)missing.push("tanggal distribusi");
  if(!kinds.length)missing.push("jenis dokumen");
  if(!selectedIds.size)missing.push("minimal satu penerima");
@@ -395,7 +395,7 @@ function updateSelectedCount(){
  saveDraft();
 }
 async function createDocs(event){
- event.preventDefault();if(!transportReady()){status("Data Master belum dimuat. Buka ulang Buat Dokumen.",true);return}if(publishing||plannerController&&(!plannerController.isReady()||plannerController.isSaving()||plannerController.requiresSave()))return;status("");syncPreflightSummary();
+ event.preventDefault();if(!masterLoaded||!transportReady()){status("Data Master belum dimuat. Buka ulang Buat Dokumen.",true);return}if(publishing||plannerController&&(!plannerController.isReady()||plannerController.isSaving()||plannerController.requiresSave()))return;status("");syncPreflightSummary();
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
  if(!selected.length){status("Pilih minimal satu penerima.",true);$("#docsRecipientSearch",modal)?.focus();return}
  const kinds=selectedDocumentKinds();
@@ -835,7 +835,7 @@ function init(){
  menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{plannerController?.menuChanged();syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored&&!plannerController?.isApplying()&&(!plannerController||plannerController.isReady())){formDirty=true;saveDraft()}}});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
- previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,readDistributionForm,contextReady:()=>transportReady()&&(!plannerController||plannerController.isReady()),contextLocked:()=>!!plannerController?.isLocked(),selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
+ previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,readDistributionForm,contextReady:()=>masterLoaded&&transportReady()&&(!plannerController||plannerController.isReady()),contextLocked:()=>!!plannerController?.isLocked(),selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
  plannerController=window.AutoDocDailyPlanner.create({getModal:()=>modal,api,today,readMenu:readMenuComponents,setMenu:items=>menuController.set(items),setEditorLocked:value=>menuController.setLocked(value),onDistribution:applyLockedDistribution,onState:()=>{syncPreflightSummary();previewController?.updateLivePreview()},onPersist:dirty=>{if(dirty)formDirty=true;saveDraft()},onDateChange:()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft()}});
  window.AutoDocDocuments=Object.freeze({
   open(){
