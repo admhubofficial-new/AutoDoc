@@ -999,7 +999,7 @@ async function handleDocsCreate(request: Request): Promise<Response> {
 
   let distribution: Record<string, unknown>;
   try {
-    distribution = await rpc<Record<string, unknown>>("simpan_distribusi_dan_menu", {
+    distribution = await rpc<Record<string, unknown>>("autodoc_prepare_distribution", {
       p_tanggal: body.tanggal,
       p_menu_items: menuItems,
       p_waktu_makan: waktuMakan,
@@ -1012,7 +1012,7 @@ async function handleDocsCreate(request: Request): Promise<Response> {
     if (error instanceof AppError && error.code === "55000") {
       throw new AppError(
         409,
-        "Tanggal ini sudah memiliki dokumen. Gunakan data perjalanan yang sama agar snapshot dokumen lama tidak berubah: menu, komponen menu, waktu makan, petugas, pengemudi, kendaraan, dan jam berangkat harus sama dengan data yang telah diterbitkan.",
+        error.message + " Muat ulang tanggal distribusi sebelum mencoba lagi.",
       );
     }
     throw error;
@@ -2308,7 +2308,19 @@ async function handleDailyMenuPlans(request: Request): Promise<Response> {
     if (date !== null && !validIsoDate(date)) throw new AppError(400, "Tanggal menu tidak valid.");
     const query = new URLSearchParams({select:"tanggal,menu_items,updated_at", tanggal:date ? "eq."+date : (history ? "lt." : "gte.")+today,order:"tanggal."+(history?"desc":"asc"),limit:date?"1":"31",offset:date?"0":String(offset)});
     const rows = await supabaseRequest<Record<string, unknown>[]>("daily_menu_plans?"+query.toString());
-    return respond(request,{plans:rows.slice(0,30),has_more:rows.length>30});
+    const plans=rows.slice(0,30);
+    if(date){
+      const dist=await selectOne<Record<string,unknown>>("distributions","id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,waktu_makan,nama_ahli_gizi",{tanggal:"eq."+date});
+      if(dist?.id){
+        const items=await supabaseRequest<Array<{nama_komponen:string}>>("distribution_menu_items?"+new URLSearchParams({select:"nama_komponen",distribution_id:"eq."+String(dist.id),order:"urutan.asc",limit:"8"}).toString());
+        return respond(request,{plans:plans.map(p=>({...p,locked:true})),distribution:{...dist,menu_items:items.map(i=>i.nama_komponen)},has_more:false});
+      }
+      return respond(request,{plans,distribution:null,has_more:false});
+    }
+    const dates=plans.map(p=>String(p.tanggal));
+    const locked=dates.length?await supabaseRequest<Array<{tanggal:string}>>("distributions?"+new URLSearchParams({select:"tanggal",tanggal:"in.("+dates.join(",")+")"}).toString()):[];
+    const lockedDates=new Set(locked.map(d=>d.tanggal));
+    return respond(request,{plans:plans.map(p=>({...p,locked:lockedDates.has(String(p.tanggal))})),has_more:rows.length>30});
   }
   if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
   const body = await readJson(request, 64 * 1024);
@@ -2325,11 +2337,12 @@ async function handleDailyMenuPlans(request: Request): Promise<Response> {
       throw error;
     }
     if(!menu.length) throw new AppError(400,"Setiap tanggal harus memiliki menu.");
-    return {tanggal:row.tanggal,menu_items:menu,updated_at:new Date().toISOString()};
+    if(Object.hasOwn(row,"expected_updated_at")&&row.expected_updated_at!==null&&(typeof row.expected_updated_at!=="string"||!Number.isFinite(Date.parse(row.expected_updated_at)))) throw new AppError(400,"Versi rencana tidak valid.");
+    return {tanggal:row.tanggal,menu_items:menu,...(Object.hasOwn(row,"expected_updated_at")?{expected_updated_at:row.expected_updated_at}:{})};
   });
-  const saved=await supabaseRequest<Record<string, unknown>[]>("daily_menu_plans?on_conflict=tanggal&select=tanggal,menu_items,updated_at",{
-    method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(rows),
-  });
+  let saved: Record<string,unknown>[];
+  try {saved=await rpc<Record<string,unknown>[]>("autodoc_save_daily_plans",{p_plans:rows});}
+  catch(error){if(error instanceof AppError&&["55000","40001"].includes(error.code||""))throw new AppError(409,error.message);throw error;}
   return respond(request,{success:true,plans:saved});
 }
 
