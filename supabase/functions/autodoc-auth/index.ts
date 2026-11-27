@@ -2296,6 +2296,43 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
   }
 }
 
+async function handleDailyMenuPlans(request: Request): Promise<Response> {
+  if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
+  const params = new URL(request.url).searchParams;
+  const today = new Intl.DateTimeFormat("sv-SE", {timeZone:"Asia/Jakarta",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  if (request.method === "GET") {
+    const date = params.get("tanggal");
+    const history = params.get("history") === "true";
+    const offset = Number(params.get("offset") || "0");
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw new AppError(400, "Halaman tidak valid.");
+    if (date !== null && !validIsoDate(date)) throw new AppError(400, "Tanggal menu tidak valid.");
+    const query = new URLSearchParams({select:"tanggal,menu_items,updated_at", tanggal:date ? "eq."+date : (history ? "lt." : "gte.")+today,order:"tanggal."+(history?"desc":"asc"),limit:date?"1":"31",offset:date?"0":String(offset)});
+    const rows = await supabaseRequest<Record<string, unknown>[]>("daily_menu_plans?"+query.toString());
+    return respond(request,{plans:rows.slice(0,30),has_more:rows.length>30});
+  }
+  if (request.method !== "POST") throw new AppError(405, "Metode tidak diizinkan.");
+  const body = await readJson(request, 64 * 1024);
+  if (!Array.isArray(body.plans) || body.plans.length < 1 || body.plans.length > 20) throw new AppError(400,"Simpan 1 sampai 20 tanggal sekaligus.");
+  const seen = new Set<string>();
+  const rows = body.plans.map((item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new AppError(400,"Rencana menu tidak valid.");
+    const row = item as Record<string, unknown>;
+    if (!validIsoDate(row.tanggal) || row.tanggal < today || seen.has(row.tanggal)) throw new AppError(400,"Tanggal menu harus hari ini atau mendatang dan tidak boleh duplikat.");
+    seen.add(row.tanggal);
+    let menu: string[];
+    try { menu=normalizeMenuComponents(row.menu_items); } catch(error) {
+      if(error instanceof WorkflowValidationError) throw new AppError(400,error.message);
+      throw error;
+    }
+    if(!menu.length) throw new AppError(400,"Setiap tanggal harus memiliki menu.");
+    return {tanggal:row.tanggal,menu_items:menu,updated_at:new Date().toISOString()};
+  });
+  const saved=await supabaseRequest<Record<string, unknown>[]>("daily_menu_plans?on_conflict=tanggal&select=tanggal,menu_items,updated_at",{
+    method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(rows),
+  });
+  return respond(request,{success:true,plans:saved});
+}
+
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin");
   if (origin && !APP_ORIGINS.has(origin)) {
@@ -2335,6 +2372,7 @@ Deno.serve(async (request: Request) => {
       case "ai/master-apply": return await handleAiMasterApply(request);
       case "ai/analyze": return await handleAiAnalyze(request);
       case "dashboard/summary": return await handleDashboardSummary(request);
+      case "menus/plans": return await handleDailyMenuPlans(request);
       case "docs/create": return await handleDocsCreate(request);
       case "docs/days": return await handleDocsDays(request);
       case "docs/delete-history": return await handleDocsDeleteHistory(request);

@@ -1,0 +1,96 @@
+/* Menu-first workspace: isolated from document print styles. */
+.daily-menu-card,.daily-workflow{border:1px solid #e1e7e2;border-radius:12px;background:#fff;padding:10px!important;margin:0 0 10px}
+.daily-menu-heading{display:flex;align-items:center;gap:10px;background:#e7f3e9;border-radius:8px;padding:10px;color:#143f2b}
+.daily-menu-heading h3,.daily-planner h4{margin:0;font-size:15px;font-weight:750;line-height:1.3}
+.daily-menu-heading p,.daily-planner header p{margin:3px 0 0;color:#4b5f53;font-size:11px;line-height:1.4}
+.daily-menu-symbol{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:8px;background:#206a43;color:#fff}
+.daily-menu-symbol svg,.daily-planner header svg{width:23px;height:23px;flex:none}
+.daily-step-number{display:grid;place-items:center;flex:none;width:23px;height:23px;border-radius:50%;background:#328a56;color:#fff;font-size:12px;font-weight:750}
+.daily-menu-heading .daily-step-number{background:#14673b}
+.daily-menu-columns{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:12px;margin:12px 0}
+.daily-menu-editor{min-width:0;display:flex;flex-direction:column;gap:7px}
+.daily-field-label,.daily-menu-label strong{font-size:12px;font-weight:650;color:#1f3028}
+.daily-menu-editor>input,.daily-plan-row input,.daily-step-field input[type=date],.daily-step-field select{width:100%;min-width:0;box-sizing:border-box;border:1px solid #dce5df;border-radius:8px;background:#fdfefd;color:#152d22;padding:8px;font:inherit;font-size:12px;min-height:36px}
+.daily-mode-options{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:4px 0}
+.daily-mode-options button{display:flex;align-items:center;text-align:left;gap:6px;min-width:0;background:#fff;border:1px solid #dde5df;border-radius:8px;color:#1b2d22;padding:8px 6px;cursor:pointer}
+.daily-mode-options button[aria-pressed=true]{border-color:#4b9365;background:#e6f3e8}
+.daily-mode-dot{flex:none;width:13px;height:13px;border:1px solid #aebbb2;border-radius:50%;background:#fff}
+.daily-mode-options button[aria-pressed=true] .daily-mode-dot{border:4px solid #2b8550}
+.daily-mode-options strong,.daily-mode-options small{display:block;font-size:11px;line-height:1.35}
+.daily-mode-options small{font-weight:400;color:#52675a;font-size:10px}
+.daily-menu-label{display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;margin-top:4px}
+.daily-menu-label small{font-size:10px;color:#66766a}
+.daily-menu-chips{display:flex!important;flex-wrap:wrap;align-items:center;gap:5px;min-height:38px;border:1px solid #dce5df;border-radius:8px;padding:6px;background:#fcfdfc}
+.daily-menu-chips .docs-menu-row{display:flex!important;align-items:center;gap:2px;background:#e5f2e7;border:0;border-radius:6px;padding:2px 3px;max-width:100%;min-width:0}
+.daily-menu-chips .docs-menu-order{display:none}
+.daily-menu-chips .docs-menu-input{min-height:28px!important;width:92px;min-width:0;max-width:100%;font-size:11px;border:0!important;padding:3px!important;background:transparent!important}
+.daily-menu-chips .docs-menu-row-actions{display:flex;gap:0}
+.daily-menu-chips .docs-menu-row-actions button{min-height:26px!important;min-width:18px;padding:0 3px;font-size:12px;border:0;background:transparent;color:#24653c}
+.daily-menu-chips .docs-menu-empty{font-size:11px;padding:4px;color:#61756a}
+.daily-menu-actions,.daily-planner-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start}
+.daily-menu-actions .docs-btn,.daily-planner-actions .docs-btn{min-height:32px!important;font-size:11px;padding:6px 9px}
+.daily-planner{border:1px solid #dfe8e1;border-radius:9px;background:#fbfdfb;padding:9px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.daily-planner header{display:flex;gap:7px;align-items:flex-start;color:#19633c}
+.daily-planner h4{font-size:13px;color:#1c3227}
+.daily-planner h4 small{font-weight:500;font-size:10px}
+.daily-plan-rows{display:grid;gap:4px;max-height:172px;overflow:auto;min-height:36px;align-content:start}
+.daily-plan-row{display:flex;align-items:center;gap:4px;min-width:0;border:1px solid #e5ebe5;border-radius:6px;background:#fff;padding:3px}
+.daily-plan-row.is-current{background:#e1f0e2;border-color:#d1e7d5}
+.daily-plan-select{display:flex;align-items:center;gap:6px;width:100%;min-width:0;min-height:30px!important;text-align:left;border:0;background:transparent;padding:4px;color:#244331;font:inherit;cursor:pointer}
+.daily-plan-date-label{flex:none;font-size:11px;font-weight:650;white-space:nowrap}
+.daily-plan-menu-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.daily-plan-chevron{font-size:16px;color:#24663c}
+.daily-plan-date{flex:0 1 116px;width:116px!important;font-size:10px!important;padding:3px!important}
+.daily-plan-menu{flex:1;font-size:11px!important;padding:4px!important}
+.daily-plan-remove{border:0;background:transparent;color:#8a4038;min-height:30px!important}
+.daily-plan-empty,.daily-plan-status{margin:0;color:#536b5c;font-size:11px;line-height:1.4}
+.daily-plan-status[data-error=true]{color:#a53326}
+.daily-plan-status:empty{display:none}
+.daily-menu-note{display:flex;align-items:flex-start;gap:8px;padding:9px;background:#e7f3e9;border-radius:7px;font-size:11px;line-height:1.5;color:#284638}
+.daily-menu-note>span{flex:none;display:grid;place-items:center;background:#217643;color:white;border-radius:50%;width:18px;height:18px;font-weight:bold}
+.daily-workflow{padding:4px 10px!important}
+.daily-step-row{display:grid;grid-template-columns:23px minmax(0,1fr) minmax(0,1.1fr);align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #e7ece8}
+.daily-step-row:last-child{border-bottom:0}
+.daily-step-label strong,.daily-step-label small{display:block;line-height:1.35}
+.daily-step-label strong{font-size:13px;color:#142d20}
+.daily-step-label small{font-size:10px;color:#65786a;margin-top:2px}
+.daily-step-field{min-width:0;margin:0!important}
+.daily-recipient-step:has(details[open]){align-items:start}
+.daily-recipient-step details[open]{grid-column:1/-1}
+.daily-workflow .docs-recipient-subsection>summary{min-height:36px!important;padding:7px!important;gap:4px;font-size:12px}
+.daily-workflow .docs-kind-group{display:flex!important;flex-wrap:wrap;align-items:center;gap:3px!important;border:0!important;padding:0!important}
+.daily-workflow .docs-kind-choice{min-height:28px!important;padding:3px!important;font-size:11px!important;white-space:nowrap}
+.daily-sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.daily-active-menu{display:flex;align-items:center;gap:10px;margin:10px 10px 0;padding:10px 12px;background:#e7f3e9;border-radius:8px;color:#164a30;flex:none;min-width:0}
+.daily-active-mark{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:#328a56;color:#fff;font-size:19px;font-weight:bold}
+.daily-active-menu>div{min-width:0}
+.daily-active-menu strong,.daily-active-menu small{display:block;line-height:1.35}
+.daily-active-menu strong{font-size:13px;overflow-wrap:anywhere}
+.daily-active-menu small{font-size:11px;color:#385345;margin-top:3px}
+.daily-history-dialog{width:min(680px,calc(100% - 32px));max-height:85vh;border:1px solid #dce5df;border-radius:12px;padding:18px;background:#fff;color:#183326}
+.daily-history-dialog::backdrop{background:#10241c66}
+.daily-history-header,.daily-history-controls{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.daily-history-header h3{margin:0}
+.daily-history-list{display:grid;gap:5px;max-height:55vh;overflow:auto;margin:14px 0}
+.daily-history-row{display:grid;gap:3px;padding:10px;border-bottom:1px solid #e2e9e3}
+.daily-history-note,.daily-history-row span{font-size:13px;color:#52685a}
+.docs-create-layout .docs-preview-panel{background:#f8faf8}
+.docs-create-layout .docs-preview-pages{background:#e9eeea}
+.docs-create-layout .docs-preview-head{flex:none}
+.docs-create-layout .docs-create-form-panel{padding:10px}
+.docs-create-layout .docs-draft-line{margin:6px 0}
+body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{padding:8px 12px 12px;grid-template-columns:minmax(0,1fr);background:#fff}
+.docs-create-layout .docs-submit-actions{width:100%}
+.docs-create-layout #docsCreateButton{width:100%;min-height:44px;border-radius:7px;background:#176342;color:white;font-weight:750}
+.docs-create-layout #docsOutputCount{font-size:12px;padding:5px 8px}
+.docs-create-layout #docsPreflightSummary{font-size:11px;margin:0}
+@media(min-width:821px){
+ .workspace-page .docs-create-layout{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:0 10px}
+ .docs-create-layout .docs-preview-tools{flex-basis:230px}
+ .docs-create-layout .docs-preview-zoom input{width:68px}
+ .docs-create-layout .docs-preview-kinds{gap:2px}
+ .docs-create-layout .docs-preview-kinds button{padding-inline:7px;font-size:12px}
+ .home-page .home-nav button[aria-current=page]{background:#e3f1e5;border-radius:6px 6px 0 0}
+}
+@media(max-width:1140px) and (min-width:821px){.daily-menu-columns{grid-template-columns:1fr}.daily-plan-rows{max-height:125px}.daily-step-row{grid-template-columns:23px minmax(0,1fr) minmax(0,1fr)}}
+@media(max-width:560px){.daily-menu-columns{grid-template-columns:1fr}.daily-step-row{grid-template-columns:23px minmax(0,1fr)}.daily-step-field{grid-column:2}.daily-menu-heading{gap:6px}.daily-menu-heading h3{font-size:14px}.daily-active-menu{margin:8px 8px 0}}
