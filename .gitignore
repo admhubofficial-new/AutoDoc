@@ -15,3 +15,11 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# Generated browser/CI artifacts and local deployment metadata
+test-results/
+playwright-report/
+playwright/.auth/
+.vercel/
+supabase/.temp/
+supabase/.branches/

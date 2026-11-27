@@ -4,10 +4,10 @@ Panduan ini berlaku untuk seluruh repositori admhubofficial-new/AutoDoc. Tujuann
 
 ## 1. Gambaran proyek dan arsitektur
 
-AutoDoc adalah aplikasi administrasi distribusi MBG untuk SPPG Darmaraja 01. Fitur utamanya adalah pembuatan dan cetak Surat Jalan (SJ), BAST, formulir uji organoleptik, arsip distribusi, Data Master, dashboard, serta asisten AI untuk membaca dan memetakan sumber data.
+AutoDoc adalah aplikasi administrasi distribusi MBG untuk SPPG Darmaraja 01. Fitur utamanya adalah pembuatan dan cetak Surat Jalan (SJ), BAST, formulir uji organoleptik, arsip distribusi, Data Master, dashboard, serta endpoint AI lama yang dipertahankan untuk kompatibilitas.
 
 Arsitektur aktif:
-- Frontend: website statis HTML, CSS, JavaScript vanilla, dipublikasikan melalui GitHub Pages.
+- Frontend: website statis HTML, CSS, JavaScript vanilla, dipublikasikan melalui Vercel (utama); GitHub Pages dipertahankan sementara.
 - Backend: Supabase Edge Function Deno/TypeScript, entry point supabase/functions/autodoc-auth/index.ts.
 - Database: PostgreSQL/Supabase; tabel aplikasi berada di schema public.
 - Komunikasi frontend: window.AutoDocConfig.apiUrl menuju /functions/v1/autodoc-auth, publishable key publik, dan cookie sesi.
@@ -18,7 +18,7 @@ Arsitektur aktif:
 ## 2. Peta file dan batas tanggung jawab
 
 - index.html: bootstrap autentikasi, shell halaman, navigasi utama, serta urutan pemuatan modul.
-- config.js: URL Supabase dan publishable key publik; bukan tempat secret.
+- config.js: URL/publishable key publik dan AutoDocCore (API client, error HTTP, tanggal Jakarta, coalescing request); bukan tempat secret.
 - theme.css: satu-satunya sumber design tokens, komponen visual bersama, status, dan standar interaksi.
 - styles.css: reset/layout aplikasi, shell, sidebar, breakpoint, serta struktur layar; jangan mendefinisikan ulang design tokens di sini.
 - dashboard.js: ringkasan operasional dan shortcut navigasi.
@@ -29,7 +29,7 @@ Arsitektur aktif:
 - archive.js: pencarian/paginasi arsip dan penghapusan massal dengan PIN.
 - bast-realization.js: formulir realisasi BAST.
 - master.js, master-utils.js: CRUD Data Master, pencarian, dan parser CSV.
-- ai-assistant.js: pemilihan berkas, pratinjau usulan AI, dan konfirmasi perubahan.
+- daily-menu-planner.js / daily-menu-planner.css: rencana menu berdasarkan tanggal, revisi, konflik dan riwayat; endpoint AI lama tidak mempunyai modul UI terpisah.
 - supabase/functions/autodoc-auth/index.ts: endpoint API, autentikasi, validasi, dan operasi database.
 - supabase/functions/autodoc-auth/session.ts: cookie sesi dan identitas throttle bertanda tangan.
 - supabase/functions/autodoc-auth/validation.ts: validasi, parsing request berbatas stream, timeout HTTP, dan Retry-After.
@@ -37,7 +37,7 @@ Arsitektur aktif:
 - supabase/functions/autodoc-auth/distribution-workflow.ts: normalisasi aturan distribusi dan snapshot.
 - supabase/migrations/: riwayat perubahan skema database.
 - tests/: unit test, contract test, dan browser smoke test.
-- .github/workflows/security-tests.yml: deno check, pemeriksaan sintaks JavaScript, unit test, dan browser test.
+- .github/workflows/security-tests.yml: Deno check/lint dan sintaks; autodoc-quality.yml: unit/contract dan browser test terisolasi.
 
 Pertahankan pola modul IIFE dan API publik window.AutoDoc... yang sudah digunakan. Jaga urutan script di index.html; modul konsumen dimuat setelah dependensinya. Jika file frontend berubah, perbarui query-string versi/cache-busting pada script atau stylesheet yang relevan.
 
@@ -51,18 +51,18 @@ Pertahankan pola modul IIFE dan API publik window.AutoDoc... yang sudah digunaka
 6. Formulir uji organoleptik adalah keluaran cetak operasional tersendiri; jangan membuatnya mengonsumsi nomor SJ/BAST atau mengubah status dokumen.
 7. Jangan menghapus bucket, kolom, RPC, indeks, atau data yang tampak tidak digunakan sebelum semua referensi frontend/backend, migrasi, dan kebutuhan operasional diperiksa.
 8. Jangan mengubah isi/format cetak tanpa uji A4, page break, margin, tanda tangan, teks panjang, dan Save as PDF.
-9. Perubahan P1 ini tidak boleh mengubah logika bisnis penerbitan nomor dokumen, snapshot, atau renderer cetak.
+9. Pertahankan hasil P0–P4; perubahan dokumentasi tidak boleh mengubah logika bisnis.
 
 ## 4. Keamanan, autentikasi, dan akses data
 
 - Semua baca/tulis data aplikasi dari browser wajib melalui Edge Function. Jangan mengakses tabel public langsung dari frontend.
 - Jangan pernah menaruh service_role, sb_secret, PIN, token sesi, atau API key OpenAI pada frontend, HTML, CSS, log browser, atau commit.
-- config.js hanya berisi URL proyek dan publishable key yang memang publik.
+- config.js memuat konfigurasi publik dan helper AutoDocCore; tidak memuat secret.
 - Secret backend mencakup PIN MASUK dan API OPEN AI AutoDoc; akses melalui Deno.env di Edge Function saja. Jangan membaca, menampilkan, atau mencatat nilainya.
 - Edge Function melakukan pemeriksaan origin dan sesi sendiri; verify_jwt=false adalah konfigurasi yang disengaja. Jangan menghapus pemeriksaan khusus ini.
 - Endpoint data wajib memvalidasi validSession. Mutasi sensitif wajib mempertahankan verifikasi PIN ulang atau mekanisme autentikasi setara yang telah disetujui.
 - Pertahankan cookie sesi HMAC-SHA256, HttpOnly, Secure, SameSite=None, Partitioned, masa berlaku, dan pemeriksaan session_version.
-- Jangan memperlonggar CORS menjadi wildcard. Origin produksi saat ini https://admhubofficial-new.github.io. CORS bukan pengganti autentikasi karena klien non-browser dapat mengirim request langsung.
+- Jangan memperlonggar CORS menjadi wildcard. Origin yang diizinkan: https://autodoc-xi.vercel.app (utama) dan https://admhubofficial-new.github.io (lama). CORS bukan pengganti autentikasi karena klien non-browser dapat mengirim request langsung.
 - Login throttle menggunakan identitas browser bertanda tangan HMAC, bukan header IP dari klien. Jangan mempercayai X-Forwarded-For, X-Real-IP, CF-Connecting-IP, atau header lain yang dapat dipalsukan kecuali ada desain trusted-proxy yang diverifikasi dari konfigurasi platform.
 - Aplikasi memakai PIN bersama, bukan akun pengguna individual. Identitas throttle browser bukan identitas personal dan dapat hilang jika cookie dihapus; jangan mengklaimnya sebagai proteksi global terhadap serangan terdistribusi. Jelaskan batasan ini jika mengubah autentikasi.
 - Pertahankan RLS aktif dan pola tanpa policy/grant tabel untuk anon atau authenticated. Jangan membuka akses tabel publik demi memudahkan frontend atau menghilangkan advisor.
@@ -79,8 +79,9 @@ Semua endpoint wajib memeriksa HTTP method, sesi, struktur JSON, tipe data, panj
 
 Endpoint aktif:
 - Setup/auth: setup/status, setup/complete, auth/login, auth/session, auth/logout, auth/verify-token, auth/change-token.
-- Data Master: master/list, master/recipients, master/save, master/import.
-- AI: ai/analyze, ai/recipient-apply, ai/master-apply.
+- Data Master: master/list, master/recipients, master/save, master/numbering, master/import.
+- Menu: menus/plans.
+- AI lama (tanpa UI aktif): ai/analyze, ai/recipient-apply, ai/master-apply.
 - Dashboard: dashboard/summary.
 - Dokumen: docs/create, docs/days, docs/list, docs/mark-printed, docs/realization, docs/delete-history.
 
@@ -102,7 +103,7 @@ Aturan tipe/nilai:
 ## 6. Aturan bisnis dokumen dan transaksi
 
 - Nomor SJ dan BAST dikelola counter terpisah melalui RPC atomik. Jangan membuat nomor di browser atau memakai MAX(nomor)+1.
-- Penerbitan dokumen harus tetap menggunakan buat_dokumen_dengan_nomor; penyimpanan distribusi/menu menggunakan simpan_distribusi_dan_menu.
+- Penerbitan dokumen harus tetap menggunakan buat_dokumen_dengan_nomor; persiapan distribusi menggunakan autodoc_prepare_distribution yang memanggil simpan_distribusi_dan_menu. Rencana menu menggunakan autodoc_save_daily_plans dengan revision check dan advisory lock per tanggal. Distribusi terkunci sejak disiapkan, termasuk sebelum dokumen pertama berhasil.
 - Realisasi BAST harus menggunakan RPC transaksional simpan_realisasi_bast; jangan menggantinya dengan beberapa PATCH terpisah.
 - Penghapusan riwayat harus mempertahankan PIN ulang, batas batch, UUID unik, transaksi atomik, audit log, dan counter yang tidak di-reset.
 - Distribusi, komponen menu, dan snapshot yang sudah diterbitkan dilindungi dari perubahan. Bila retry mendeteksi data berbeda, kembalikan konflik yang jelas; jangan menimpa snapshot lama.
@@ -154,7 +155,7 @@ Aturan tipe/nilai:
 - Komponen tombol, input, card, badge, skeleton, empty/error state, dan toast memakai primitive di theme.css atau class modul yang konsisten.
 
 ### 9.3 Struktur dan navigasi responsif
-- Desktop: sidebar dapat diciutkan menjadi rail ikon; tombol tetap punya accessible name meskipun label visual tersembunyi.
+- Desktop: navigasi horizontal, formulir dan preview berdampingan; pertahankan zoom, scrolling dan target aksesibilitas.
 - Mobile: drawer memiliki tombol buka/tutup di dalam sidebar, backdrop, penutupan Escape, dan judul konteks aktif Beranda/Buat Dokumen/Arsip/Data Master.
 - Jangan mengganti ID atau nama class hook JavaScript tanpa memetakan seluruh pemanggil dan menambah test regresi.
 - Jangan menambah framework, bundler, atau library UI hanya untuk styling.
@@ -179,10 +180,11 @@ Aturan tipe/nilai:
 
 ## 10. Standar pengujian
 
-Sebelum menyelesaikan perubahan, jalankan:
+Sebelum menyelesaikan perubahan aplikasi, jalankan (setup lokal: npm ci --ignore-scripts dan npx --no-install playwright-core install chromium):
 - npm test
 - npm run test:browser
 - deno check supabase/functions/autodoc-auth/index.ts
+- deno lint supabase/functions/autodoc-auth
 
 Tambahkan test sesuai dampak:
 - Unit test untuk parser, normalisasi, tanggal/waktu, tipe data, batas, dan aturan bisnis.
@@ -212,4 +214,8 @@ Tambahkan test sesuai dampak:
 - Bila pengguna meminta tahap analisis/rencana saja, jangan mengubah repository/database atau membuka PR.
 - Setelah implementasi disetujui, buat PR yang menjelaskan tujuan, file, dampak database, uji, dan risiko.
 - Jangan merge sebelum CI wajib sukses dan sesuai instruksi pengguna. Jika pengguna secara eksplisit menahan merge, jangan merge.
-- Jangan menyatakan deployment sukses hanya berdasarkan merge; verifikasi workflow Pages dan versi Edge Function secara terpisah.
+- Jangan menyatakan deployment sukses hanya berdasarkan merge; verifikasi commit/alias Vercel, workflow Pages selama transisi, dan versi Edge Function secara terpisah. CI belum menjadi deployment gate Vercel; lihat docs/runbook.md.
+
+## 13. Dokumentasi aktif
+
+README.md adalah titik masuk. docs/operator.md, docs/architecture.md, SECURITY.md, docs/runbook.md dan CHANGELOG.md memisahkan panduan aktif dari riwayat. Default transportasi berasal dari Data Master, bukan literal JS. Draf v4 membedakan default dan override. Jangan memulihkan fungsi salin menu terakhir. Setelah perubahan fitur, sinkronkan dokumen yang relevan; jangan mencatat rahasia atau data penerima.
