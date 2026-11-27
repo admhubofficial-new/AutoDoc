@@ -35,19 +35,4 @@ jobs:
           for file in ./*.js; do
             node --check "$file"
           done
-      - name: Jalankan unit test
-        run: npm test
-      - name: Siapkan Chromium untuk uji browser
-        run: |
-          npm install --no-save --package-lock=false playwright@1.56.1
-          npx playwright install chromium
-      - name: Jalankan uji interaksi browser
-        run: npm run test:browser
-      - name: Unggah bukti visual responsif P2/P3
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: autodoc-p2-p3-visual-audit
-          path: test-results/p2-p3/
-          if-no-files-found: ignore
-          retention-days: 7
+      # Unit and browser tests run in autodoc-quality.yml; keep this job focused on backend type/lint and syntax.

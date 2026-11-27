@@ -11,6 +11,8 @@ const realizationSource = readFileSync(new URL("../bast-realization.js", import.
 const previewSource = readFileSync(new URL("../document-preview.js", import.meta.url), "utf8");
 const menuSource = readFileSync(new URL("../document-menu.js", import.meta.url), "utf8");
 const htmlSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const coreSource=readFileSync(new URL("../config.js",import.meta.url),"utf8");
+const plannerSource=readFileSync(new URL("../daily-menu-planner.js",import.meta.url),"utf8");
 const masterSource = readFileSync(new URL("../master.js", import.meta.url), "utf8");
 
 test("document issuance does not reference the removed print PIN", () => {
@@ -23,7 +25,7 @@ test("status reporting recreates its live region if the modal markup is missing 
 });
 
 test("partial document creation responses are handled as valid API results", () => {
-  assert.match(source, /response\.status!==207/);
+  assert.match(coreSource, /if \(!response\.ok\)/); // 207 is an HTTP success; behavior covered in core-regression.test.ts
 });
 
 
@@ -65,8 +67,8 @@ test("live print preview uses the production renderer and follows form changes",
   assert.match(previewSource, /function updateLivePreview\(\)/);
   assert.match(previewSource, /window\.AutoDocPrintRenderer/);
   assert.match(previewSource, /frame\.srcdoc=html/);
-  assert.match(source, /form\.addEventListener\("input",\(\)=>\{formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
-  assert.match(source, /form\.addEventListener\("change",\(\)=>\{formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\)\}\)/);
+  assert.match(source, /form\.addEventListener\("input",onFormEdit\)/);
+  assert.match(source, /formDirty=true;syncPreflightSummary\(\);previewController\?\.updateLivePreview\(\);saveDraft\(\)/);
   assert.match(previewSource, /Memuat nomor surat/);
   assert.match(previewSource, /previewPortionRows/);
   assert.match(previewSource, /renderOrganolepticPreview/);
@@ -84,12 +86,11 @@ test("daily menu supports eight ordered components, suggestions, reordering, and
   assert.match(source, /docsAddMenuItem/);
 });
 
-test("single-page form can copy the ordered menu from the latest distribution archive", () => {
-  assert.match(source, /function copyLastMenu\(\)/);
-  assert.match(source, /api\("docs\/days\?offset=0"\)/);
-  assert.match(source, /api\("docs\/list\?tanggal="/);
-  assert.match(source, /distribution\.menu_items/);
-  assert.match(source, /Salin menu terakhir/);
+test("daily planner uses selected date and does not copy the latest archive menu", () => {
+  assert.match(plannerSource, /api\("menus\/plans\?tanggal="\+encodeURIComponent\(selected\)\)/);
+  assert.match(plannerSource, /apply\(dist\.menu_items\)/);
+  assert.match(plannerSource, /local\.base!==version\(\)/);
+  assert.doesNotMatch(source, /copyLastMenu|Salin menu terakhir/);
 });
 
 
@@ -107,8 +108,8 @@ test("petugas, pengemudi, dan kendaraan remain optional during document creation
 });
 
 test("creation sends menu components, meal time, and only selected numbered document types", () => {
-  assert.match(source, /menu_items:menuItems/);
-  assert.match(source, /waktu_makan:\$\("#docsMealTime",modal\)\.value/);
+  assert.match(source, /menu_items:readMenuComponents\(\)/);
+  assert.match(source, /waktu_makan:\$\("#docsMealTime",modal\)\?\.value/);
   assert.match(source, /jenis_dokumen:kinds/);
   assert.match(source, /recipient_ids:selected/);
   assert.match(source, /const body=\{/);
@@ -116,7 +117,7 @@ test("creation sends menu components, meal time, and only selected numbered docu
 });
 
 test("meal time supports pagi, siang, and sore with siang selected by default", () => {
-  assert.match(source, /id='docsMealTime'><option value='pagi'>Pagi<\/option><option value='siang' selected>Siang<\/option><option value='sore'>Sore<\/option>/);
+  assert.match(source, /id='docsMealTime'[^>]*><option value='pagi'>Pagi<\/option><option value='siang' selected>Siang<\/option><option value='sore'>Sore<\/option>/);
 });
 
 test("organoleptic printing matches the approved A4 portrait template", () => {
@@ -186,9 +187,9 @@ test("archive module owns global search, page selection, and PIN-protected bulk 
 
 
 test("distribution date defaults to today in WIB and departure time starts empty", () => {
-  assert.match(source, /function nowInJakarta\(\)/);
-  assert.ok(source.includes('timeZone:"Asia/Jakarta"'));
-  assert.match(source, /const today=\(\)=>nowInJakarta\(\);/);
+  assert.match(coreSource, /function today\(/);
+  assert.ok(coreSource.includes('timeZone:"Asia/Jakarta"'));
+  assert.match(source, /const \{api,today\}=window.AutoDocCore/);
   assert.match(source, /const todayVal=today\(\)/);
   assert.match(source, /<input id='docsTime' type='time'>/);
   assert.doesNotMatch(source, /currentTime\.time|Terisi otomatis mengikuti waktu WIB/);
@@ -197,8 +198,8 @@ test("distribution date defaults to today in WIB and departure time starts empty
 
 test("creation form accepts new staff, driver and vehicle values and remembers them as master data", () => {
   assert.match(source, /id='docsStaff' type='text' list='docsStaffSuggestions'/);
-  assert.match(source, /id='docsDriver' type='text' list='docsDriverSuggestions'/);
-  assert.match(source, /id='docsVehicle' type='text' list='docsVehicleSuggestions'/);
+  assert.match(source, /id='docsDriver' type='text'[^>]*list='docsDriverSuggestions'/);
+  assert.match(source, /id='docsVehicle' type='text'[^>]*list='docsVehicleSuggestions'/);
   assert.match(source, /async function rememberMasterValue\(entity,field,value\)/);
   assert.match(source, /api\("master\/save",\{entity,data\}\)/);
   assert.match(source, /rememberCreationInputs\(body\)/);
@@ -211,7 +212,7 @@ test("creation form accepts new staff, driver and vehicle values and remembers t
 
 test("live document preview is isolated in its own module and initialized before documents", () => {
   assert.match(previewSource, /window\.AutoDocDocumentPreview=Object\.freeze/);
-  assert.match(previewSource, /return Object\.freeze\(\{updateLivePreview,fitPreviewFrame\}\)/);
+  assert.match(previewSource, /return Object\.freeze\(\{updateLivePreview,fitPreviewFrame,reset\}\)/);
   assert.match(source, /window\.AutoDocDocumentPreview\.create/);
   assert.doesNotMatch(source, /function updateLivePreview|function renderOrganolepticPreview|function fitPreviewFrame/);
 });
@@ -267,15 +268,15 @@ test("organoleptic archive and creation printing use recipient-specific snapshot
   assert.match(source, /function getArchiveRecipientMenus/);
   assert.match(source, /function printOrganolepticForms\(recipients,menuByRecipient=\{\}\)/);
   assert.match(source, /menuByRecipient\?\.\[recipientId\]/);
-  assert.match(source, /pendingOrganolepticPrint\.menuByRecipient/);
+  assert.match(source, /printOrganolepticForms\(selectedRecipients,getArchiveRecipientMenus\(\)\)/);
   assert.match(source, /printOrganolepticForms\(getArchiveRecipients\(\),getArchiveRecipientMenus\(\)\)/);
 });
 
 test("P4 creation form groups the operator flow and keeps readiness in one compact status", () => {
   const steps = [
-    "for='docsDate'",
-    "class='docs-recipient-subsection'",
-    "<summary>Menu harian</summary>",
+    "Rencana Menu Harian",
+    "id='docsDate'",
+    "class='docs-recipient-subsection daily-step-field'",
     "<span>Pengiriman</span>"
   ];
   const positions = steps.map(step => source.indexOf(step));
@@ -287,7 +288,8 @@ test("P4 creation form groups the operator flow and keeps readiness in one compa
   assert.match(source, /docsPreflightSummary/);
   assert.match(source, /docsSubmitCount/);
   assert.ok(source.includes("menuController?.count"));
-  assert.match(source, /Menu harian belum diisi/);
+  assert.match(source, /Simpan perubahan menu sebelum terbit/);
+  assert.match(source, /Menu gagal dimuat/);
   assert.match(source, /Pilih minimal satu penerima untuk melanjutkan/);
   assert.ok(source.includes("button.disabled=publishing||!ready"));
   assert.ok(source.includes('status("Memuat daftar penerima dan data pendukung...",false,"loading")'));

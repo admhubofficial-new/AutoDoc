@@ -57,7 +57,8 @@ test("retries cannot overwrite an issued distribution snapshot", () => {
   const body = functionBody("handleDocsCreate", "handleDocsDays");
   assert.match(body, /error\.code === "55000"/);
   assert.match(body, /new AppError\(\s*409/);
-  assert.match(body, /snapshot dokumen lama tidak berubah/);
+  assert.match(body, /autodoc_prepare_distribution/);
+  assert.match(body, /Muat ulang tanggal distribusi/);
 });
 
 
@@ -143,7 +144,7 @@ test("home dashboard separates the global BAST queue and exposes latest distribu
   assert.match(dashboardUi, /Arsip distribusi terakhir/);
   assert.match(dashboardUi, /action\("＋ Buat Dokumen", true/);
   assert.match(dashboardUi, /action\("Buka arsip terakhir", false/);
-  assert.match(indexHtml, /dashboard\.js\?v=ruang-kerja-20261126/);
+  assert.match(indexHtml, /dashboard\.js\?v=[^"]+/);
 });
 
 test("SPPG identity exposes separate Kepala SPPG, Kepala SPPI, and Ahli Gizi Dapur fields", () => {
