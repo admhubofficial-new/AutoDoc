@@ -413,8 +413,8 @@ async function clearFailures(keyHash: string): Promise<void> {
 const MASTER_CONFIG = {
   settings: { table: "settings", columns: "id,nama_sppg,kode_sppg,alamat,kecamatan,kabupaten,kabupaten_perlu_verifikasi,kabupaten_catatan_verifikasi,nama_kepala_sppg,nama_kepala_sppi,nama_ahli_gizi,logo_path", order: "id.asc" },
   recipients: { table: "recipients", columns: "id,kelompok,nama,jenjang,aktif,urutan,alamat,siswa_kecil,siswa_besar,tendik,ibu_hamil,ibu_menyusui,balita,putus_sekolah,kader,porsi_kecil,porsi_besar,total_porsi,keterangan,perlu_verifikasi,catatan_verifikasi", order: "urutan.asc,nama.asc" },
-  drivers: { table: "master_pengemudi", columns: "id,nama,aktif,urutan", order: "urutan.asc,nama.asc" },
-  vehicles: { table: "master_kendaraan", columns: "id,no_kendaraan,aktif,urutan", order: "urutan.asc,no_kendaraan.asc" },
+  drivers: { table: "master_pengemudi", columns: "id,nama,aktif,urutan,default_pengiriman", order: "urutan.asc,nama.asc" },
+  vehicles: { table: "master_kendaraan", columns: "id,no_kendaraan,jenis_kendaraan,aktif,urutan,default_pengiriman", order: "urutan.asc,no_kendaraan.asc" },
   staff: { table: "master_petugas", columns: "id,nama,jabatan,aktif,urutan", order: "urutan.asc,nama.asc" },
   menus: { table: "master_menu", columns: "id,teks_menu,aktif,urutan", order: "urutan.asc,teks_menu.asc" },
 } as const;
@@ -485,6 +485,22 @@ function masterPayload(entity: MasterEntity, input: Record<string, unknown>): Re
   if (entity === "drivers" || entity === "staff" || entity === "menus" || entity === "vehicles") {
     const field = entity === "vehicles" ? "no_kendaraan" : entity === "menus" ? "teks_menu" : "nama";
     data[field] = cleanText(input[field], entity === "vehicles" ? "Nomor kendaraan" : entity === "menus" ? "Menu" : "Nama", true, 180);
+    if(entity==="drivers"||entity==="vehicles"){
+      let value=String(data[field]).replace(/\s+/g," ").trim();
+      if(value.includes("/")) throw new AppError(400,"Satu record hanya untuk satu pengemudi atau kendaraan.");
+      if(entity==="vehicles"){
+        const modelMatch=value.match(/^Grand\s*Max\s+(.+)$/i);
+        if(modelMatch){value=modelMatch[1];if(!("jenis_kendaraan" in input))data.jenis_kendaraan="GrandMax";}
+        value=value.toUpperCase();
+        const plate=value.match(/^([A-Z]{1,2})\s*(\d{1,4})\s*([A-Z]{0,3})$/);
+        if(plate)value=[plate[1],plate[2],plate[3]].filter(Boolean).join(" ");
+        if(value.length>80)throw new AppError(400,"Nomor kendaraan terlalu panjang.");
+        if("jenis_kendaraan" in input)data.jenis_kendaraan=cleanText(input.jenis_kendaraan,"Jenis kendaraan",false,80);
+      }
+      data[field]=value;
+      if(input.aktif===false)data.default_pengiriman=false;
+      else if("default_pengiriman" in input)data.default_pengiriman=input.default_pengiriman===true;
+    }
     if (entity === "staff") data.jabatan = cleanText(input.jabatan, "Jabatan", false, 120);
     data.aktif = input.aktif !== false;
     data.urutan = cleanOrder(input.urutan);
@@ -517,6 +533,8 @@ async function handleMasterList(request: Request): Promise<Response> {
     if (entity === "settings") query.set("id", "eq.1");
     data[entity] = await supabaseRequest<unknown[]>(config.table + "?" + query.toString());
   }
+  const defaults=(rows:unknown,field:string)=>(Array.isArray(rows)?rows:[]).filter((row:Record<string,unknown>)=>row.aktif===true&&row.default_pengiriman===true).map((row:Record<string,unknown>)=>String(row[field])).join(" / ");
+  data.transport_defaults={nama_pengemudi:defaults(data.drivers,"nama"),no_kendaraan:defaults(data.vehicles,"no_kendaraan")};
   if(includeRecipients) data.numbering = await supabaseRequest<unknown[]>("counters?select=jenis,start_number,next_number,locked&order=jenis");
   return respond(request, { data });
 }
