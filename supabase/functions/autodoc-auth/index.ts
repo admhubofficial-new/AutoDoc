@@ -522,20 +522,23 @@ async function handleMasterList(request: Request): Promise<Response> {
   if (request.method !== "GET") throw new AppError(405, "Metode tidak diizinkan.");
   if (!(await validSession(request))) throw new AppError(401, "Sesi berakhir. Silakan masuk kembali.");
   const data: Record<string, unknown> = {};
-  const includeRecipients = new URL(request.url).searchParams.get("include_recipients") !== "false";
-  for (const entity of Object.keys(MASTER_CONFIG) as MasterEntity[]) {
-    if (entity === "recipients" && !includeRecipients) {
-      data[entity] = [];
-      continue;
-    }
+  const params = new URL(request.url).searchParams;
+  const numberingQuery = "counters?select=jenis,start_number,next_number,locked&order=jenis";
+  // Preview only consumes counters; do not fetch unrelated master tables.
+  if (params.get("preview") === "true") return respond(request, {data:{numbering:await supabaseRequest<unknown[]>(numberingQuery)}});
+  const includeRecipients = params.get("include_recipients") !== "false";
+  const entities = Object.keys(MASTER_CONFIG) as MasterEntity[];
+  const [entries, numbering] = await Promise.all([Promise.all(entities.map(async entity => {
+    if (entity === "recipients" && !includeRecipients) return [entity, []] as const;
     const config = MASTER_CONFIG[entity];
     const query = new URLSearchParams({ select: config.columns, order: config.order });
     if (entity === "settings") query.set("id", "eq.1");
-    data[entity] = await supabaseRequest<unknown[]>(config.table + "?" + query.toString());
-  }
+    return [entity, await supabaseRequest<unknown[]>(config.table + "?" + query.toString())] as const;
+  })), includeRecipients ? supabaseRequest<unknown[]>(numberingQuery) : Promise.resolve([])]);
+  Object.assign(data,Object.fromEntries(entries));
+  if(includeRecipients) data.numbering=numbering;
   const defaults=(rows:unknown,field:string)=>(Array.isArray(rows)?rows:[]).filter((row:Record<string,unknown>)=>row.aktif===true&&row.default_pengiriman===true).map((row:Record<string,unknown>)=>String(row[field])).join(" / ");
   data.transport_defaults={nama_pengemudi:defaults(data.drivers,"nama"),no_kendaraan:defaults(data.vehicles,"no_kendaraan")};
-  if(includeRecipients) data.numbering = await supabaseRequest<unknown[]>("counters?select=jenis,start_number,next_number,locked&order=jenis");
   return respond(request, { data });
 }
 
@@ -1233,23 +1236,24 @@ async function handleDocsList(request: Request): Promise<Response> {
     { tanggal: "eq." + tanggal },
   );
   if (!distribution?.id) return respond(request, { distribution: null, documents: [] });
-  const menuItems = await supabaseRequest<Array<Record<string, unknown>>>(
+  const [menuItems, docs] = await Promise.all([supabaseRequest<Array<Record<string, unknown>>>(
     "distribution_menu_items?" + new URLSearchParams({
       select: "id,distribution_id,urutan,nama_komponen",
       distribution_id: "eq." + String(distribution.id),
       order: "urutan.asc",
       limit: "8",
     }).toString(),
-  );
-  (distribution as Record<string, unknown>).menu_items = menuItems;
-  const docs = await supabaseRequest<Array<Record<string, unknown>>>(
+  ),
+  supabaseRequest<Array<Record<string, unknown>>>(
     "documents?" + new URLSearchParams({
       select: "id,distribution_id,recipient_id,jenis,nomor_urut,nomor_lengkap,snapshot_json,status,alasan_batal,file_ttd_path,created_at",
       distribution_id: "eq." + String(distribution.id),
       order: "jenis.asc,nomor_urut.asc",
       limit: "300",
     }).toString(),
-  );
+  )]);
+  (distribution as Record<string, unknown>).menu_items = menuItems;
+  if(url.searchParams.get("preview")==="true") return respond(request,{distribution,documents:docs});
   const bastIds = docs.filter((doc) => doc.jenis === "BAST").map((doc) => String(doc.id));
   if (bastIds.length) {
     const inFilter = "in.(" + bastIds.join(",") + ")";
@@ -2325,10 +2329,12 @@ async function handleDailyMenuPlans(request: Request): Promise<Response> {
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw new AppError(400, "Halaman tidak valid.");
     if (date !== null && !validIsoDate(date)) throw new AppError(400, "Tanggal menu tidak valid.");
     const query = new URLSearchParams({select:"tanggal,menu_items,updated_at", tanggal:date ? "eq."+date : (history ? "lt." : "gte.")+today,order:"tanggal."+(history?"desc":"asc"),limit:date?"1":"31",offset:date?"0":String(offset)});
-    const rows = await supabaseRequest<Record<string, unknown>[]>("daily_menu_plans?"+query.toString());
+    const [rows,dist]=await Promise.all([
+      supabaseRequest<Record<string, unknown>[]>("daily_menu_plans?"+query.toString()),
+      date?selectOne<Record<string,unknown>>("distributions","id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,waktu_makan,nama_ahli_gizi",{tanggal:"eq."+date}):Promise.resolve(null)
+    ]);
     const plans=rows.slice(0,30);
     if(date){
-      const dist=await selectOne<Record<string,unknown>>("distributions","id,tanggal,menu,nama_petugas,nama_pengemudi,no_kendaraan,jam_berangkat,waktu_makan,nama_ahli_gizi",{tanggal:"eq."+date});
       if(dist?.id){
         const items=await supabaseRequest<Array<{nama_komponen:string}>>("distribution_menu_items?"+new URLSearchParams({select:"nama_komponen",distribution_id:"eq."+String(dist.id),order:"urutan.asc",limit:"8"}).toString());
         return respond(request,{plans:plans.map(p=>({...p,locked:true})),distribution:{...dist,menu_items:items.map(i=>i.nama_komponen)},has_more:false});
