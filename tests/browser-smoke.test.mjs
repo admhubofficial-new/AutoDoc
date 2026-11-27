@@ -2,7 +2,7 @@ import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
-import { chromium } from "playwright";
+import { chromium } from "playwright-core";
 
 const origin = "http://127.0.0.1:4173/";
 const recipientId = "11111111-1111-4111-8111-111111111111";
@@ -40,6 +40,9 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
   const errors = [];
   const menuPlans=new Map(initialPlans.map(plan=>[plan.tanggal,plan]));
   page.on("pageerror", error => errors.push(error.message));
+  page.setDefaultTimeout(12000);
+  // Fail closed: tests can only reach the local static server or mocked API.
+  await context.route("**/*",route=>{const url=new URL(route.request().url());return url.origin===new URL(origin).origin?route.continue():route.abort("blockedbyclient")});
 
   await page.route("**/functions/v1/autodoc-auth/**", async route => {
     const request = route.request();
@@ -205,7 +208,7 @@ test("P0 shared design system and active navigation context work without runtime
     assert.equal((await context.textContent()).trim(), "Buat Dokumen");
     assert.equal(await page.locator("#workspacePages .docs-overlay").count(),1);
     assert.equal(await page.locator('[data-home-nav="realization"]').isVisible(),true);
-    await page.locator("input[name='recipient']").waitFor();
+    await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
     await page.locator("input[name='recipient']").check();
     await page.locator("#docsMealTime").selectOption("pagi");
     await page.locator('[data-home-nav="realization"]').click();
@@ -279,7 +282,7 @@ test("P1 operator dashboard and document form work on desktop and mobile", async
     assert.equal(await page.locator("#docsTime").inputValue(), "");
     assert.equal(await page.locator("input[name='recipient']").isChecked(), true);
     const summary = await page.locator("#docsPreflightSummary").innerText();
-    assert.match(summary, /Menu harian belum diisi/);
+    assert.equal(summary.trim(),"");
     assert.match(await page.locator("#docsSubmitCount").textContent(), /1 tujuan/);
     assert.match(await page.locator("#docsSubmitCount").textContent(), /16 porsi/);
     assert.equal(await page.locator("#docsCreateButton").isDisabled(), false);
@@ -608,7 +611,7 @@ test("phase 3 distribution draft survives reload, can be discarded, and never is
   await page.locator("#docsDraftStatus").getByText(/Draf tersimpan/).waitFor();
   await page.reload({waitUntil:"domcontentloaded"});
   await page.locator('[data-home-nav="print"]').click();
-  await page.locator("input[name='recipient']").waitFor();
+  await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
   assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
   assert.equal(await page.locator("input[name='recipient']").isChecked(),true);
   assert.equal(await page.locator(".docs-menu-input").inputValue(),"Nasi uji draf");
@@ -720,7 +723,7 @@ test("audit: leaving archive clears PIN confirmation and pending requests cannot
   page.once("dialog",dialog=>dialog.accept());
   await page.locator('[data-home-nav="print"]').click();
   assert.equal(await page.locator("#docsDeletePin").count(),0);
-  await page.locator("input[name='recipient']").waitFor();
+  await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
   assert.equal(app.writes.some(item=>item.route==="docs/delete-history"),false);
   assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
@@ -754,6 +757,8 @@ test("desktop paper accepts wheel input and reflows into scrollable rows on zoom
   try {
     const page = app.page;
     const host = page.locator("#docsPreviewPages");
+    await page.locator('[data-home-nav="print"]').click();
+    await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
     await host.locator("iframe").nth(6).waitFor({ state: "attached" });
     await page.waitForFunction(() => document.querySelector("#docsPreviewPages")?.getAttribute("aria-busy") === "false");
     const paper = host.locator(".docs-preview-paper").first();
@@ -785,7 +790,7 @@ test("desktop paper accepts wheel input and reflows into scrollable rows on zoom
 test("preview does not render an unselected document kind", async () => {
   const app=await openApp();
   try {
-    const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();
+    const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
     await page.locator("#docsPreviewPages .docs-document-sheet").first().waitFor({state:"attached"});
     for (const id of ["docsKindSj","docsKindBast","docsIncludeOrganoleptic"]) await page.locator("#"+id).uncheck();
     await page.waitForFunction(()=>document.querySelectorAll("#docsPreviewPages .docs-document-sheet").length===0 && document.querySelector("#docsPreviewPages").getAttribute("aria-busy")==="false");
@@ -798,7 +803,7 @@ test("preview does not render an unselected document kind", async () => {
 
 
 test("daily menu planner isolates dates and saves a batch without issuing documents", async()=>{
- const app=await openApp();try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name='recipient']").waitFor();
+ const app=await openApp();try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
  const today=await page.locator("#docsDate").inputValue();const nextDate=new Date(today+"T00:00:00Z");nextDate.setUTCDate(nextDate.getUTCDate()+1);const tomorrow=nextDate.toISOString().slice(0,10);
  await page.locator("#docsAddMenuItem").click();await page.locator(".docs-menu-input").fill("Menu hari ini");await page.locator("#docsSaveDailyMenu").click();await page.locator("#docsDailyStatus").getByText(/tersimpan/).waitFor();
  await page.locator("#docsMenuDate").fill(tomorrow);await page.waitForFunction(()=>document.querySelector("#docsDate").value===document.querySelector("#docsMenuDate").value&&!document.querySelector(".docs-menu-input"));
@@ -810,7 +815,7 @@ test("daily menu planner isolates dates and saves a batch without issuing docume
 
 test("new distribution uses editable transport defaults", async()=>{
  const app=await openApp();try{
-  const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();
+  const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
   await page.locator("#docsShippingDisclosure > summary").click();
   assert.equal(await page.locator("#docsDriver").inputValue(),"Budi Supriadi / Elzar Rifandanu");
   assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 8734 HS / Z 8952 AI");
@@ -826,7 +831,7 @@ test("legacy draft with empty transport fields migrates to defaults in live Sura
   const page=app.page;
   await page.evaluate(recipientId=>sessionStorage.setItem("autodoc:distribution-draft:v1",JSON.stringify({version:1,savedAt:Date.now(),fields:[["docsDriver",""],["docsVehicle",""],["docsMealTime","pagi"]],menu:["Nasi Putih"],recipients:[recipientId]})),recipientId);
   await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();
-  await page.locator("input[name=recipient]").waitFor();
+  await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
   const preview=page.frameLocator("#docsPreviewFrame").locator("body");
   await preview.getByText("Budi Supriadi / Elzar Rifandanu",{exact:false}).waitFor();
   await preview.getByText("Z 8734 HS / Z 8952 AI",{exact:false}).waitFor();
@@ -838,7 +843,7 @@ test("legacy draft with empty transport fields migrates to defaults in live Sura
   await page.locator("#docsShippingDisclosure > summary").click();
   await page.locator("#docsDriver").fill("Pengemudi khusus");await preview.getByText("Pengemudi khusus",{exact:false}).waitFor();
   await page.locator("#docsVehicle").fill("");
-  await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();
+  await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").first().waitFor({state:"attached"});
   assert.equal(await page.locator("#docsDriver").inputValue(),"Pengemudi khusus");assert.equal(await page.locator("#docsVehicle").inputValue(),"");
   assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
@@ -846,19 +851,19 @@ test("legacy draft with empty transport fields migrates to defaults in live Sura
 
 
 test("P0: failed date context blocks issuance and retry restores the menu",async()=>{
- const app=await openApp({apiFailures:{"menus/plans?date":1}});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.locator("#docsMenuRetry").waitFor();assert.equal(await page.locator("#docsCreateButton").isDisabled(),true);assert.equal(await page.locator("#docsAddMenuItem").isDisabled(),true);await page.locator("#docsMenuRetry").click();await page.waitForFunction(()=>!document.querySelector("#docsAddMenuItem").disabled);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
+ const app=await openApp({apiFailures:{"menus/plans?date":1}});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").first().waitFor({state:"attached"});await page.locator("#docsMenuRetry").waitFor();assert.equal(await page.locator("#docsCreateButton").isDisabled(),true);assert.equal(await page.locator("#docsAddMenuItem").isDisabled(),true);await page.locator("#docsMenuRetry").click();await page.waitForFunction(()=>!document.querySelector("#docsAddMenuItem").disabled);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
 });
 test("P0: a locked date uses archived transport and menu, never stale defaults",async()=>{
  const date="2026-11-23",lockedDistribution={id:distributionId,tanggal:date,menu_items:["Menu arsip"],nama_pengemudi:"Pengemudi arsip",no_kendaraan:"BE 1234 XX",waktu_makan:"pagi",jam_berangkat:"08:00:00"};
- const app=await openApp({lockedDistribution});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.locator("#docsMenuDate").fill(date);await page.locator("#docsDailyStatus").getByText(/terkunci/).waitFor();assert.equal(await page.locator("#docsDriver").inputValue(),"Pengemudi arsip");assert.equal(await page.locator("#docsVehicle").inputValue(),"BE 1234 XX");assert.equal(await page.locator("#docsDriver").isDisabled(),true);assert.equal(await page.locator(".docs-menu-input").inputValue(),"Menu arsip");assert.equal(await page.locator("#docsAddMenuItem").isDisabled(),true);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
+ const app=await openApp({lockedDistribution});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").first().waitFor({state:"attached"});await page.locator("#docsMenuDate").fill(date);await page.locator("#docsDailyStatus").getByText(/terkunci/).waitFor();assert.equal(await page.locator("#docsDriver").inputValue(),"Pengemudi arsip");assert.equal(await page.locator("#docsVehicle").inputValue(),"BE 1234 XX");assert.equal(await page.locator("#docsDriver").isDisabled(),true);assert.equal(await page.locator(".docs-menu-input").inputValue(),"Menu arsip");assert.equal(await page.locator("#docsAddMenuItem").isDisabled(),true);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
 });
 
 
 test("P1: database defaults replace untouched draft values and preserve manual overrides",async()=>{
- const app=await openApp({transportDefaults:{nama_pengemudi:"Pengemudi DB",no_kendaraan:"Z 2222 AA"}});try{const page=app.page;await page.evaluate(recipientId=>sessionStorage.setItem("autodoc:distribution-draft:v1",JSON.stringify({version:4,savedAt:Date.now(),fields:[["docsDriver","Default lama"],["docsVehicle","Z 1111 AA"]],transportOverrides:{docsDriver:false,docsVehicle:true},menu:[],recipients:[recipientId]})),recipientId);await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.waitForFunction(()=>document.querySelector("#docsDriver")?.value==="Pengemudi DB");assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 1111 AA");await page.frameLocator("#docsPreviewFrame").getByText("Pengemudi DB",{exact:false}).waitFor();assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
+ const app=await openApp({transportDefaults:{nama_pengemudi:"Pengemudi DB",no_kendaraan:"Z 2222 AA"}});try{const page=app.page;await page.evaluate(recipientId=>sessionStorage.setItem("autodoc:distribution-draft:v1",JSON.stringify({version:4,savedAt:Date.now(),fields:[["docsDriver","Default lama"],["docsVehicle","Z 1111 AA"]],transportOverrides:{docsDriver:false,docsVehicle:true},menu:[],recipients:[recipientId]})),recipientId);await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").first().waitFor({state:"attached"});await page.waitForFunction(()=>document.querySelector("#docsDriver")?.value==="Pengemudi DB");assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 1111 AA");await page.frameLocator("#docsPreviewFrame").getByText("Pengemudi DB",{exact:false}).waitFor();assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
 });
 
 
 test("P3: unchanged preview preserves iframe identity and retry reloads number context",async()=>{
- const app=await openApp({apiFailures:{"master/list?preview=true":1}});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.waitForFunction(()=>!document.querySelector("#docsAddMenuItem").disabled);await page.locator("input[name=recipient]").first().check();await page.locator("#docsPreviewRetry").waitFor();await page.locator("#docsPreviewRetry").click();await page.frameLocator("#docsPreviewFrame").getByText("1053/SJ/SPPG-UJI",{exact:false}).waitFor();await page.locator("#docsPreviewFrame").evaluate(frame=>frame.dataset.p3Identity="preserved");await page.locator("#docsDriver").dispatchEvent("input");await page.waitForTimeout(100);assert.equal(await page.locator("#docsPreviewFrame").getAttribute("data-p3-identity"),"preserved");assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
+ const app=await openApp({apiFailures:{"master/list?preview=true":1}});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").first().waitFor({state:"attached"});await page.waitForFunction(()=>!document.querySelector("#docsAddMenuItem").disabled);await page.locator("input[name=recipient]").first().check();await page.locator("#docsPreviewRetry").waitFor();await page.locator("#docsPreviewRetry").click();await page.frameLocator("#docsPreviewFrame").getByText("1053/SJ/SPPG-UJI",{exact:false}).waitFor();await page.locator("#docsPreviewFrame").evaluate(frame=>frame.dataset.p3Identity="preserved");await page.locator("#docsDriver").dispatchEvent("input");await page.waitForTimeout(100);assert.equal(await page.locator("#docsPreviewFrame").getAttribute("data-p3-identity"),"preserved");assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
 });

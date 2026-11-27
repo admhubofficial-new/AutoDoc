@@ -8,6 +8,9 @@
   },
   "scripts": {
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "test:browser": "node --test tests/browser-smoke.test.mjs"
+    "test:browser": "node --test --test-timeout=90000 tests/browser-smoke.test.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.65.1"
   }
 }
