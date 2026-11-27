@@ -775,3 +775,18 @@ test("desktop paper accepts wheel input and reflows into scrollable rows on zoom
     await app.context.close();
   }
 });
+
+
+test("preview does not render an unselected document kind", async () => {
+  const app=await openApp();
+  try {
+    const page=app.page;
+    await page.locator("#docsPreviewPages .docs-document-sheet").first().waitFor({state:"attached"});
+    for (const id of ["docsKindSj","docsKindBast","docsIncludeOrganoleptic"]) await page.locator("#"+id).uncheck();
+    await page.waitForFunction(()=>document.querySelectorAll("#docsPreviewPages .docs-document-sheet").length===0 && document.querySelector("#docsPreviewPages").getAttribute("aria-busy")==="false");
+    assert.equal(await page.locator("[data-page-step='1']").isDisabled(),true);
+    await page.locator("#docsKindSj").check();
+    await page.locator("#docsPreviewPages .docs-document-sheet").first().waitFor({state:"attached"});
+    assert.deepEqual(app.errors,[]);
+  } finally {await app.context.close()}
+});

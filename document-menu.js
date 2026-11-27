@@ -101,9 +101,9 @@
         items = Array.isArray(value) ? value.slice(0, 8) : [];
         render();
       },
-      reset() {
+      reset(renderNow = true) {
         items = [];
-        render();
+        if (renderNow) render();
       }
     });
   }

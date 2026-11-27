@@ -193,7 +193,7 @@ async function copyLastMenu(){
   if(!items.length&&String(distribution.menu||"").trim())items.push(String(distribution.menu).trim());
   if(!items.length){status("Distribusi terakhir belum memiliki komponen menu.",true);return}
   formDirty=true;menuController?.set(items.slice(0,8));saveDraft();
-  status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+(menuController?.count()||items.length)+" komponen).");previewController?.updateLivePreview();
+  status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+(menuController?.count()||items.length)+" komponen).");
  }catch(error){if(active())status(error.message,true)}
  finally{if(button.isConnected){button.disabled=false;button.textContent=oldText}}
 }
@@ -217,7 +217,7 @@ function renderCreate(){
 function renderCreateForm(){
  const target=$(".docs-view-create",modal);
  if(!target)return;
- menuController?.reset();
+ menuController?.reset(false);
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
  const todayVal=today();
  const menuSuggestions=masterSuggestions(master.menus,"teks_menu");
@@ -268,7 +268,7 @@ function renderCreateForm(){
  $("#docsClearAll",target).onclick=()=>setAllRecipients(false);
  $("#docsAddMenuItem",target).onclick=()=>addMenuComponent();
  $("#docsCopyLastMenu",target).onclick=copyLastMenu;
- $("#docsDate",target).addEventListener("change",()=>{previewController?.updateLivePreview()});
+
  $("#docsPreviewKind",target).addEventListener("change",()=>previewController?.updateLivePreview());
  const layout=$(".docs-create-layout",target);
  const previewToggle=$("#docsPreviewToggle",target);
@@ -295,11 +295,12 @@ function renderCreateForm(){
   };
   kindsHost.append(button);
  }
- form.addEventListener("input",()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview()});
- form.addEventListener("change",()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview()});
- form.addEventListener("input",saveDraft);
- form.addEventListener("change",saveDraft);
- form.addEventListener("submit",createDocs);
+ const onFormEdit=event=>{
+   if(event.target.matches(".docs-menu-input, #docsRecipientSearch, #docsRecipientGroup"))return;
+   formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft();
+  };
+  form.addEventListener("input",onFormEdit);
+  form.addEventListener("submit",createDocs);
  syncPreflightSummary();
  previewController?.updateLivePreview();
 }
@@ -320,7 +321,7 @@ function renderRecipients(recipients){
   const content=node("span");
   const warning=r.perlu_verifikasi?" <span class='docs-verify'>Perlu verifikasi</span>":"";
   content.innerHTML="<strong>"+esc(r.nama)+warning+"</strong><small>"+esc(r.kelompok)+" · "+esc(r.jenjang)+" · "+Number(r.total_porsi||0).toLocaleString("id-ID")+" porsi</small>";
-  check.addEventListener("change",updateSelectedCount);
+
   label.append(check,content);list.append(label);
  });
  updateRecipientResultCount();
@@ -848,10 +849,11 @@ function init(){
    $(".docs-head p",modal).textContent="Lengkapi menu dan penerima, periksa ringkasan, lalu terbitkan dokumen.";
    $(".docs-view-create",modal).hidden=false;
    $(".docs-view-history",modal).hidden=true;
+    previewController?.updateLivePreview();
   },
   close,
   isBusy,notifyBusy,leaveHistory,
-  resetSession(){close(false);clearStoredDraft();draftRestored=false;masterLoaded=false;master={};formDirty=false;pendingOrganolepticPrint=null;currentDocs=[];currentDistribution=null;renderCreate();$(".docs-view-history",modal).replaceChildren()},
+  resetSession(){close(false);previewController?.reset();clearStoredDraft();draftRestored=false;masterLoaded=false;master={};formDirty=false;pendingOrganolepticPrint=null;currentDocs=[];currentDistribution=null;renderCreate();$(".docs-view-history",modal).replaceChildren()},
   openRealization(date){
    realizationMode=true;masterRequest++;copyMenuRequest++;clearHistory();
    show(false);tab="history";
