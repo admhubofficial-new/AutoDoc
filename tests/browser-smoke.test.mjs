@@ -36,6 +36,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const writes = [];
+  const reads = [];
   const errors = [];
   const menuPlans=new Map(initialPlans.map(plan=>[plan.tanggal,plan]));
   page.on("pageerror", error => errors.push(error.message));
@@ -44,6 +45,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     const request = route.request();
     const url = new URL(request.url());
     const routeName = url.pathname.split("/autodoc-auth/")[1] || "";
+    if(request.method()==="GET")reads.push(routeName+url.search);
     if (apiDelays[routeName]) await new Promise(resolve => setTimeout(resolve, apiDelays[routeName]));
     const failureKey = routeName==="menus/plans"&&url.searchParams.has("tanggal")?"menus/plans?date":url.searchParams.has("preview") ? routeName + "?preview=true" : routeName === "master/list" && url.searchParams.has("include_recipients")
       ? "master/list?include_recipients=false"
@@ -117,7 +119,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
   await page.goto(origin, { waitUntil: "domcontentloaded" });
   if (authenticated) await page.locator("#homePage:not([hidden])").waitFor();
   else await page.locator("#loginPanel:not([hidden])").waitFor();
-  return { context, page, writes, errors };
+  return { context, page, writes, errors, reads };
 }
 
 test("login page renders after session check and password visibility control works", async () => {
@@ -854,4 +856,9 @@ test("P0: a locked date uses archived transport and menu, never stale defaults",
 
 test("P1: database defaults replace untouched draft values and preserve manual overrides",async()=>{
  const app=await openApp({transportDefaults:{nama_pengemudi:"Pengemudi DB",no_kendaraan:"Z 2222 AA"}});try{const page=app.page;await page.evaluate(recipientId=>sessionStorage.setItem("autodoc:distribution-draft:v1",JSON.stringify({version:4,savedAt:Date.now(),fields:[["docsDriver","Default lama"],["docsVehicle","Z 1111 AA"]],transportOverrides:{docsDriver:false,docsVehicle:true},menu:[],recipients:[recipientId]})),recipientId);await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.waitForFunction(()=>document.querySelector("#docsDriver")?.value==="Pengemudi DB");assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 1111 AA");await page.frameLocator("#docsPreviewFrame").getByText("Pengemudi DB",{exact:false}).waitFor();assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
+});
+
+
+test("P3: unchanged preview preserves iframe identity and retry reloads number context",async()=>{
+ const app=await openApp({apiFailures:{"master/list?preview=true":1}});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.waitForFunction(()=>!document.querySelector("#docsAddMenuItem").disabled);await page.locator("input[name=recipient]").first().check();await page.locator("#docsPreviewRetry").waitFor();await page.locator("#docsPreviewRetry").click();await page.frameLocator("#docsPreviewFrame").getByText("1053/SJ/SPPG-UJI",{exact:false}).waitFor();await page.locator("#docsPreviewFrame").evaluate(frame=>frame.dataset.p3Identity="preserved");await page.locator("#docsDriver").dispatchEvent("input");await page.waitForTimeout(100);assert.equal(await page.locator("#docsPreviewFrame").getAttribute("data-p3-identity"),"preserved");assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
 });

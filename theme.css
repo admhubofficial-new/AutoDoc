@@ -823,3 +823,5 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{paddi
  .home-page .home-nav button[aria-current=page]{background:#e3f1e5;border-radius:6px 6px 0 0}
 }
 .docs-create-layout .docs-preview-head{padding-block:4px}
+
+#docsPreviewRetry{align-self:flex-start;margin:0 16px 8px;min-height:32px}#docsPreviewRetry[hidden]{display:none!important}

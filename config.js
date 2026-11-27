@@ -9,7 +9,22 @@
     configurable: false
   });
   const config = window.AutoDocConfig;
-  async function requestJson(route, options = {}, fallback = "Permintaan tidak berhasil.") {
+  // Share concurrent reads only; never cache completed responses or writes.
+  const pendingReads=new Map();
+  function requestJson(route, options = {}, fallback = "Permintaan tidak berhasil.") {
+    const method=String(options.method||"GET").toUpperCase();
+    const path=route.replace(/^[/]+/,"");
+    if(method!=="GET")pendingReads.clear();
+    const share=method==="GET"&&!options.signal&&!options.headers&&!options.body&&["master/list","master/recipients","menus/plans","docs/list"].includes(path.split("?")[0]);
+    if(!share)return fetchJson(path,options,fallback);
+    const key=JSON.stringify([path,fallback]);
+    if(pendingReads.has(key))return pendingReads.get(key);
+    const promise=fetchJson(path,options,fallback).finally(()=>{if(pendingReads.get(key)===promise)pendingReads.delete(key)});
+    pendingReads.set(key,promise);
+    return promise;
+  }
+  window.addEventListener("autodoc:data-changed",()=>pendingReads.clear());
+  async function fetchJson(route, options, fallback) {
     const headers = new Headers(options.headers || {});
     headers.set("apikey", config.publishableKey);
     headers.set("Accept", "application/json");
