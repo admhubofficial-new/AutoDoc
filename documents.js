@@ -11,7 +11,7 @@ function nowInJakarta(){
 }
 const today=()=>nowInJakarta();
 let realizationMode=false, queueRequest=0, historyRequest=0, masterRequest=0, publishing=false, formDirty=false;
-let copyMenuRequest=0, menuRevision=0;
+let plannerController=null;
 const DRAFT_KEY="autodoc:distribution-draft:v1";
 const DRAFT_TTL=12*60*60*1000;
 let renderingForm=false,restoringDraft=false,draftRestored=false;
@@ -39,7 +39,7 @@ function saveDraft(){
   draftMessage("Draf tersimpan di tab ini · berlaku 12 jam");
  }catch(_){draftMessage("Draf hanya tersimpan sementara di halaman ini. Penyimpanan browser tidak tersedia.")}
 }
-function isBusy(){return publishing||!!modal?.querySelector(".docs-realization[data-state='loading'],.docs-delete-panel[data-state='loading']")}
+function isBusy(){return publishing||!!plannerController?.isSaving()||!!modal?.querySelector(".docs-realization[data-state='loading'],.docs-delete-panel[data-state='loading']")}
 function notifyBusy(){status("Penyimpanan sedang berlangsung. Tunggu konfirmasi server sebelum berpindah halaman.",false,"loading")}
 let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
 
@@ -72,7 +72,7 @@ function status(message,bad,state){
 function close(returnHome=true){
  if(!modal)return;
  if(returnHome&&!leaveHistory())return
- queueRequest++;historyRequest++;masterRequest++;copyMenuRequest++;
+ queueRequest++;historyRequest++;masterRequest++;
  clearHistory();
  modal.hidden=true;modal.setAttribute("aria-hidden","true");
  if(returnHome){
@@ -173,30 +173,6 @@ function selectedDocumentKinds(){
  return kinds;
 }
 function addMenuComponent(value=""){menuController?.add(value)}
-async function copyLastMenu(){
- const button=$("#docsCopyLastMenu",modal);
- if(!button)return;
- const request=++copyMenuRequest,revision=menuRevision;
- const active=()=>request===copyMenuRequest&&revision===menuRevision&&!modal.hidden&&tab==="create"&&button.isConnected;
- const oldText=button.textContent;button.disabled=true;button.textContent="Memuat menu terakhir...";
- try{
-  const days=await api("docs/days?offset=0");
-  if(!active())return;
-  const latest=Array.isArray(days.distributions)?days.distributions[0]:null;
-  if(!latest){status("Belum ada distribusi sebelumnya untuk disalin.",true);return}
-  const detail=await api("docs/list?tanggal="+encodeURIComponent(latest.tanggal));
-  if(!active())return;
-  const distribution=detail.distribution||latest;
-  const items=Array.isArray(distribution.menu_items)
-   ? distribution.menu_items.map(item=>String(item.nama_komponen||"").trim()).filter(Boolean)
-   : [];
-  if(!items.length&&String(distribution.menu||"").trim())items.push(String(distribution.menu).trim());
-  if(!items.length){status("Distribusi terakhir belum memiliki komponen menu.",true);return}
-  formDirty=true;menuController?.set(items.slice(0,8));saveDraft();
-  status("Menu dari distribusi "+latest.tanggal+" berhasil disalin ("+(menuController?.count()||items.length)+" komponen).");
- }catch(error){if(active())status(error.message,true)}
- finally{if(button.isConnected){button.disabled=false;button.textContent=oldText}}
-}
 function captureDraft(){
  const ids=draftFields;
  return {fields:ids.map(id=>{const input=$("#"+id,modal);return [id,input?.type==="checkbox"?input.checked:input?.value]}),menu:readMenuComponents(),recipients:Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(input=>input.value)};
@@ -204,7 +180,8 @@ function captureDraft(){
 function restoreDraft(draft){
  restoringDraft=true;
  for(const [id,value] of draft.fields){const input=$("#"+id,modal);if(!input||value===undefined)continue;if(input.type==="checkbox")input.checked=value;else input.value=value}
- menuController?.set(draft.menu);
+ plannerController?.syncDate(true);
+ if(draft.menu.length)menuController?.set(draft.menu);
  const selected=new Set(draft.recipients);
  modal.querySelectorAll("input[name='recipient']").forEach(input=>{input.checked=selected.has(input.value)});
  updateSelectedCount();
@@ -226,20 +203,24 @@ function renderCreateForm(){
  target.innerHTML="<div class='docs-mobile-switch' aria-label='Tampilan dokumen'><button type='button' class='docs-btn' id='docsEditToggle' aria-controls='docsCreateForm' aria-pressed='true'>Isi</button><button type='button' class='docs-btn' id='docsPreviewToggle' aria-controls='docsPreviewDisclosure' aria-pressed='false'>Lihat Surat</button></div><div class='docs-create-layout'>"+
   "<section class='docs-create-form-panel'>"+
    "<form id='docsCreateForm' autocomplete='off'>"+
-    "<section class='docs-form-section'>"+
-
-     "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsDate'>Tanggal distribusi *</label><input id='docsDate' type='date' required value='"+todayVal+"'></div><div class='docs-field'><label for='docsMealTime'>Waktu makan</label><select id='docsMealTime'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
+    "<section class='daily-menu-card docs-form-section' aria-labelledby='dailyMenuHeading'>"+
+     "<header class='daily-menu-heading'><span class='daily-menu-symbol' aria-hidden='true'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'><path d='M3 17h18M5 15a7 7 0 0 1 14 0M12 5v3M3 20h18' stroke-linecap='round'/></svg></span><span class='daily-step-number'>1</span><div><h3 id='dailyMenuHeading'>Rencana Menu Harian</h3><p>Tentukan menu berdasarkan tanggal. Menu berubah setiap hari.</p></div></header>"+
+     "<div class='daily-menu-columns'><div class='daily-menu-editor'><label class='daily-field-label' for='docsMenuDate'>Tanggal menu</label><input id='docsMenuDate' type='date' value='"+todayVal+"'>"+
+     "<div class='daily-mode-options' aria-label='Cara mengisi menu'><button type='button' id='docsQuickMode' aria-pressed='true'><span class='daily-mode-dot'></span><span><strong>Input cepat hari ini</strong><small>Isi saat buat surat</small></span></button><button type='button' id='docsPlannerMode' aria-pressed='false'><span class='daily-mode-dot'></span><span><strong>Input banyak hari</strong><small>Rencanakan beberapa hari</small></span></button></div>"+
+     "<div class='daily-menu-label'><strong id='docsMenuForDate'>Menu tanggal terpilih</strong><small id='docsMenuCount'>0 dari 8 komponen</small></div><div class='docs-menu-list daily-menu-chips' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
+     "<div class='daily-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah komponen</button><button type='button' class='docs-btn primary' id='docsSaveDailyMenu'>Simpan menu</button></div><p class='daily-plan-status' id='docsDailyStatus' role='status'></p></div>"+
+     "<aside class='daily-planner' aria-label='Perencana Menu Beberapa Hari'><header><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' aria-hidden='true'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M7 2v6M17 2v6M3 10h18M7 14h2m3 0h2m3 0h1M7 17h2m3 0h2' stroke-linecap='round'/></svg><div><h4>Perencana Menu <small>(Beberapa Hari)</small></h4><p>Input dan kelola menu untuk beberapa tanggal sekaligus.</p></div></header><div id='docsPlanRows' class='daily-plan-rows'></div><div class='daily-planner-actions'><button type='button' class='docs-btn' id='docsAddPlanDate'>+ Tambah tanggal lain</button><button type='button' class='docs-btn primary' id='docsSavePlans' hidden>Simpan semua</button></div><p id='docsPlannerStatus' class='daily-plan-status' role='status'></p></aside></div>"+
+     "<div class='daily-menu-note'><span aria-hidden='true'>i</span><div>Hanya menu untuk <strong>tanggal terpilih</strong> yang digunakan dalam pembuatan surat.<br>Menu hari sebelumnya tersimpan di Arsip / Riwayat.</div></div>"+
     "</section>"+
-    "<section class='docs-form-section'>"+
-     "<details class='docs-recipient-subsection'"+(recipients.length<=3?" open":"")+"><summary class='docs-subsection-head'><div><strong><span id='docsSubmitCount' aria-live='polite'>0 tujuan · 0 porsi</span></strong></div><span class='docs-edit-recipients'>Ubah</span><span id='docsRecipientResultCount' class='docs-recipient-result-count' aria-live='polite'>"+recipients.length+" tujuan</span></summary>"+
+    "<section class='docs-form-section daily-workflow'>"+
+     "<div class='daily-step-row'><span class='daily-step-number'>2</span><div class='daily-step-label'><svg class='daily-step-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' aria-hidden='true'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M7 2v6M17 2v6M3 10h18'/></svg><div><strong>Tanggal Distribusi</strong><small>Tanggal pengiriman makanan.</small></div></div><div class='docs-field daily-step-field'><input id='docsDate' aria-label='Tanggal distribusi' type='date' required value='"+todayVal+"'></div></div>"+
+     "<div class='daily-step-row'><span class='daily-step-number'>3</span><div class='daily-step-label'><svg class='daily-step-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' aria-hidden='true'><circle cx='12' cy='12' r='9'/><path d='M12 6v6l4 2'/></svg><div><strong>Waktu Makan</strong><small>Waktu pelaksanaan distribusi.</small></div></div><div class='docs-field daily-step-field'><select id='docsMealTime' aria-label='Waktu makan'><option value='pagi'>Pagi</option><option value='siang' selected>Siang</option><option value='sore'>Sore</option></select></div></div>"+
+     "<div class='daily-step-row daily-recipient-step'><span class='daily-step-number'>4</span><div class='daily-step-label'><svg class='daily-step-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' aria-hidden='true'><circle cx='9' cy='8' r='3'/><circle cx='18' cy='9' r='2'/><path d='M3 20v-2a6 6 0 0 1 12 0v2M16 15a5 5 0 0 1 5 5'/></svg><div><strong>Tujuan Distribusi</strong><small>Pilih penerima distribusi.</small></div></div>"+
+     "<details class='docs-recipient-subsection daily-step-field'"+(recipients.length<=3?" open":"")+"><summary class='docs-subsection-head'><div><strong><span id='docsSubmitCount' aria-live='polite'>0 tujuan · 0 porsi</span></strong></div><span class='docs-edit-recipients'>Ubah</span><span id='docsRecipientResultCount' class='docs-recipient-result-count' aria-live='polite'>"+recipients.length+" tujuan</span></summary>"+
       "<div class='docs-recipient-box docs-recipient-box-compact'><div class='docs-recipient-tools'><input id='docsRecipientSearch' type='search' placeholder='Cari nama penerima...' aria-label='Cari penerima' autocomplete='off'><select id='docsRecipientGroup' aria-label='Filter kelompok penerima'><option value=''>Semua kelompok</option>"+groupOptions+"</select><button type='button' class='docs-btn' id='docsSelectAll'>Pilih semua hasil</button><button type='button' class='docs-btn' id='docsClearAll'>Hapus pilihan</button></div><div class='docs-recipient-list' id='docsRecipientList'></div></div>"+
-     "</details>"+
-    "<fieldset class='docs-kind-group'><legend>Dokumen yang diterbitkan</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label><label class='docs-kind-choice'><input id='docsIncludeOrganoleptic' type='checkbox' checked> Organoleptik</label></fieldset>"+
-     "<details class='docs-menu-disclosure'><summary>Menu harian</summary>"+
-     "<div class='docs-subsection-head'><button type='button' class='docs-btn' id='docsCopyLastMenu'>Salin menu terakhir</button></div>"+
-     "<div class='docs-menu-head'><strong id='docsMenuCount'>0 dari 8 komponen</strong></div><div class='docs-menu-list' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
-     "<div class='docs-menu-actions'><button type='button' class='docs-btn primary' id='docsAddMenuItem'>+ Tambah komponen</button></div>"+
-     "</details>"+
+     "</details>"+ "</div>"+
+     "<div class='daily-step-row daily-kind-step'><span class='daily-step-number'>5</span><div class='daily-step-label'><svg class='daily-step-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' aria-hidden='true'><path d='M5 3h9l5 5v13H5zM14 3v6h5M8 13h8M8 17h6'/></svg><div><strong>Jenis Dokumen</strong><small>Pilih dokumen yang diterbitkan.</small></div></div>"+
+     "<fieldset class='docs-kind-group daily-step-field'><legend class='daily-sr-only'>Dokumen yang diterbitkan</legend><label class='docs-kind-choice'><input id='docsKindSj' type='checkbox' checked> Surat Jalan</label><label class='docs-kind-choice'><input id='docsKindBast' type='checkbox' checked> BAST</label><label class='docs-kind-choice'><input id='docsIncludeOrganoleptic' type='checkbox' checked> Uji Organoleptik</label></fieldset>"+ "</div>"+
     "</section>"+
     "<section class='docs-form-section'>"+
      "<details class='docs-shipping-details' id='docsShippingDisclosure'><summary><span>Pengiriman</span></summary><div class='docs-shipping-fields'>"+
@@ -250,8 +231,8 @@ function renderCreateForm(){
     "<div class='docs-draft-line'><span id='docsDraftStatus' role='status' aria-live='polite'></span><button type='button' class='docs-btn' id='docsDiscardDraft'>Atur ulang draf</button></div>"+
    "</form><div id='docsCreateResult'></div>"+
   "</section>"+
-  "<section class='docs-preview-panel' id='docsPreviewDisclosure' aria-label='Pratinjau dokumen'><div class='docs-preview-content'><div class='docs-preview-head'><div class='docs-preview-selects'><div class='docs-preview-kinds' aria-label='Jenis dokumen pratinjau'></div><select hidden id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div><div class='docs-preview-tools'><div class='docs-page-controls'><button type='button' class='docs-btn' data-page-step='-1' aria-label='Halaman sebelumnya'>‹</button><span id='docsPreviewPageCount' class='docs-page-count'></span><button type='button' class='docs-btn' data-page-step='1' aria-label='Halaman berikutnya'>›</button></div><label class='docs-preview-zoom'>Ukuran <input id='docsZoom' type='range' min='25' max='100' step='5' value='100' aria-label='Ukuran lembar'><output for='docsZoom'>100%</output></label></div></div><p id='docsPreviewNumberStatus' class='docs-note' role='status'></p><div id='docsPreviewPages' class='docs-preview-pages' tabindex='0' role='region' aria-label='Lembar dokumen'></div></div></section>"+
- "<div class='docs-submit-bar'><div class='docs-submit-meta'><div id='docsOutputCount'></div><p id='docsPreflightSummary' data-state='incomplete' role='status' aria-live='polite'>Pilih minimal satu penerima untuk melanjutkan.</p></div><div class='docs-submit-actions'><button class='docs-btn primary' id='docsCreateButton' type='submit' form='docsCreateForm' disabled>Terbitkan</button></div></div>"+
+  "<section class='docs-preview-panel' id='docsPreviewDisclosure' aria-label='Pratinjau dokumen'><div class='docs-preview-content'><div class='daily-active-menu'><span class='daily-active-mark' aria-hidden='true'>✓</span><div><strong id='docsActiveMenu'>Menu aktif: belum diisi</strong><small>Menu tanggal terpilih otomatis digunakan pada pratinjau dan dokumen yang diterbitkan.</small></div></div><div class='docs-preview-head'><div class='docs-preview-selects'><div class='docs-preview-kinds' aria-label='Jenis dokumen pratinjau'></div><select hidden id='docsPreviewKind' aria-label='Jenis dokumen pratinjau'><option value='SJ'>Surat Jalan</option><option value='BAST'>BAST</option><option value='ORGANOLEPTIC'>Uji Organoleptik</option></select></div><div class='docs-preview-tools'><div class='docs-page-controls'><button type='button' class='docs-btn' data-page-step='-1' aria-label='Halaman sebelumnya'>‹</button><span id='docsPreviewPageCount' class='docs-page-count'></span><button type='button' class='docs-btn' data-page-step='1' aria-label='Halaman berikutnya'>›</button></div><label class='docs-preview-zoom'>Ukuran <input id='docsZoom' type='range' min='25' max='100' step='5' value='100' aria-label='Ukuran lembar'><output for='docsZoom'>100%</output></label></div></div><p id='docsPreviewNumberStatus' class='docs-note' role='status'></p><div id='docsPreviewPages' class='docs-preview-pages' tabindex='0' role='region' aria-label='Lembar dokumen'></div></div></section>"+
+ "<div class='docs-submit-bar'><div class='docs-submit-meta'><div id='docsOutputCount'></div><p id='docsPreflightSummary' data-state='incomplete' role='status' aria-live='polite'>Pilih minimal satu penerima untuk melanjutkan.</p></div><div class='docs-submit-actions'><button class='docs-btn primary' id='docsCreateButton' type='submit' form='docsCreateForm' disabled>Terbitkan Dokumen</button></div></div>"+
  "</div>";
  menuController?.render();
 
@@ -267,7 +248,7 @@ function renderCreateForm(){
  $("#docsSelectAll",target).onclick=()=>setAllRecipients(true);
  $("#docsClearAll",target).onclick=()=>setAllRecipients(false);
  $("#docsAddMenuItem",target).onclick=()=>addMenuComponent();
- $("#docsCopyLastMenu",target).onclick=copyLastMenu;
+ 
 
  $("#docsPreviewKind",target).addEventListener("change",()=>previewController?.updateLivePreview());
  const layout=$(".docs-create-layout",target);
@@ -296,12 +277,13 @@ function renderCreateForm(){
   kindsHost.append(button);
  }
  const onFormEdit=event=>{
-   if(event.target.matches(".docs-menu-input, #docsRecipientSearch, #docsRecipientGroup"))return;
+   if(event.target.closest(".daily-menu-card")||event.target.matches("#docsRecipientSearch, #docsRecipientGroup"))return;
    formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft();
   };
   form.addEventListener("input",onFormEdit);
   form.addEventListener("submit",createDocs);
- syncPreflightSummary();
+ plannerController?.bind();
+  syncPreflightSummary();
  previewController?.updateLivePreview();
 }
 
@@ -369,13 +351,13 @@ function syncPreflightSummary(){
  if(!kinds.length)missing.push("jenis dokumen");
  if(!selectedIds.size)missing.push("minimal satu penerima");
  if(menuCount>8)missing.push("maksimal 8 komponen menu");
- const ready=missing.length===0;
+ const ready=missing.length===0&&!plannerController?.isLoading()&&!plannerController?.isSaving();
  const needsVerification=selectedRecipients.filter(item=>item.perlu_verifikasi===true).length;
  target.dataset.state=ready?"ready":"incomplete";
  target.classList.toggle("is-ready",ready);
  target.textContent=ready
   ?(readMenuComponents().length?"":"Menu harian belum diisi.")
-  :"Lengkapi "+missing.join(", ")+".";
+  :plannerController?.isLoading()?"Memuat menu tanggal terpilih…":plannerController?.isSaving()?"Menyimpan rencana menu…":"Lengkapi "+missing.join(", ")+".";
  if(needsVerification)target.textContent+=" Periksa kembali "+needsVerification+" penerima bertanda perlu verifikasi.";
  const countLabel=$("#docsSubmitCount",modal);
  if(countLabel)countLabel.textContent=selectedIds.size+" tujuan · "+totalPortions.toLocaleString("id-ID")+" porsi";
@@ -392,7 +374,7 @@ function updateSelectedCount(){
  saveDraft();
 }
 async function createDocs(event){
- event.preventDefault();if(publishing)return;status("");syncPreflightSummary();
+ event.preventDefault();if(publishing||plannerController?.isLoading()||plannerController?.isSaving())return;status("");syncPreflightSummary();
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
  if(!selected.length){status("Pilih minimal satu penerima.",true);$("#docsRecipientSearch",modal)?.focus();return}
  const kinds=selectedDocumentKinds();
@@ -439,7 +421,7 @@ async function createDocs(event){
   tab="history";
   $(".docs-view-create",modal).hidden=true;$(".docs-view-history",modal).hidden=false;
  }catch(e){status(e.message,true)}
- finally{publishing=false;button.textContent="Periksa & terbitkan";syncPreflightSummary()}
+ finally{publishing=false;button.textContent="Terbitkan Dokumen";syncPreflightSummary()}
 }
 function clearHistory(){
  currentDocs=[];currentDistribution=null;
@@ -836,26 +818,28 @@ function showRealization(card,doc){
 function init(){
  build();
  window.addEventListener("autodoc:data-changed",()=>{masterLoaded=false});
- menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{menuRevision++;syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored){formDirty=true;saveDraft()}}});
+ menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{plannerController?.menuChanged();syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored&&!plannerController?.isApplying()){formDirty=true;saveDraft()}}});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
  previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
+ plannerController=window.AutoDocDailyPlanner.create({getModal:()=>modal,api,today,readMenu:readMenuComponents,setMenu:items=>menuController.set(items),onState:syncPreflightSummary,onDateChange:()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft()}});
  window.AutoDocDocuments=Object.freeze({
   open(){
-   realizationMode=false;queueRequest++;historyRequest++;copyMenuRequest++;clearHistory();
+   realizationMode=false;queueRequest++;historyRequest++;clearHistory();
    show();
    tab="create";
    $("#docsTitle",modal).textContent="Buat Dokumen";
    $(".docs-head p",modal).textContent="Lengkapi menu dan penerima, periksa ringkasan, lalu terbitkan dokumen.";
    $(".docs-view-create",modal).hidden=false;
    $(".docs-view-history",modal).hidden=true;
+    plannerController?.bind();
     previewController?.updateLivePreview();
   },
   close,
   isBusy,notifyBusy,leaveHistory,
-  resetSession(){close(false);previewController?.reset();clearStoredDraft();draftRestored=false;masterLoaded=false;master={};formDirty=false;pendingOrganolepticPrint=null;currentDocs=[];currentDistribution=null;renderCreate();$(".docs-view-history",modal).replaceChildren()},
+  resetSession(){close(false);plannerController?.reset();previewController?.reset();clearStoredDraft();draftRestored=false;masterLoaded=false;master={};formDirty=false;pendingOrganolepticPrint=null;currentDocs=[];currentDistribution=null;renderCreate();$(".docs-view-history",modal).replaceChildren()},
   openRealization(date){
-   realizationMode=true;masterRequest++;copyMenuRequest++;clearHistory();
+   realizationMode=true;masterRequest++;clearHistory();
    show(false);tab="history";
    $("#docsTitle",modal).textContent="Realisasi BAST";
    $(".docs-head p",modal).textContent="Pilih tanggal dan selesaikan pencatatan penerimaan makanan.";
@@ -864,7 +848,7 @@ function init(){
    loadRealizationQueue(date);
   },
   openArchive(date){
-   realizationMode=false;queueRequest++;masterRequest++;copyMenuRequest++;clearHistory();
+   realizationMode=false;queueRequest++;masterRequest++;clearHistory();
    show(false);
    tab="history";
    $("#docsTitle",modal).textContent="Arsip Dokumen";

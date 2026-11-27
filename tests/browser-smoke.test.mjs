@@ -37,6 +37,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
   const page = await context.newPage();
   const writes = [];
   const errors = [];
+  const menuPlans=new Map();
   page.on("pageerror", error => errors.push(error.message));
 
   await page.route("**/functions/v1/autodoc-auth/**", async route => {
@@ -78,6 +79,9 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         total_porsi: 16, siswa_kecil: 16, balita: 0, siswa_besar: 0, tendik: 0,
         ibu_hamil: 0, ibu_menyusui: 0, putus_sekolah: 0, kader: 0
       }] };
+    } else if (routeName === "menus/plans") {
+      if(request.method()==="POST"){const body=request.postDataJSON();writes.push({route:routeName,body});for(const plan of body.plans)menuPlans.set(plan.tanggal,plan);payload={success:true,plans:body.plans}}
+      else{const date=url.searchParams.get("tanggal");payload={plans:[...menuPlans.values()].filter(plan=>!date||date===plan.tanggal),has_more:false}}
     } else if (routeName === "docs/days") {
       const query = url.searchParams.get("q") || "";
       payload = {
@@ -597,7 +601,6 @@ test("phase 3 distribution draft survives reload, can be discarded, and never is
   await page.locator('[data-home-nav="print"]').click();
   await page.locator("input[name='recipient']").check();
   await page.locator("#docsMealTime").selectOption("pagi");
-  await page.locator(".docs-menu-disclosure > summary").click();
   await page.locator("#docsAddMenuItem").click();
   await page.locator(".docs-menu-input").fill("Nasi uji draf");
   await page.locator("#docsDraftStatus").getByText(/Draf tersimpan/).waitFor();
@@ -789,4 +792,15 @@ test("preview does not render an unselected document kind", async () => {
     await page.locator("#docsPreviewPages .docs-document-sheet").first().waitFor({state:"attached"});
     assert.deepEqual(app.errors,[]);
   } finally {await app.context.close()}
+});
+
+
+test("daily menu planner isolates dates and saves a batch without issuing documents", async()=>{
+ const app=await openApp();try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name='recipient']").waitFor();
+ const today=await page.locator("#docsDate").inputValue();const nextDate=new Date(today+"T00:00:00Z");nextDate.setUTCDate(nextDate.getUTCDate()+1);const tomorrow=nextDate.toISOString().slice(0,10);
+ await page.locator("#docsAddMenuItem").click();await page.locator(".docs-menu-input").fill("Menu hari ini");await page.locator("#docsSaveDailyMenu").click();await page.locator("#docsDailyStatus").getByText(/tersimpan/).waitFor();
+ await page.locator("#docsMenuDate").fill(tomorrow);await page.waitForFunction(()=>document.querySelector("#docsDate").value===document.querySelector("#docsMenuDate").value&&!document.querySelector(".docs-menu-input"));
+ await page.locator("#docsPlannerMode").click();await page.locator("#docsAddPlanDate").click();await page.locator(".daily-plan-date").last().fill(tomorrow);await page.locator(".daily-plan-menu").last().fill("Nasi; Ayam");page.once("dialog",dialog=>dialog.accept());await page.locator("#docsSavePlans").click();await page.locator("#docsPlannerStatus").getByText(/tersimpan/).waitFor();
+ await page.locator("#docsActiveMenu").getByText(/Nasi, Ayam/).waitFor();assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
 });

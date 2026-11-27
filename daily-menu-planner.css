@@ -94,3 +94,5 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{paddi
 }
 @media(max-width:1140px) and (min-width:821px){.daily-menu-columns{grid-template-columns:1fr}.daily-plan-rows{max-height:125px}.daily-step-row{grid-template-columns:23px minmax(0,1fr) minmax(0,1fr)}}
 @media(max-width:560px){.daily-menu-columns{grid-template-columns:1fr}.daily-step-row{grid-template-columns:23px minmax(0,1fr)}.daily-step-field{grid-column:2}.daily-menu-heading{gap:6px}.daily-menu-heading h3{font-size:14px}.daily-active-menu{margin:8px 8px 0}}
+
+.daily-step-label{display:flex;align-items:center;gap:10px;min-width:0}.daily-step-icon{width:24px;height:24px;color:#19653d;flex:none}.daily-step-label>div{min-width:0}.daily-planner-actions #docsSavePlans[hidden]{display:none}.daily-active-menu:has(#docsActiveMenu:empty){display:none}

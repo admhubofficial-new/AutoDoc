@@ -28,7 +28,10 @@
       clearSearch.id = "docsDaysClearSearch";
       clearSearch.hidden = true;
       searchGroup.append(input, clearSearch);
-      toolbar.append(heading, searchGroup);
+      const menuHistory=node("button","docs-btn","Riwayat rencana menu");
+      menuHistory.type="button";
+      menuHistory.onclick=()=>window.AutoDocDailyPlanner.openHistory({api});
+      toolbar.append(heading, searchGroup, menuHistory);
 
       const dangerZone = node("section", "docs-danger-zone");
       dangerZone.setAttribute("aria-labelledby", "docsDangerZoneTitle");

@@ -9,7 +9,7 @@ function create({getModal,api,today,readMenu,setMenu,onState,onDateChange}){
  const q=s=>root?.querySelector(s), mq=s=>getModal()?.querySelector(s);
  const active=()=>root?.isConnected&&!getModal().hidden&&!root.closest(".docs-view-create")?.hidden;
  function msg(id,text,bad=false){const n=q(id);if(n){n.textContent=text;n.dataset.error=String(bad)}}
- function buttons(){const quick=q("#docsSaveDailyMenu"),save=q("#docsSavePlans"),add=q("#docsAddPlanDate");if(quick)quick.disabled=saving||loading||!valid(date)||date<today()||!readMenu().length;if(save){save.hidden=!editing;save.disabled=saving||!rows.some(r=>r.dirty)}if(add)add.disabled=saving||rows.filter(r=>r.dirty).length>=20}
+ function buttons(){const main=mq("#docsDate"),menu=q("#docsMenuDate");if(main)main.disabled=saving;if(menu)menu.disabled=saving;const quick=q("#docsSaveDailyMenu"),save=q("#docsSavePlans"),add=q("#docsAddPlanDate");if(quick)quick.disabled=saving||loading||!valid(date)||date<today()||!readMenu().length;if(save){save.hidden=!editing;save.disabled=saving||!rows.some(r=>r.dirty)}if(add)add.disabled=saving||rows.filter(r=>r.dirty).length>=20}
  function banner(){const n=mq("#docsActiveMenu");if(n){n.textContent="Menu aktif: "+(readMenu().join(", ")||"belum diisi");n.title=n.textContent}const title=q("#docsMenuForDate");if(title)title.textContent="Menu untuk "+label(date);buttons()}
  function apply(items){applying=true;try{setMenu(items)}finally{applying=false}banner()}
  function menuChanged(){if(!root?.isConnected)return;if(!applying){revision++;if(valid(date))drafts.set(date,readMenu().slice())}banner()}
