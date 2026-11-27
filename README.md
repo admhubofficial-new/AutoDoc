@@ -4,7 +4,7 @@ Website administrasi distribusi MBG untuk SPPG Darmaraja 01. Aplikasi membantu o
 
 ## Arsitektur dan teknologi
 
-- **Frontend:** HTML, CSS, dan JavaScript vanilla; dipublikasikan melalui GitHub Pages.
+- **Frontend:** HTML, CSS, dan JavaScript vanilla; hosting utama diarahkan ke [Vercel](https://autodoc-xi.vercel.app/). GitHub Pages dipertahankan sementara sebagai jalur transisi.
 - **Backend:** Supabase Edge Function `autodoc-auth` (Deno/TypeScript).
 - **Database:** PostgreSQL/Supabase, dengan operasi browser selalu melalui Edge Function.
 - **Integrasi:** Supabase REST/RPC/Storage, OpenAI Responses API dari server, dan Google Fonts (Inter).
@@ -59,7 +59,7 @@ Jangan mengubah bucket, policy Storage, atau URL logo sebelum memeriksa referens
 - Cookie sesi ditandatangani HMAC-SHA256, memakai `HttpOnly`, `Secure`, `SameSite=None`, dan `Partitioned`, dengan masa berlaku 12 jam.
 - Validasi sesi memeriksa `session_version` sehingga rotasi PIN dapat membatalkan sesi lama.
 - Lima kegagalan autentikasi berturut-turut mengunci percobaan pada identitas browser bertanda tangan selama 15 menit. Ini mencegah satu browser secara langsung mengunci seluruh operator. Karena aplikasi masih memakai PIN bersama, identitas tersebut bukan identitas personal; penghapusan cookie/browser data dapat menghasilkan identitas throttle baru. Ini bukan pengganti akun pengguna individual.
-- CORS hanya mengizinkan origin `https://admhubofficial-new.github.io`. CORS bukan pengganti pemeriksaan sesi.
+- CORS hanya mengizinkan origin produksi `https://autodoc-xi.vercel.app` serta origin lama `https://admhubofficial-new.github.io` selama transisi. Origin lain ditolak; CORS bukan pengganti pemeriksaan sesi.
 - Frontend hanya memuat publishable key. Jangan pernah menaruh `service_role`, `sb_secret`, PIN, atau API key OpenAI di frontend.
 
 Edge Function menggunakan `verify_jwt=false` karena pemeriksaan origin, cookie sesi, dan PIN dilakukan di backend aplikasi. Jangan menghapus pemeriksaan tersebut.
@@ -138,10 +138,10 @@ Jangan menjalankan test yang menulis, menghapus, atau mengonsumsi nomor dokumen 
 
 ## Deployment
 
-- Push ke `main` memicu deployment GitHub Pages.
+- Hosting utama: `https://autodoc-xi.vercel.app/`. Hubungkan Vercel ke repository ini dengan production branch `main`, Framework Preset Other, root repository, tanpa build framework; aset frontend memakai path relatif. GitHub Pages masih tersedia selama transisi. Verifikasi deployment Vercel sebelum menonaktifkan Pages.
 - Edge Function `autodoc-auth` harus dideploy terpisah setelah perubahan backend disetujui dan siap dirilis.
 - Pertahankan `verify_jwt=false` hanya selama pemeriksaan sesi/origin khusus di dalam fungsi tetap aktif.
-- Verifikasi workflow Pages dan versi Edge Function secara terpisah; merge saja bukan bukti deployment berhasil.
+- Verifikasi deployment Vercel, workflow Pages selama transisi, dan versi Edge Function secara terpisah; merge saja bukan bukti deployment berhasil.
 
 ### Workspace v2 (fase 1)
 Modul Buat Dokumen, Arsip, dan Data Master tampil sebagai halaman dalam shell navigasi, bukan dialog layar penuh. Menu Realisasi BAST menyediakan antrean berdasarkan tanggal, pencarian nama dan filter status; formulir realisasi dan verifikasi PIN yang ada tetap dipakai. AI menu tetap menjadi dialog kontekstual agar input distribusi tidak hilang. Penerbitan, nomor, snapshot, API dan renderer cetak tidak berubah. Draf persisten, pelacakan pengiriman dan navigasi bawah mobile belum termasuk fase ini.
