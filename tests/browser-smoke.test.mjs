@@ -817,3 +817,27 @@ test("new distribution uses editable transport defaults", async()=>{
   assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
 });
+
+
+test("legacy draft with empty transport fields migrates to defaults in live Surat Jalan preview", async()=>{
+ const app=await openApp();try{
+  const page=app.page;
+  await page.evaluate(recipientId=>sessionStorage.setItem("autodoc:distribution-draft:v1",JSON.stringify({version:1,savedAt:Date.now(),fields:[["docsDriver",""],["docsVehicle",""],["docsMealTime","pagi"]],menu:["Nasi Putih"],recipients:[recipientId]})),recipientId);
+  await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();
+  await page.locator("input[name=recipient]").waitFor();
+  const preview=page.frameLocator("#docsPreviewFrame").locator("body");
+  await preview.getByText("Budi Supriadi / Elzar Rifandanu",{exact:false}).waitFor();
+  await preview.getByText("Z 8734 HS / Z 8952 AI",{exact:false}).waitFor();
+  assert.equal(await page.locator("#docsDriver").inputValue(),"Budi Supriadi / Elzar Rifandanu");
+  assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 8734 HS / Z 8952 AI");
+  assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
+  assert.equal(await page.locator(".docs-menu-input").inputValue(),"Nasi Putih");
+  assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("autodoc:distribution-draft:v1")).version),2);
+  await page.locator("#docsShippingDisclosure > summary").click();
+  await page.locator("#docsDriver").fill("Pengemudi khusus");await preview.getByText("Pengemudi khusus",{exact:false}).waitFor();
+  await page.locator("#docsVehicle").fill("");
+  await page.reload({waitUntil:"domcontentloaded"});await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();
+  assert.equal(await page.locator("#docsDriver").inputValue(),"Pengemudi khusus");assert.equal(await page.locator("#docsVehicle").inputValue(),"");
+  assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});

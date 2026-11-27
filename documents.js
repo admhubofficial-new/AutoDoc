@@ -15,6 +15,7 @@ const today=()=>nowInJakarta();
 let realizationMode=false, queueRequest=0, historyRequest=0, masterRequest=0, publishing=false, formDirty=false;
 let plannerController=null;
 const DRAFT_KEY="autodoc:distribution-draft:v1";
+ const DRAFT_VERSION=2;
 const DRAFT_TTL=12*60*60*1000;
 let renderingForm=false,restoringDraft=false,draftRestored=false;
 const draftFields=["docsDate","docsMealTime","docsTime","docsStaff","docsDriver","docsVehicle","docsKindSj","docsKindBast","docsIncludeOrganoleptic"];
@@ -25,19 +26,19 @@ function readStoredDraft(){
   const raw=sessionStorage.getItem(DRAFT_KEY);if(!raw)return null;
   if(raw.length>200000){clearStoredDraft();return null}
   const saved=JSON.parse(raw);
-  if(saved.version!==1||!Number.isFinite(saved.savedAt)||saved.savedAt>Date.now()||Date.now()-saved.savedAt>DRAFT_TTL||!Array.isArray(saved.fields)||!Array.isArray(saved.menu)||!Array.isArray(saved.recipients)){clearStoredDraft();return null}
+  if(![1,DRAFT_VERSION].includes(saved.version)||!Number.isFinite(saved.savedAt)||saved.savedAt>Date.now()||Date.now()-saved.savedAt>DRAFT_TTL||!Array.isArray(saved.fields)||!Array.isArray(saved.menu)||!Array.isArray(saved.recipients)){clearStoredDraft();return null}
   const validId=id=>typeof id==="string"&&/^[0-9a-f-]{36}$/i.test(id);
   const fields=saved.fields.filter(item=>Array.isArray(item)&&draftFields.includes(item[0])&&(typeof item[1]==="boolean"||typeof item[1]==="string"&&item[1].length<=180));
   const menu=saved.menu.filter(item=>typeof item==="string"&&item.length<=180).slice(0,8);
   const recipients=saved.recipients.filter(validId).slice(0,100);
 
-  return {fields,menu,recipients,needsMenuReview:!!saved.plan};
+  return {fields,menu,recipients,needsMenuReview:!!saved.plan,version:saved.version};
  }catch(_){clearStoredDraft();return null}
 }
 function saveDraft(){
  if(renderingForm||restoringDraft||!draftRestored||!formDirty||publishing||!$("#docsCreateForm",modal))return;
  try{
-  sessionStorage.setItem(DRAFT_KEY,JSON.stringify({version:1,savedAt:Date.now(),...captureDraft()}));
+  sessionStorage.setItem(DRAFT_KEY,JSON.stringify({savedAt:Date.now(),...captureDraft()}));
   draftMessage("Draf tersimpan");
  }catch(_){draftMessage("Draf hanya tersimpan sementara di halaman ini. Penyimpanan browser tidak tersedia.")}
 }
@@ -180,11 +181,17 @@ function selectedDocumentKinds(){
 function addMenuComponent(value=""){menuController?.add(value)}
 function captureDraft(){
  const ids=draftFields;
- return {fields:ids.map(id=>{const input=$("#"+id,modal);return [id,input?.type==="checkbox"?input.checked:input?.value]}),menu:readMenuComponents(),recipients:Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(input=>input.value)};
+ return {version:DRAFT_VERSION,fields:ids.map(id=>{const input=$("#"+id,modal);return [id,input?.type==="checkbox"?input.checked:input?.value]}),menu:readMenuComponents(),recipients:Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(input=>input.value)};
 }
 function restoreDraft(draft){
  restoringDraft=true;
- for(const [id,value] of draft.fields){const input=$("#"+id,modal);if(!input||value===undefined)continue;if(input.type==="checkbox")input.checked=value;else input.value=value}
+ const transportDefaults={docsDriver:DEFAULT_DRIVER,docsVehicle:DEFAULT_VEHICLE};
+ for(const [id,value] of draft.fields){
+  const input=$("#"+id,modal);if(!input||value===undefined)continue;
+  if(input.type==="checkbox")input.checked=value;
+  else if(draft.version===1&&Object.hasOwn(transportDefaults,id)&&!String(value??"").trim())input.value=transportDefaults[id];
+  else input.value=value;
+ }
  plannerController?.syncDate(true);
  if(draft.menu.length)menuController?.set(draft.menu);
  const selected=new Set(draft.recipients);
