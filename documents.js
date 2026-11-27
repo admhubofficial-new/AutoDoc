@@ -54,7 +54,7 @@ async function api(route,body){
  if(body){headers["Content-Type"]="application/json";options.method="POST";options.body=JSON.stringify(body)}
  const response=await fetch(API+"/"+route,options);
  let payload={};try{payload=await response.json()}catch(_){}
- if(!response.ok&&response.status!==207)throw new Error(payload.message||"Permintaan tidak berhasil.");
+ if(!response.ok&&response.status!==207){const error=new Error(payload.message||"Permintaan tidak berhasil.");error.status=response.status;throw error}
  return payload;
 }
 function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
@@ -424,7 +424,7 @@ async function createDocs(event){
   $(".docs-head p",modal).textContent="Periksa hasil penerbitan dan gunakan aksi cetak."
   tab="history";
   $(".docs-view-create",modal).hidden=true;$(".docs-view-history",modal).hidden=false;
- }catch(e){status(e.message,true)}
+ }catch(e){status(e.message,true);if(e.status===409)plannerController?.syncDate(true)}
  finally{publishing=false;button.textContent="Terbitkan Dokumen";syncPreflightSummary()}
 }
 function clearHistory(){
@@ -807,8 +807,11 @@ function printOrganolepticForms(recipients,menuByRecipient={}){
   const source=currentDocs.find(doc=>doc.jenis==="SJ"&&String(doc.recipient_id||doc.snapshot_json?.penerima?.id)===recipientId);
   const nomor=/\/SJ\//i.test(source?.nomor_lengkap||"")?source.nomor_lengkap.replace(/\/SJ\//i,"/ORG/"):"";
   const archived=source||currentDocs.find(doc=>String(doc.recipient_id||doc.snapshot_json?.penerima?.id)===recipientId);
-  const sppg=archived?.snapshot_json?.sppg||(Array.isArray(master.settings)?master.settings[0]:master.settings);
-  return organolepticSheet(printDoc,{...data,sppg,logoUrl:LETTERHEAD_LOGO_URL,escapeHtml:esc,menu:ownMenu.length?ownMenu:menu,nomor},recipient);
+  const snapshot=archived?.snapshot_json;
+  const sppg=snapshot?.sppg||(Array.isArray(master.settings)?master.settings[0]:master.settings);
+  const archivedItems=snapshot?.distribusi?.menu_items;
+  const archivedMenu=Array.isArray(archivedItems)?archivedItems.map(item=>typeof item==="string"?item:String(item?.nama_komponen||"").trim()).filter(Boolean).slice(0,8):null;
+  return organolepticSheet(printDoc,{...data,sppg,logoUrl:LETTERHEAD_LOGO_URL,escapeHtml:esc,menu:archivedMenu??(ownMenu.length?ownMenu:menu),waktuMakan:snapshot?.distribusi?.waktu_makan||meal,ahliGizi:String(snapshot?.sppg?.nama_ahli_gizi??data.ahliGizi),nomor},snapshot?.penerima||recipient);
  }));
  printWhenLogosReady(win,()=>status("Dialog cetak gagal dibuka.",true));
 }

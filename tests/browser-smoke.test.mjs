@@ -32,12 +32,12 @@ after(async () => {
   server?.kill("SIGTERM");
 });
 
-async function openApp({ authenticated = true, viewport = { width: 1365, height: 900 }, apiFailures = {}, apiDelays = {}, recipientCount = 1 } = {}) {
+async function openApp({ authenticated = true, viewport = { width: 1365, height: 900 }, apiFailures = {}, apiDelays = {}, recipientCount = 1, initialPlans = [], lockedDistribution = null } = {}) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const writes = [];
   const errors = [];
-  const menuPlans=new Map();
+  const menuPlans=new Map(initialPlans.map(plan=>[plan.tanggal,plan]));
   page.on("pageerror", error => errors.push(error.message));
 
   await page.route("**/functions/v1/autodoc-auth/**", async route => {
@@ -45,7 +45,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
     const url = new URL(request.url());
     const routeName = url.pathname.split("/autodoc-auth/")[1] || "";
     if (apiDelays[routeName]) await new Promise(resolve => setTimeout(resolve, apiDelays[routeName]));
-    const failureKey = url.searchParams.has("preview") ? routeName + "?preview=true" : routeName === "master/list" && url.searchParams.has("include_recipients")
+    const failureKey = routeName==="menus/plans"&&url.searchParams.has("tanggal")?"menus/plans?date":url.searchParams.has("preview") ? routeName + "?preview=true" : routeName === "master/list" && url.searchParams.has("include_recipients")
       ? "master/list?include_recipients=false"
       : routeName;
     if (apiFailures[failureKey] > 0) {
@@ -81,7 +81,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
       }] };
     } else if (routeName === "menus/plans") {
       if(request.method()==="POST"){const body=request.postDataJSON();writes.push({route:routeName,body});const saved=body.plans.map(plan=>({...plan,updated_at:new Date().toISOString()}));for(const plan of saved)menuPlans.set(plan.tanggal,plan);payload={success:true,plans:saved}}
-      else{const date=url.searchParams.get("tanggal");payload={plans:[...menuPlans.values()].filter(plan=>!date||date===plan.tanggal),has_more:false}}
+      else{const date=url.searchParams.get("tanggal");payload={plans:[...menuPlans.values()].filter(plan=>!date||date===plan.tanggal),distribution:date===lockedDistribution?.tanggal?lockedDistribution:null,has_more:false}}
     } else if (routeName === "docs/days") {
       const query = url.searchParams.get("q") || "";
       payload = {
@@ -840,4 +840,13 @@ test("legacy draft with empty transport fields migrates to defaults in live Sura
   assert.equal(await page.locator("#docsDriver").inputValue(),"Pengemudi khusus");assert.equal(await page.locator("#docsVehicle").inputValue(),"");
   assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
+});
+
+
+test("P0: failed date context blocks issuance and retry restores the menu",async()=>{
+ const app=await openApp({apiFailures:{"menus/plans?date":1}});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.locator("#docsMenuRetry").waitFor();assert.equal(await page.locator("#docsCreateButton").isDisabled(),true);assert.equal(await page.locator("#docsAddMenuItem").isDisabled(),true);await page.locator("#docsMenuRetry").click();await page.waitForFunction(()=>!document.querySelector("#docsAddMenuItem").disabled);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
+});
+test("P0: a locked date uses archived transport and menu, never stale defaults",async()=>{
+ const date="2026-11-23",lockedDistribution={id:distributionId,tanggal:date,menu_items:["Menu arsip"],nama_pengemudi:"Pengemudi arsip",no_kendaraan:"BE 1234 XX",waktu_makan:"pagi",jam_berangkat:"08:00:00"};
+ const app=await openApp({lockedDistribution});try{const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();await page.locator("#docsMenuDate").fill(date);await page.locator("#docsDailyStatus").getByText(/terkunci/).waitFor();assert.equal(await page.locator("#docsDriver").inputValue(),"Pengemudi arsip");assert.equal(await page.locator("#docsVehicle").inputValue(),"BE 1234 XX");assert.equal(await page.locator("#docsDriver").isDisabled(),true);assert.equal(await page.locator(".docs-menu-input").inputValue(),"Menu arsip");assert.equal(await page.locator("#docsAddMenuItem").isDisabled(),true);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[])}finally{await app.context.close()}
 });
