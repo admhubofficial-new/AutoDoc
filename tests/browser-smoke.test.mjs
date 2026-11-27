@@ -804,3 +804,16 @@ test("daily menu planner isolates dates and saves a batch without issuing docume
  await page.waitForFunction(()=>Array.from(document.querySelectorAll("#docsMenuItems .docs-menu-input"),input=>input.value).join(", ")==="Nasi, Ayam");assert.equal(await page.locator(".daily-active-menu, .daily-menu-note").count(),0);assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
  }finally{await app.context.close()}
 });
+
+
+test("new distribution uses editable transport defaults", async()=>{
+ const app=await openApp();try{
+  const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();
+  await page.locator("#docsShippingDisclosure > summary").click();
+  assert.equal(await page.locator("#docsDriver").inputValue(),"Budi Supriadi / Elzar Rifandanu");
+  assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 8734 HS / Z 8952 AI");
+  await page.locator("#docsDriver").fill("Budi Supriadi");await page.locator("#docsVehicle").fill("Z 8734 HS");
+  assert.equal(await page.locator("#docsDriver").inputValue(),"Budi Supriadi");assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 8734 HS");
+  assert.equal(app.writes.some(w=>w.route==="docs/create"),false);assert.deepEqual(app.errors,[]);
+ }finally{await app.context.close()}
+});

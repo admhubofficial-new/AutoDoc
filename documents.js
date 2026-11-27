@@ -10,6 +10,8 @@ function nowInJakarta(){
  return values.year+"-"+values.month+"-"+values.day;
 }
 const today=()=>nowInJakarta();
+ const DEFAULT_DRIVER="Budi Supriadi / Elzar Rifandanu";
+ const DEFAULT_VEHICLE="Z 8734 HS / Z 8952 AI";
 let realizationMode=false, queueRequest=0, historyRequest=0, masterRequest=0, publishing=false, formDirty=false;
 let plannerController=null;
 const DRAFT_KEY="autodoc:distribution-draft:v1";
@@ -129,7 +131,10 @@ async function rememberCreationInputs(body){
   ["drivers","nama",body.nama_pengemudi],
   ["vehicles","no_kendaraan",body.no_kendaraan]
  ];
- for(const [entity,field,value] of tasks)await rememberMasterValue(entity,field,value);
+ for(const [entity,field,value] of tasks){
+  const values=(entity==="drivers"&&value===DEFAULT_DRIVER||entity==="vehicles"&&value===DEFAULT_VEHICLE)?value.split(" / "):[value];
+  for(const entry of values)await rememberMasterValue(entity,field,entry);
+ }
  const allMenus=[...(body.menu_items||[]),...Object.values(body.recipient_menu_items||{}).flat()];
  for(const value of allMenus)await rememberMasterValue("menus","teks_menu",value);
 }
@@ -223,7 +228,7 @@ function renderCreateForm(){
     "</section>"+
     "<section class='docs-form-section'>"+
      "<details class='docs-shipping-details' id='docsShippingDisclosure'><summary><span>Pengiriman</span></summary><div class='docs-shipping-fields'>"+
-      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas</label><input id='docsStaff' type='text' list='docsStaffSuggestions' maxlength='180' placeholder='Pilih atau ketik nama petugas' autocomplete='off'><datalist id='docsStaffSuggestions'>"+masterSuggestions(master.staff,"nama")+"</datalist></div><div class='docs-field'><label for='docsDriver'>Pengemudi</label><input id='docsDriver' type='text' list='docsDriverSuggestions' maxlength='180' placeholder='Pilih atau ketik nama pengemudi' autocomplete='off'><datalist id='docsDriverSuggestions'>"+masterSuggestions(master.drivers,"nama")+"</datalist></div><div class='docs-field'><label for='docsVehicle'>Kendaraan</label><input id='docsVehicle' type='text' list='docsVehicleSuggestions' maxlength='80' placeholder='Pilih atau ketik nomor kendaraan' autocomplete='off'><datalist id='docsVehicleSuggestions'>"+masterSuggestions(master.vehicles,"no_kendaraan")+"</datalist></div></div>"+
+      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas</label><input id='docsStaff' type='text' list='docsStaffSuggestions' maxlength='180' placeholder='Pilih atau ketik nama petugas' autocomplete='off'><datalist id='docsStaffSuggestions'>"+masterSuggestions(master.staff,"nama")+"</datalist></div><div class='docs-field'><label for='docsDriver'>Pengemudi</label><input id='docsDriver' type='text' value='"+esc(DEFAULT_DRIVER)+"' list='docsDriverSuggestions' maxlength='180' placeholder='Pilih atau ketik nama pengemudi' autocomplete='off'><datalist id='docsDriverSuggestions'>"+masterSuggestions(master.drivers,"nama")+"</datalist></div><div class='docs-field'><label for='docsVehicle'>Kendaraan</label><input id='docsVehicle' type='text' value='"+esc(DEFAULT_VEHICLE)+"' list='docsVehicleSuggestions' maxlength='80' placeholder='Pilih atau ketik nomor kendaraan' autocomplete='off'><datalist id='docsVehicleSuggestions'>"+masterSuggestions(master.vehicles,"no_kendaraan")+"</datalist></div></div>"+
      "</div></details>"+
     "</section>"+
     "<div class='docs-draft-line'><span id='docsDraftStatus' role='status' aria-live='polite'></span><button type='button' class='docs-btn' id='docsDiscardDraft'>Atur ulang draf</button></div>"+
