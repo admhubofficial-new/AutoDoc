@@ -15,7 +15,7 @@ const today=()=>nowInJakarta();
 let realizationMode=false, queueRequest=0, historyRequest=0, masterRequest=0, publishing=false, formDirty=false;
 let plannerController=null;
 const DRAFT_KEY="autodoc:distribution-draft:v1";
- const DRAFT_VERSION=2;
+ const DRAFT_VERSION=3;
 const DRAFT_TTL=12*60*60*1000;
 let renderingForm=false,restoringDraft=false,draftRestored=false;
 const draftFields=["docsDate","docsMealTime","docsTime","docsStaff","docsDriver","docsVehicle","docsKindSj","docsKindBast","docsIncludeOrganoleptic"];
@@ -26,17 +26,19 @@ function readStoredDraft(){
   const raw=sessionStorage.getItem(DRAFT_KEY);if(!raw)return null;
   if(raw.length>200000){clearStoredDraft();return null}
   const saved=JSON.parse(raw);
-  if(![1,DRAFT_VERSION].includes(saved.version)||!Number.isFinite(saved.savedAt)||saved.savedAt>Date.now()||Date.now()-saved.savedAt>DRAFT_TTL||!Array.isArray(saved.fields)||!Array.isArray(saved.menu)||!Array.isArray(saved.recipients)){clearStoredDraft();return null}
+  if(![1,2,DRAFT_VERSION].includes(saved.version)||!Number.isFinite(saved.savedAt)||saved.savedAt>Date.now()||Date.now()-saved.savedAt>DRAFT_TTL||!Array.isArray(saved.fields)||!Array.isArray(saved.menu)||!Array.isArray(saved.recipients)){clearStoredDraft();return null}
   const validId=id=>typeof id==="string"&&/^[0-9a-f-]{36}$/i.test(id);
   const fields=saved.fields.filter(item=>Array.isArray(item)&&draftFields.includes(item[0])&&(typeof item[1]==="boolean"||typeof item[1]==="string"&&item[1].length<=180));
   const menu=saved.menu.filter(item=>typeof item==="string"&&item.length<=180).slice(0,8);
   const recipients=saved.recipients.filter(validId).slice(0,100);
 
-  return {fields,menu,recipients,needsMenuReview:!!saved.plan,version:saved.version};
+  const planDraft=Array.isArray(saved.planDraft)?saved.planDraft.filter(r=>r&&typeof r.tanggal==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(r.tanggal)&&typeof r.text==="string"&&r.text.length<=1450).slice(0,20).map(r=>({tanggal:r.tanggal,text:r.text,base:typeof r.base==="string"?r.base:null,saved:!!r.saved})):[];
+   const menuConflict=Array.isArray(saved.menuConflict)?saved.menuConflict.filter(i=>typeof i==="string"&&i.length<=180).slice(0,8):null;
+   return {fields,menu,recipients,needsMenuReview:!!saved.plan,version:saved.version,menuBase:typeof saved.menuBase==="string"||saved.menuBase===null?saved.menuBase:undefined,planDraft,menuConflict};
  }catch(_){clearStoredDraft();return null}
 }
 function saveDraft(){
- if(renderingForm||restoringDraft||!draftRestored||!formDirty||publishing||!$("#docsCreateForm",modal))return;
+ if(renderingForm||restoringDraft||!draftRestored||!formDirty||publishing||!$("#docsCreateForm",modal)||plannerController&&!plannerController.isReady())return;
  try{
   sessionStorage.setItem(DRAFT_KEY,JSON.stringify({savedAt:Date.now(),...captureDraft()}));
   draftMessage("Draf tersimpan");
@@ -172,6 +174,8 @@ async function loadMaster(){
  if(warning)status(warning.trim(),true,"error");else if(!activeCount)status("Belum ada penerima aktif.",false,"empty");else status("");
 }
 function readMenuComponents(){return menuController?.read()||[]}
+function readDistributionForm(){return {tanggal:$("#docsDate",modal)?.value||"",jam_berangkat:$("#docsTime",modal)?.value||"",menu_items:readMenuComponents(),waktu_makan:$("#docsMealTime",modal)?.value||"siang",nama_petugas:$("#docsStaff",modal)?.value.trim()||"",nama_pengemudi:$("#docsDriver",modal)?.value.trim()||"",no_kendaraan:$("#docsVehicle",modal)?.value.trim()||""}}
+function applyLockedDistribution(dist){const fields={docsMealTime:["waktu_makan","siang"],docsTime:["jam_berangkat",""],docsStaff:["nama_petugas",""],docsDriver:["nama_pengemudi",DEFAULT_DRIVER],docsVehicle:["no_kendaraan",DEFAULT_VEHICLE]};for(const [id,[key,fallback]] of Object.entries(fields)){const input=$("#"+id,modal);if(!input)continue;if(dist){const raw=String(dist[key]??"");input.value=id==="docsTime"?raw.slice(0,5):raw||(id==="docsMealTime"?fallback:"");input.dataset.distributionLocked="true";input.disabled=true}else if(input.dataset.distributionLocked==="true"){delete input.dataset.distributionLocked;input.disabled=false;input.value=fallback}}}
 function selectedDocumentKinds(){
  const kinds=[];
  if($("#docsKindSj",modal)?.checked)kinds.push("SJ");
@@ -181,7 +185,7 @@ function selectedDocumentKinds(){
 function addMenuComponent(value=""){menuController?.add(value)}
 function captureDraft(){
  const ids=draftFields;
- return {version:DRAFT_VERSION,fields:ids.map(id=>{const input=$("#"+id,modal);return [id,input?.type==="checkbox"?input.checked:input?.value]}),menu:readMenuComponents(),recipients:Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(input=>input.value)};
+ return {version:DRAFT_VERSION,...(plannerController?.capture()||{}),fields:ids.map(id=>{const input=$("#"+id,modal);return [id,input?.type==="checkbox"?input.checked:input?.value]}),menu:readMenuComponents(),recipients:Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(input=>input.value)};
 }
 function restoreDraft(draft){
  restoringDraft=true;
@@ -192,8 +196,8 @@ function restoreDraft(draft){
   else if(draft.version===1&&Object.hasOwn(transportDefaults,id)&&!String(value??"").trim())input.value=transportDefaults[id];
   else input.value=value;
  }
- plannerController?.syncDate(true);
- if(draft.menu.length)menuController?.set(draft.menu);
+ if(plannerController)plannerController.restoreMenu(draft.menu,draft.menuBase,draft.planDraft,draft.menuConflict);
+ else if(draft.menu.length)menuController?.set(draft.menu);
  const selected=new Set(draft.recipients);
  modal.querySelectorAll("input[name='recipient']").forEach(input=>{input.checked=selected.has(input.value)});
  updateSelectedCount();
@@ -220,8 +224,8 @@ function renderCreateForm(){
      "<div class='daily-menu-columns'><div class='daily-menu-editor'><label class='daily-field-label' for='docsMenuDate'>Tanggal menu</label><input id='docsMenuDate' type='date' value='"+todayVal+"'>"+
      "<div class='daily-mode-options' aria-label='Cara mengisi menu'><button type='button' id='docsQuickMode' aria-pressed='true'><span class='daily-mode-dot'></span><span><strong>Input cepat</strong></span></button><button type='button' id='docsPlannerMode' aria-pressed='false'><span class='daily-mode-dot'></span><span><strong>Input banyak hari</strong></span></button></div>"+
      "<div class='daily-menu-label'><strong id='docsMenuForDate'>Menu tanggal terpilih</strong><small id='docsMenuCount'>0 dari 8 komponen</small></div><div class='docs-menu-list daily-menu-chips' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
-     "<div class='daily-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah komponen</button><button type='button' class='docs-btn primary' id='docsSaveDailyMenu'>Simpan menu</button></div><p class='daily-plan-status' id='docsDailyStatus' role='status'></p></div>"+
-     "<aside class='daily-planner' aria-label='Perencana Menu Beberapa Hari'><header><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' aria-hidden='true'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M7 2v6M17 2v6M3 10h18M7 14h2m3 0h2m3 0h1M7 17h2m3 0h2' stroke-linecap='round'/></svg><div><h4>Perencana Menu</h4></div></header><p id='docsPlanHelp' class='daily-plan-status' hidden>Pisahkan dengan titik koma (;).</p><div id='docsPlanRows' class='daily-plan-rows'></div><div class='daily-planner-actions'><button type='button' class='docs-btn' id='docsAddPlanDate'>+ Tambah tanggal lain</button><button type='button' class='docs-btn primary' id='docsSavePlans' hidden>Simpan semua</button></div><p id='docsPlannerStatus' class='daily-plan-status' role='status'></p></aside></div>"+
+     "<div class='daily-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah komponen</button><button type='button' class='docs-btn primary' id='docsSaveDailyMenu'>Simpan menu</button></div><p class='daily-plan-status' id='docsDailyStatus' role='status'></p><div class='daily-menu-actions'><button type='button' class='docs-btn' id='docsMenuRetry' hidden>Coba lagi</button><button type='button' class='docs-btn' id='docsRestoreMenuDraft' hidden>Pakai draf menu</button></div></div>"+
+     "<aside class='daily-planner' aria-label='Perencana Menu Beberapa Hari'><header><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' aria-hidden='true'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M7 2v6M17 2v6M3 10h18M7 14h2m3 0h2m3 0h1M7 17h2m3 0h2' stroke-linecap='round'/></svg><div><h4>Perencana Menu</h4></div></header><p id='docsPlanHelp' class='daily-plan-status' hidden>Pisahkan dengan titik koma (;).</p><div id='docsPlanRows' class='daily-plan-rows'></div><div class='daily-planner-actions'><button type='button' class='docs-btn' id='docsAddPlanDate'>+ Tambah tanggal lain</button><button type='button' class='docs-btn primary' id='docsSavePlans' hidden>Simpan semua</button></div><p id='docsPlannerStatus' class='daily-plan-status' role='status'></p><button type='button' class='docs-btn' id='docsPlannerReload' hidden>Muat ulang daftar</button></aside></div>"+
     "</section>"+
     "<section class='docs-form-section daily-workflow'>"+
      "<div class='daily-step-row'><span class='daily-step-number'>2</span><div class='daily-step-label'><svg class='daily-step-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' aria-hidden='true'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M7 2v6M17 2v6M3 10h18'/></svg><div><strong>Tanggal Distribusi</strong></div></div><div class='docs-field daily-step-field'><input id='docsDate' aria-label='Tanggal distribusi' type='date' required value='"+todayVal+"'></div></div>"+
@@ -361,13 +365,13 @@ function syncPreflightSummary(){
  if(!kinds.length)missing.push("jenis dokumen");
  if(!selectedIds.size)missing.push("minimal satu penerima");
  if(menuCount>8)missing.push("maksimal 8 komponen menu");
- const ready=missing.length===0&&!plannerController?.isLoading()&&!plannerController?.isSaving();
+ const ready=missing.length===0&&(!plannerController||plannerController.isReady()&&!plannerController.isSaving()&&!plannerController.requiresSave());
  const needsVerification=selectedRecipients.filter(item=>item.perlu_verifikasi===true).length;
  target.dataset.state=ready?"ready":"incomplete";
  target.classList.toggle("is-ready",ready);
  target.textContent=ready
   ?""
-  :plannerController?.isLoading()?"Memuat menu tanggal terpilih…":plannerController?.isSaving()?"Menyimpan rencana menu…":"Lengkapi "+missing.join(", ")+".";
+  :plannerController?.isLoading()?"Memuat menu tanggal terpilih…":plannerController?.isSaving()?"Menyimpan rencana menu…":plannerController?.hasFailed()?"Menu gagal dimuat. Coba lagi sebelum terbit.":plannerController?.requiresSave()?"Simpan perubahan menu sebelum terbit.":plannerController&&!plannerController.isReady()?"Memuat data distribusi…":"Lengkapi "+missing.join(", ")+".";
  if(needsVerification)target.textContent+=" Periksa kembali "+needsVerification+" penerima bertanda perlu verifikasi.";
  const countLabel=$("#docsSubmitCount",modal);
  if(countLabel)countLabel.textContent=selectedIds.size+" tujuan · "+totalPortions.toLocaleString("id-ID")+" porsi";
@@ -384,7 +388,7 @@ function updateSelectedCount(){
  saveDraft();
 }
 async function createDocs(event){
- event.preventDefault();if(publishing||plannerController?.isLoading()||plannerController?.isSaving())return;status("");syncPreflightSummary();
+ event.preventDefault();if(publishing||plannerController&&(!plannerController.isReady()||plannerController.isSaving()||plannerController.requiresSave()))return;status("");syncPreflightSummary();
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
  if(!selected.length){status("Pilih minimal satu penerima.",true);$("#docsRecipientSearch",modal)?.focus();return}
  const kinds=selectedDocumentKinds();
@@ -392,17 +396,7 @@ async function createDocs(event){
  const includeOrganoleptic=$("#docsIncludeOrganoleptic",modal)?.checked===true;
  const menuItems=readMenuComponents();
  if(menuItems.length>8){status("Menu Hari Ini maksimal 8 komponen.",true);return}
- const body={
-  tanggal:$("#docsDate",modal).value,
-  jam_berangkat:$("#docsTime",modal).value,
-  menu_items:menuItems,
-  waktu_makan:$("#docsMealTime",modal).value||"siang",
-  jenis_dokumen:kinds,
-  nama_petugas:$("#docsStaff",modal).value.trim(),
-  nama_pengemudi:$("#docsDriver",modal).value.trim(),
-  no_kendaraan:$("#docsVehicle",modal).value.trim(),
-  recipient_ids:selected
- };
+ const body={...readDistributionForm(),jenis_dokumen:kinds,recipient_ids:selected};
  if(!body.tanggal){status("Tanggal distribusi wajib diisi.",true);$("#docsDate",modal)?.focus();return}
  if(!window.confirm("Terbitkan "+(selected.length*kinds.length)+" dokumen untuk "+selected.length+" penerima pada "+body.tanggal+"? Nomor resmi baru dialokasikan setelah konfirmasi."))return;
  publishing=true;
@@ -828,11 +822,11 @@ function showRealization(card,doc){
 function init(){
  build();
  window.addEventListener("autodoc:data-changed",()=>{masterLoaded=false});
- menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{plannerController?.menuChanged();syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored&&!plannerController?.isApplying()){formDirty=true;saveDraft()}}});
+ menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{plannerController?.menuChanged();syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored&&!plannerController?.isApplying()&&(!plannerController||plannerController.isReady())){formDirty=true;saveDraft()}}});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
- previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
- plannerController=window.AutoDocDailyPlanner.create({getModal:()=>modal,api,today,readMenu:readMenuComponents,setMenu:items=>menuController.set(items),onState:syncPreflightSummary,onDateChange:()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft()}});
+ previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,readDistributionForm,contextReady:()=>!plannerController||plannerController.isReady(),contextLocked:()=>!!plannerController?.isLocked(),selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
+ plannerController=window.AutoDocDailyPlanner.create({getModal:()=>modal,api,today,readMenu:readMenuComponents,setMenu:items=>menuController.set(items),setEditorLocked:value=>menuController.setLocked(value),onDistribution:applyLockedDistribution,onState:()=>{syncPreflightSummary();previewController?.updateLivePreview()},onPersist:dirty=>{if(dirty)formDirty=true;saveDraft()},onDateChange:()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft()}});
  window.AutoDocDocuments=Object.freeze({
   open(){
    realizationMode=false;queueRequest++;historyRequest++;clearHistory();

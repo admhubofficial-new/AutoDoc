@@ -92,3 +92,6 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{paddi
 .daily-menu-columns .daily-plan-status{font-size:10px}
 .daily-menu-columns .daily-plan-status:empty{display:none}
 .docs-create-layout .docs-preview-head{padding-block:4px}
+
+.daily-menu-actions:has(>button[hidden]+button[hidden]){display:none}
+#docsMenuRetry[hidden],#docsRestoreMenuDraft[hidden],#docsPlannerReload[hidden]{display:none!important}

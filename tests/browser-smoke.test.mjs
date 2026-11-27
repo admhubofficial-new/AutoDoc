@@ -80,7 +80,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         ibu_hamil: 0, ibu_menyusui: 0, putus_sekolah: 0, kader: 0
       }] };
     } else if (routeName === "menus/plans") {
-      if(request.method()==="POST"){const body=request.postDataJSON();writes.push({route:routeName,body});for(const plan of body.plans)menuPlans.set(plan.tanggal,plan);payload={success:true,plans:body.plans}}
+      if(request.method()==="POST"){const body=request.postDataJSON();writes.push({route:routeName,body});const saved=body.plans.map(plan=>({...plan,updated_at:new Date().toISOString()}));for(const plan of saved)menuPlans.set(plan.tanggal,plan);payload={success:true,plans:saved}}
       else{const date=url.searchParams.get("tanggal");payload={plans:[...menuPlans.values()].filter(plan=>!date||date===plan.tanggal),has_more:false}}
     } else if (routeName === "docs/days") {
       const query = url.searchParams.get("q") || "";
@@ -783,7 +783,7 @@ test("desktop paper accepts wheel input and reflows into scrollable rows on zoom
 test("preview does not render an unselected document kind", async () => {
   const app=await openApp();
   try {
-    const page=app.page;
+    const page=app.page;await page.locator('[data-home-nav="print"]').click();await page.locator("input[name=recipient]").waitFor();
     await page.locator("#docsPreviewPages .docs-document-sheet").first().waitFor({state:"attached"});
     for (const id of ["docsKindSj","docsKindBast","docsIncludeOrganoleptic"]) await page.locator("#"+id).uncheck();
     await page.waitForFunction(()=>document.querySelectorAll("#docsPreviewPages .docs-document-sheet").length===0 && document.querySelector("#docsPreviewPages").getAttribute("aria-busy")==="false");
@@ -832,7 +832,7 @@ test("legacy draft with empty transport fields migrates to defaults in live Sura
   assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 8734 HS / Z 8952 AI");
   assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
   assert.equal(await page.locator(".docs-menu-input").inputValue(),"Nasi Putih");
-  assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("autodoc:distribution-draft:v1")).version),2);
+  assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("autodoc:distribution-draft:v1")).version),3);
   await page.locator("#docsShippingDisclosure > summary").click();
   await page.locator("#docsDriver").fill("Pengemudi khusus");await preview.getByText("Pengemudi khusus",{exact:false}).waitFor();
   await page.locator("#docsVehicle").fill("");

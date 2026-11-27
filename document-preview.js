@@ -1,7 +1,7 @@
 (() => {
 "use strict";
 function create(dependencies){
- const { $, esc, getModal, getMaster, api, readMenuComponents, selectedDocumentKinds, today, logoUrl } = dependencies;
+ const { $, esc, getModal, getMaster, api, readDistributionForm, contextReady, contextLocked, selectedDocumentKinds, today, logoUrl } = dependencies;
  let numberDate="", numberContext=null, numberRequest=0, numberError=false, previewFrame=0;
  function invalidateNumbers(){numberRequest++;numberDate="";numberContext=null;numberError=false}
  function reset(){invalidateNumbers();if(previewFrame)cancelAnimationFrame(previewFrame);previewFrame=0}
@@ -104,24 +104,26 @@ function renderLivePreview(){
   button.disabled=!available.includes(button.dataset.previewKind);
   button.setAttribute("aria-pressed",String(button.dataset.previewKind===kind && !button.disabled));
  }
- const date=$("#docsDate",form)?.value||today();
- const hasPreview=recipients.length>0&&!!kind;
+ const distribution=readDistributionForm();
+ const date=distribution.tanggal||today();
+ const hasPreview=recipients.length>0&&!!kind&&contextReady();
  if(hasPreview)loadNumbers(date);
  const existing=new Map((numberContext?.existing||[]).map(doc=>[doc.jenis+":"+String(doc.recipient_id||doc.snapshot_json?.penerima?.id),doc]));
  const next=Object.fromEntries((numberContext?.counters||[]).filter(row=>row.locked).map(row=>[row.jenis,Number(row.next_number)]));
  const month=["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][Number(date.slice(5,7))-1];
  const previewStatus=$("#docsPreviewNumberStatus",getModal());
- const waiting=hasPreview&&!numberContext&&!numberError;
+ const waiting=recipients.length>0&&!!kind&&(!contextReady()||hasPreview&&!numberContext&&!numberError);
  pages.setAttribute("aria-busy",String(waiting));
  if(previewStatus)previewStatus.textContent=!hasPreview?"":numberError
   ?"Nomor belum bisa dimuat. Ubah tanggal atau muat ulang untuk mencoba lagi."
-  :waiting?"Memuat nomor surat…":"";
+  :waiting?"Memuat nomor surat…":contextLocked()?"Distribusi terkunci · dokumen terbit memakai arsip.":"Nomor pratinjau bersifat perkiraan.";
+ const previous=pages.children[Number(pages.dataset.current)||0]?.dataset.recipientId;
+ const current=Math.max(0,recipients.findIndex(r=>String(r.id)===previous));
  const pageCount=$("#docsPreviewPageCount",getModal());
- if(pageCount){pageCount.textContent=hasPreview?"1 dari "+recipients.length+" · "+recipients[0].nama:"";pageCount.title=pageCount.textContent}
- pages.replaceChildren();
- pages.dataset.current="0";
- getModal().querySelector("[data-page-step='-1']").disabled=true;
- getModal().querySelector("[data-page-step='1']").disabled=!hasPreview||recipients.length<2;
+ if(pageCount){pageCount.textContent=hasPreview?(current+1)+" dari "+recipients.length+" · "+recipients[current].nama:"";pageCount.title=pageCount.textContent}
+ pages.replaceChildren();pages.dataset.current=String(current);
+ getModal().querySelector("[data-page-step='-1']").disabled=!hasPreview||current===0;
+ getModal().querySelector("[data-page-step='1']").disabled=!hasPreview||current===recipients.length-1;
  const makeFrame=(title)=>{
   const paper=document.createElement("div");
   paper.className="docs-preview-paper";
@@ -136,15 +138,15 @@ function renderLivePreview(){
  if(!hasPreview){
   const frame=makeFrame("Pratinjau belum tersedia");
   frame.style.height="220px";
-  frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:32px;background:#fff;color:#647269;font:14px/1.6 Inter,Arial,sans-serif;text-align:center}main{max-width:420px}h2{margin:0 0 8px;color:#1f2a23;font-size:19px}p{margin:0}</style></head><body><main><h2>Pratinjau belum tersedia</h2><p>"+(!recipients.length?"Pilih penerima pada formulir untuk melihat dokumen dengan data sebenarnya.":"Pilih jenis dokumen untuk melihat pratinjau.")+"</p></main></body></html>";
+  frame.srcdoc="<!doctype html><html lang='id'><head><meta charset='utf-8'><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:32px;background:#fff;color:#647269;font:14px/1.6 Inter,Arial,sans-serif;text-align:center}main{max-width:420px}h2{margin:0 0 8px;color:#1f2a23;font-size:19px}p{margin:0}</style></head><body><main><h2>Pratinjau belum tersedia</h2><p>"+(!contextReady()?"Data distribusi belum tersedia.":!recipients.length?"Pilih penerima pada formulir untuk melihat dokumen dengan data sebenarnya.":"Pilih jenis dokumen untuk melihat pratinjau.")+"</p></main></body></html>";
   return;
  }
  const settings=Array.isArray(getMaster().settings)?(getMaster().settings[0]||{}):(getMaster().settings||{});
- const menu=readMenuComponents();
- const mealTime=$("#docsMealTime",form)?.value||"siang";
+ const menu=distribution.menu_items;
+ const mealTime=distribution.waktu_makan;
  for(const recipient of recipients){
  const frame=makeFrame("Pratinjau "+recipient.nama);
- frame.parentElement.dataset.recipient=recipient.nama;
+ frame.parentElement.dataset.recipient=recipient.nama;frame.parentElement.dataset.recipientId=String(recipient.id);
  frame.dataset.documentPage="";
  if(pages.children.length>1)frame.loading="lazy";
  frame.parentElement.classList.add("docs-document-sheet");
@@ -156,12 +158,12 @@ function renderLivePreview(){
   number=String(next[issueKind]++).padStart(3,"0")+"/"+issueKind+"/"+settings.kode_sppg+"/"+month+"/"+date.slice(0,4);
  }
  if(kind==="ORGANOLEPTIC"){
-  renderOrganolepticPreview(frame,recipient,date,menu,settings,number.replace(/\/SJ\//i,"/ORG/"),mealTime);
+  const archived=issued?.snapshot_json||existing.get("BAST:"+String(recipient.id))?.snapshot_json;const archivedItems=archived?.distribusi?.menu_items;const actualMenu=Array.isArray(archivedItems)?archivedItems.map(i=>typeof i==="string"?i:String(i?.nama_komponen||"")).filter(Boolean):menu;renderOrganolepticPreview(frame,archived?.penerima||recipient,date,actualMenu,archived?.sppg||settings,number.replace(/\/SJ\//i,"/ORG/"),archived?.distribusi?.waktu_makan||mealTime);
   continue;
  }
  const snapshot={
   sppg:settings,
-  distribusi:{tanggal:date,jam_berangkat:$("#docsTime",form)?.value||"",menu:menu.join(", "),nama_petugas:$("#docsStaff",form)?.value||"",nama_pengemudi:$("#docsDriver",form)?.value||"",no_kendaraan:$("#docsVehicle",form)?.value||""},
+  distribusi:{...distribution,menu:menu.join(", ")},
   penerima:recipient,rincian_porsi:previewPortionRows(recipient),
   ringkasan:{porsi_kecil:Number(recipient.porsi_kecil||0),porsi_besar:Number(recipient.porsi_besar||0),total_porsi:Number(recipient.total_porsi||0)}
  };
@@ -171,6 +173,7 @@ function renderLivePreview(){
  html=html.replace("</style>","@page{margin:0}html,body{margin:0!important;background:#fff!important}.sheet{margin:0!important;box-shadow:none!important}</style>");
  frame.onload=()=>fitPage(frame);frame.srcdoc=html;
  }
+ if(current>0)requestAnimationFrame(()=>{if(pages.isConnected&&pages.children[current]?.dataset.recipientId===previous){pages.children[current].scrollIntoView({block:"start",behavior:"instant"});syncPagePosition(current)}});
 }
 
 

@@ -2,7 +2,7 @@
   "use strict";
 
   function create({ getModal, $, node, status, getPreviewController, onChange = () => {} }) {
-    let items = [];
+    let items = [], locked = false;
 
     function notifyChange() {
       if (typeof onChange === "function") onChange();
@@ -27,10 +27,10 @@
         input.type = "text";
         input.maxLength = 180;
         input.placeholder = "Contoh: Nasi Putih";
-        input.value = value;
+        input.value = value;input.readOnly=locked;
         input.setAttribute("list", "docsMenuSuggestions");
         input.setAttribute("aria-label", "Komponen menu " + (index + 1));
-        input.addEventListener("input", () => {
+        input.addEventListener("input", () => {if(locked)return;
           items[index] = input.value;
           notifyChange();
         });
@@ -38,7 +38,7 @@
         const actions = node("div", "docs-menu-row-actions");
         const up = node("button", null, "↑");
         up.type = "button";
-        up.disabled = index === 0;
+        up.disabled = locked || index === 0;
         up.setAttribute("aria-label", "Geser " + (index + 1) + " ke atas");
         up.onclick = () => {
           if (index > 0) {
@@ -49,7 +49,7 @@
 
         const down = node("button", null, "↓");
         down.type = "button";
-        down.disabled = index === items.length - 1;
+        down.disabled = locked || index === items.length - 1;
         down.setAttribute("aria-label", "Geser " + (index + 1) + " ke bawah");
         down.onclick = () => {
           if (index < items.length - 1) {
@@ -59,7 +59,7 @@
         };
 
         const remove = node("button", null, "×");
-        remove.type = "button";
+        remove.type = "button";remove.disabled=locked;
         remove.setAttribute("aria-label", "Hapus komponen " + (index + 1));
         remove.onclick = () => {
           items.splice(index, 1);
@@ -77,11 +77,11 @@
         count.setAttribute("aria-live", "polite");
       }
       const add = $("#docsAddMenuItem", modal);
-      if (add) add.disabled = items.length >= 8;
+      if (add) add.disabled = locked || items.length >= 8;
       notifyChange();
     }
 
-    function add(value = "") {
+    function add(value = "") {if(locked)return;
       if (items.length >= 8) {
         status("Menu Hari Ini maksimal 8 komponen.", true);
         return;
@@ -94,6 +94,7 @@
 
     return Object.freeze({
       render,
+      setLocked(value){locked=!!value;const modal=getModal();modal?.querySelectorAll('#docsMenuItems .docs-menu-row').forEach((row,index)=>{row.querySelector('input').readOnly=locked;const bs=row.querySelectorAll('button');bs[0].disabled=locked||index===0;bs[1].disabled=locked||index===items.length-1;bs[2].disabled=locked});const add=$('#docsAddMenuItem',modal);if(add)add.disabled=locked||items.length>=8},
       read: () => items.map(value => String(value || "").trim()).filter(Boolean),
       count: () => items.length,
       add,
