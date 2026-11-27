@@ -16,7 +16,6 @@ function create({getModal,api,today,readMenu,setMenu,onState,onDateChange}){
  function syncDate(preserve=false){
   if(!root?.isConnected)return;const next=mq("#docsDate").value;
   if(next===date&&!preserve)return;
-  if(next!==date&&!preserve&&valid(date))drafts.set(date,readMenu().slice());
   date=next;q("#docsMenuDate").value=date;const seq=++request;loading=false;
   if(!preserve)apply(drafts.get(date)||[]);else if(readMenu().length)drafts.set(date,readMenu().slice());
   banner();renderRows();
@@ -26,13 +25,13 @@ function create({getModal,api,today,readMenu,setMenu,onState,onDateChange}){
   api("menus/plans?tanggal="+encodeURIComponent(selected)).then(data=>{
    if(seq!==request||root!==form||!active())return;
    const saved=data.plans?.find(p=>p.tanggal===selected);
-   if(saved&&revision===rev&&!drafts.has(selected)){apply(saved.menu_items);drafts.set(selected,saved.menu_items.slice())}
+   if(saved&&revision===rev&&!drafts.has(selected))apply(saved.menu_items)
    msg("#docsDailyStatus",saved?"Rencana tanggal ini tersimpan.":"Belum ada rencana; isi menu langsung.");
   }).catch(e=>{if(seq===request&&root===form&&active())msg("#docsDailyStatus","Gagal memuat rencana: "+e.message,true)})
   .finally(()=>{if(seq===request&&root===form){loading=false;buttons();onState()}});
  }
  function choose(value){if(saving)return;mq("#docsDate").value=value;syncDate();onDateChange?.()}
- function mode(value){editing=value;q("#docsQuickMode").setAttribute("aria-pressed",String(!value));q("#docsPlannerMode").setAttribute("aria-pressed",String(value));renderRows()}
+ function mode(value){editing=value;const help=q("#docsPlanHelp");if(help)help.hidden=!value;q("#docsQuickMode").setAttribute("aria-pressed",String(!value));q("#docsPlannerMode").setAttribute("aria-pressed",String(value));renderRows()}
  function renderRows(){
   const host=q("#docsPlanRows");if(!host)return;host.replaceChildren();
   if(!rows.length)host.append(el("p","daily-plan-empty","Belum ada rencana. Tambahkan tanggal."));
@@ -63,7 +62,7 @@ function create({getModal,api,today,readMenu,setMenu,onState,onDateChange}){
   if(quick&&rows.some(r=>r.saved&&r.tanggal===date&&JSON.stringify(split(r.text))!==JSON.stringify(plans[0].menu_items))&&!window.confirm("Perbarui menu tersimpan untuk tanggal ini?"))return;
   saving=true;listRequest++;renderRows();buttons();onState();const form=root,selected=date,rev=revision;msg(id,"Menyimpan rencana…");
   try{const data=await api("menus/plans",{plans});if(root!==form||!active())return;if(data.success!==true)throw Error("Server belum mengonfirmasi penyimpanan.");
-   for(const plan of plans){drafts.set(plan.tanggal,plan.menu_items.slice());rows=rows.filter(r=>r.tanggal!==plan.tanggal);rows.push({tanggal:plan.tanggal,text:plan.menu_items.join("; "),saved:true,dirty:false})}
+   for(const plan of plans){if(plan.tanggal!==selected||rev===revision)drafts.delete(plan.tanggal);rows=rows.filter(r=>r.tanggal!==plan.tanggal);rows.push({tanggal:plan.tanggal,text:plan.menu_items.join("; "),saved:true,dirty:false})}
    const current=plans.find(p=>p.tanggal===selected);if(current&&selected===date&&rev===revision)apply(current.menu_items);
    rows.sort((a,b)=>a.tanggal.localeCompare(b.tanggal));msg(id,quick?"Menu tersimpan.":plans.length+" rencana tersimpan.");if(!quick)mode(false);
   }catch(e){if(root===form&&active())msg(id,e.message,true)}
@@ -82,7 +81,7 @@ function create({getModal,api,today,readMenu,setMenu,onState,onDateChange}){
   }else if(active())syncDate(true);
   if(active())loadRows();
  }
- function reset(){request++;listRequest++;root=null;rows=[];drafts.clear();date="";loading=false;saving=false}
+ function reset(){request++;listRequest++;root=null;rows=[];drafts.clear();date="";loading=false;saving=false;revision=0}
  return Object.freeze({bind,syncDate,menuChanged,reset,isApplying:()=>applying,isLoading:()=>loading,isSaving:()=>saving})
 }
 function openHistory({api}){
