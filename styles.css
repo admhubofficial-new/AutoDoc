@@ -702,35 +702,6 @@
   box-shadow: none;
 }
 
-.docs-preview-panel > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 54px;
-  padding: 11px 13px;
-  color: var(--color-ink);
-  cursor: pointer;
-  list-style: none;
-}
-
-.docs-preview-panel > summary::-webkit-details-marker {
-  display: none;
-}
-
-.docs-preview-panel > summary strong {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.docs-preview-toggle {
-  display: inline;
-  flex: 0 0 auto;
-  color: var(--color-primary);
-  font-size: 11px;
-  font-weight: 650;
-}
-
 .docs-preview-content {
   display: flex;
   min-width: 0;
@@ -904,8 +875,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .docs-preview-panel,
-  .docs-preview-panel > summary {
+  .docs-preview-panel {
     scroll-behavior: auto;
     transition: none;
   }

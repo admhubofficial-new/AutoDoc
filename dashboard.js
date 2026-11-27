@@ -3,8 +3,8 @@
 
   const host = document.getElementById("opsDashboard");
   const home = document.getElementById("homePage");
-  const config = window.AutoDocConfig;
-  if (!host || !home || !config) return;
+  const core = window.AutoDocCore;
+  if (!host || !home || !core) return;
 
   let loading = false;
   let loaded = false;
@@ -23,16 +23,6 @@
     return Number.isFinite(amount) ? amount.toLocaleString("id-ID") : "0";
   }
 
-  function jakartaDateValue() {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Asia/Jakarta",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit"
-    }).formatToParts(new Date());
-    const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value]));
-    return values.year + "-" + values.month + "-" + values.day;
-  }
 
   function dateLabel(value) {
     if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "Tanggal tidak tersedia";
@@ -191,7 +181,7 @@
     setState("success");
     host.replaceChildren();
 
-    const activeDate = jakartaDateValue();
+    const activeDate = core.today();
     const hero = el("section", "home-operator-hero");
     const dateBlock = el("div", "home-operator-date");
     const date = el("time", "home-operational-date", dateLabel(activeDate));
@@ -254,15 +244,7 @@
     loading = true;
     renderLoading();
     try {
-      const response = await fetch(config.apiUrl + "/dashboard/summary", {
-        method: "GET",
-        headers: { apikey: config.publishableKey, Accept: "application/json" },
-        credentials: "include",
-        cache: "no-store"
-      });
-      let payload = {};
-      try { payload = await response.json(); } catch (_) {}
-      if (!response.ok) throw new Error(payload.message || "Ringkasan dashboard gagal dimuat.");
+      const payload = await core.api("dashboard/summary",undefined,"Ringkasan dashboard gagal dimuat.");
       if (!payload || typeof payload !== "object") throw new Error("Respons ringkasan dashboard tidak valid.");
       if(request!==generation||home.hidden)return;
       render(payload);

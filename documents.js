@@ -1,15 +1,9 @@
 (() => {
 "use strict";
-const { apiUrl: API, publishableKey: KEY } = window.AutoDocConfig;
+const {api,today}=window.AutoDocCore;
 const $=(selector,root=document)=>root.querySelector(selector);
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LETTERHEAD_LOGO_URL="https://cnbomblvtddkmtojzpyd.supabase.co/storage/v1/object/public/logo%20bgn/logo-bgn%20(1).png";
-function nowInJakarta(){
- const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Jakarta",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
- const values=Object.fromEntries(parts.filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));
- return values.year+"-"+values.month+"-"+values.day;
-}
-const today=()=>nowInJakarta();
  function transportDefaults(){const values=master.transport_defaults;return {docsDriver:typeof values?.nama_pengemudi==="string"?values.nama_pengemudi:"",docsVehicle:typeof values?.no_kendaraan==="string"?values.no_kendaraan:""}}
  function transportReady(){return typeof master.transport_defaults?.nama_pengemudi==="string"&&typeof master.transport_defaults?.no_kendaraan==="string"}
 let realizationMode=false, queueRequest=0, historyRequest=0, masterRequest=0, publishing=false, formDirty=false;
@@ -48,15 +42,6 @@ function isBusy(){return publishing||!!plannerController?.isSaving()||!!modal?.q
 function notifyBusy(){status("Penyimpanan sedang berlangsung. Tunggu konfirmasi server sebelum berpindah halaman.",false,"loading")}
 let modal=null, tab="create", master={}, currentDocs=[], currentDistribution=null, returnFocusEl=null, masterLoaded=false, pendingOrganolepticPrint=null, archiveController=null, realizationController=null, previewController=null, menuController=null;
 
-async function api(route,body){
- const headers={"apikey":KEY,"Accept":"application/json"};
- const options={credentials:"include",cache:"no-store",headers};
- if(body){headers["Content-Type"]="application/json";options.method="POST";options.body=JSON.stringify(body)}
- const response=await fetch(API+"/"+route,options);
- let payload={};try{payload=await response.json()}catch(_){}
- if(!response.ok&&response.status!==207){const error=new Error(payload.message||"Permintaan tidak berhasil.");error.status=response.status;throw error}
- return payload;
-}
 function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el}
 function status(message,bad,state){
   if(!modal)return;
@@ -139,7 +124,7 @@ async function rememberCreationInputs(body){
   const values=entity==="drivers"||entity==="vehicles"?String(value||"").split("/").map(v=>v.trim()).filter(Boolean):[value];
   for(const entry of values)await rememberMasterValue(entity,field,entry);
  }
- const allMenus=[...(body.menu_items||[]),...Object.values(body.recipient_menu_items||{}).flat()];
+ const allMenus=new Set(body.menu_items||[]);
  for(const value of allMenus)await rememberMasterValue("menus","teks_menu",value);
 }
 async function loadMaster(){
@@ -228,7 +213,7 @@ function renderCreateForm(){
      "<header class='daily-menu-heading'><span class='daily-menu-symbol' aria-hidden='true'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'><path d='M3 17h18M5 15a7 7 0 0 1 14 0M12 5v3M3 20h18' stroke-linecap='round'/></svg></span><span class='daily-step-number'>1</span><div><h3 id='dailyMenuHeading'>Rencana Menu Harian</h3></div></header>"+
      "<div class='daily-menu-columns'><div class='daily-menu-editor'><label class='daily-field-label' for='docsMenuDate'>Tanggal menu</label><input id='docsMenuDate' type='date' value='"+todayVal+"'>"+
      "<div class='daily-mode-options' aria-label='Cara mengisi menu'><button type='button' id='docsQuickMode' aria-pressed='true'><span class='daily-mode-dot'></span><span><strong>Input cepat</strong></span></button><button type='button' id='docsPlannerMode' aria-pressed='false'><span class='daily-mode-dot'></span><span><strong>Input banyak hari</strong></span></button></div>"+
-     "<div class='daily-menu-label'><strong id='docsMenuForDate'>Menu tanggal terpilih</strong><small id='docsMenuCount'>0 dari 8 komponen</small></div><div class='docs-menu-list daily-menu-chips' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
+     "<div class='daily-menu-label'><strong>Komponen menu</strong><small id='docsMenuCount'>0 dari 8 komponen</small></div><div class='docs-menu-list daily-menu-chips' id='docsMenuItems'></div><datalist id='docsMenuSuggestions'>"+menuSuggestions+"</datalist>"+
      "<div class='daily-menu-actions'><button type='button' class='docs-btn' id='docsAddMenuItem'>+ Tambah komponen</button><button type='button' class='docs-btn primary' id='docsSaveDailyMenu'>Simpan menu</button></div><p class='daily-plan-status' id='docsDailyStatus' role='status'></p><div class='daily-menu-actions'><button type='button' class='docs-btn' id='docsMenuRetry' hidden>Coba lagi</button><button type='button' class='docs-btn' id='docsRestoreMenuDraft' hidden>Pakai draf menu</button></div></div>"+
      "<aside class='daily-planner' aria-label='Perencana Menu Beberapa Hari'><header><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' aria-hidden='true'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M7 2v6M17 2v6M3 10h18M7 14h2m3 0h2m3 0h1M7 17h2m3 0h2' stroke-linecap='round'/></svg><div><h4>Perencana Menu</h4></div></header><p id='docsPlanHelp' class='daily-plan-status' hidden>Pisahkan dengan titik koma (;).</p><div id='docsPlanRows' class='daily-plan-rows'></div><div class='daily-planner-actions'><button type='button' class='docs-btn' id='docsAddPlanDate'>+ Tambah tanggal lain</button><button type='button' class='docs-btn primary' id='docsSavePlans' hidden>Simpan semua</button></div><p id='docsPlannerStatus' class='daily-plan-status' role='status'></p><button type='button' class='docs-btn' id='docsPlannerReload' hidden>Muat ulang daftar</button></aside></div>"+
     "</section>"+
@@ -417,7 +402,7 @@ async function createDocs(event){
    catch(saveError){masterSaveWarning=" Dokumen berhasil dibuat, tetapi sebagian data baru belum tersimpan ke Data Master: "+saveError.message}
   }
   window.dispatchEvent(new Event("autodoc:data-changed"));
-  pendingOrganolepticPrint=includeOrganoleptic?{tanggal:body.tanggal,recipientIds:selected.slice(),menuByRecipient:body.recipient_menu_items||{}}:null;
+  pendingOrganolepticPrint=includeOrganoleptic?{tanggal:body.tanggal,recipientIds:selected.slice()}:null;
   const failed=(result.errors||[]).length;
   const summary=node("div","docs-result");
   summary.textContent=result.berhasil+" dari "+result.requested+" dokumen berhasil disiapkan. "+(failed?"Masih ada "+failed+" dokumen gagal; ulangi tanggal yang sama untuk melanjutkan.":"Nomor yang sudah terbit tidak akan dibuat ulang.");
@@ -496,7 +481,7 @@ async function loadHistory(date){
    const selectedRecipients=getRecipientsByIds(pendingOrganolepticPrint.recipientIds);
    if(selectedRecipients.length){
     const selectedButton=node("button","docs-btn primary","Cetak Uji Organoleptik · "+selectedRecipients.length+" penerima terpilih");
-    selectedButton.type="button";selectedButton.onclick=()=>printOrganolepticForms(selectedRecipients,pendingOrganolepticPrint.menuByRecipient||{});
+    selectedButton.type="button";selectedButton.onclick=()=>printOrganolepticForms(selectedRecipients,getArchiveRecipientMenus());
     $("#docsPrintSelectedSlot",target).append(selectedButton);
    }
   }
@@ -835,7 +820,7 @@ function init(){
  menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{plannerController?.menuChanged();syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored&&!plannerController?.isApplying()&&(!plannerController||plannerController.isReady())){formDirty=true;saveDraft()}}});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
- previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,readDistributionForm,contextReady:()=>masterLoaded&&transportReady()&&(!plannerController||plannerController.isReady()),contextLocked:()=>!!plannerController?.isLocked(),selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
+ previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readDistributionForm,contextReady:()=>masterLoaded&&transportReady()&&(!plannerController||plannerController.isReady()),contextLocked:()=>!!plannerController?.isLocked(),selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
  plannerController=window.AutoDocDailyPlanner.create({getModal:()=>modal,api,today,readMenu:readMenuComponents,setMenu:items=>menuController.set(items),setEditorLocked:value=>menuController.setLocked(value),onDistribution:applyLockedDistribution,onState:()=>{syncPreflightSummary();previewController?.updateLivePreview()},onPersist:dirty=>{if(dirty)formDirty=true;saveDraft()},onDateChange:()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft()}});
  window.AutoDocDocuments=Object.freeze({
   open(){

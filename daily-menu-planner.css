@@ -1,5 +1,5 @@
 /* Menu-first workspace: isolated from document print styles. */
-.daily-menu-card,.daily-workflow{border:1px solid #e1e7e2;border-radius:12px;background:#fff;padding:10px!important;margin:0 0 10px}
+.daily-menu-card,.daily-workflow{border:1px solid #e1e7e2;border-radius:12px;background:#fff;padding:8px!important;margin:0 0 8px}
 .daily-menu-heading{display:flex;align-items:center;gap:8px;background:#e7f3e9;border-radius:8px;padding:6px 9px;color:#143f2b}
 .daily-menu-heading h3,.daily-planner h4{margin:0;font-size:15px;font-weight:750;line-height:1.3}
 .daily-menu-symbol{display:grid;place-items:center;flex:none;width:29px;height:29px;border-radius:7px;background:#206a43;color:#fff}
@@ -43,11 +43,10 @@
 .daily-plan-empty,.daily-plan-status{margin:0;color:#536b5c;font-size:11px;line-height:1.4}
 .daily-plan-status[data-error=true]{color:#a53326}
 .daily-plan-status:empty{display:none}
-.daily-workflow{padding:4px 10px!important}
+.daily-workflow{padding:2px 10px!important}
 .daily-step-row{display:grid;grid-template-columns:23px minmax(0,1fr) minmax(0,1.1fr);align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #e7ece8}
 .daily-step-row:last-child{border-bottom:0}
-.daily-step-label strong{display:block;line-height:1.35}
-.daily-step-label strong{font-size:13px;color:#142d20}
+.daily-step-label strong{display:block;line-height:1.35;font-size:13px;color:#142d20}
 .daily-step-field{min-width:0;margin:0!important}
 .daily-recipient-step:has(details[open]){align-items:start}
 .daily-recipient-step details[open]{grid-column:1/-1}
@@ -62,24 +61,6 @@
 .daily-history-list{display:grid;gap:5px;max-height:55vh;overflow:auto;margin:14px 0}
 .daily-history-row{display:grid;gap:3px;padding:10px;border-bottom:1px solid #e2e9e3}
 .daily-history-note,.daily-history-row span{font-size:13px;color:#52685a}
-.docs-create-layout .docs-preview-panel{background:#f8faf8}
-.docs-create-layout .docs-preview-pages{background:#e9eeea}
-.docs-create-layout .docs-preview-head{flex:none}
-.docs-create-layout .docs-create-form-panel{padding:8px}
-.docs-create-layout .docs-draft-line{margin:6px 0}
-body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{padding:8px 12px 12px;grid-template-columns:minmax(0,1fr);background:#fff}
-.docs-create-layout .docs-submit-actions{width:100%}
-.docs-create-layout #docsCreateButton{width:100%;min-height:44px;border-radius:7px;background:#176342;color:white;font-weight:750}
-.docs-create-layout #docsOutputCount{font-size:12px;padding:5px 8px}
-.docs-create-layout #docsPreflightSummary{font-size:11px;margin:0}
-@media(min-width:821px){
- .workspace-page .docs-create-layout{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:0 10px}
- .docs-create-layout .docs-preview-tools{flex-basis:230px}
- .docs-create-layout .docs-preview-zoom input{width:68px}
- .docs-create-layout .docs-preview-kinds{gap:2px}
- .docs-create-layout .docs-preview-kinds button{padding-inline:7px;font-size:12px}
- .home-page .home-nav button[aria-current=page]{background:#e3f1e5;border-radius:6px 6px 0 0}
-}
 @media(max-width:1140px) and (min-width:821px){.daily-menu-columns{grid-template-columns:1fr}.daily-plan-rows{max-height:125px}.daily-step-row{grid-template-columns:23px minmax(0,1fr) minmax(0,1fr)}}
 @media(max-width:560px){.daily-menu-columns{grid-template-columns:1fr}.daily-step-row{grid-template-columns:23px minmax(0,1fr)}.daily-step-field{grid-column:2}.daily-menu-heading{gap:6px}.daily-menu-heading h3{font-size:14px}}
 
@@ -87,11 +68,7 @@ body .workspace-pages .workspace-page .docs-create-layout .docs-submit-bar{paddi
 
 #docsPlanHelp[hidden]{display:none}
 
-.daily-menu-card,.daily-workflow{margin-bottom:8px;padding:8px!important}
-.daily-workflow{padding:2px 10px!important}
 .daily-menu-columns .daily-plan-status{font-size:10px}
-.daily-menu-columns .daily-plan-status:empty{display:none}
-.docs-create-layout .docs-preview-head{padding-block:4px}
 
 .daily-menu-actions:has(>button[hidden]+button[hidden]){display:none}
 #docsMenuRetry[hidden],#docsRestoreMenuDraft[hidden],#docsPlannerReload[hidden]{display:none!important}

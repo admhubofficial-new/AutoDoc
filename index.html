@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=p4-simplified-document-flow-20261124-workspace-v2-phase2-phase3-phase4-cleanup-v3-r2">
-  <link rel="stylesheet" href="./theme.css?v=20261127-preview-audit1">
-  <link rel="stylesheet" href="./daily-menu-planner.css?v=20261127-p0-sync1">
+  <link rel="stylesheet" href="./styles.css?v=20261127-p2-clean1">
+  <link rel="stylesheet" href="./theme.css?v=20261127-p2-clean1">
+  <link rel="stylesheet" href="./daily-menu-planner.css?v=20261127-p2-clean1">
 </head>
 <body class="auth-pending">
   <div id="authBoot" class="auth-boot" role="status" aria-live="polite"><span class="auth-boot-mark" aria-hidden="true">AD</span><span>Memeriksa sesi AutoDoc…</span></div>
@@ -148,7 +148,7 @@
     </div>
   </main>
 
-  <script src="./config.js?v=shared-config-20261121"></script>
+  <script src="./config.js?v=20261127-p2-clean1"></script>
   <script>
     (() => {
       const loginForm = document.getElementById("loginForm");
@@ -167,8 +167,7 @@
       const loginButton = document.getElementById("loginButton");
       const setupButton = document.getElementById("setupButton");
 
-      const API_URL = window.AutoDocConfig.apiUrl;
-      const SUPABASE_PUBLISHABLE_KEY = window.AutoDocConfig.publishableKey;
+      const {requestJson}=window.AutoDocCore;
 
       function setStatus(message, state) {
         authStatus.textContent = message || "";
@@ -222,26 +221,6 @@
         secureNote.hidden = true;
         setStatus("Lengkapi Setup Awal untuk mulai menggunakan AutoDoc.", "success");
         document.title = "Setup Awal — AutoDoc";
-      }
-
-      async function requestJson(route, options = {}) {
-        const headers = new Headers(options.headers || {});
-        headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
-        headers.set("Accept", "application/json");
-        const response = await fetch(API_URL + "/" + route.replace(/^\/+/, ""), {
-          ...options,
-          headers,
-          credentials: "include",
-          cache: "no-store"
-        });
-        let payload = {};
-        try { payload = await response.json(); } catch (_) {}
-        if (!response.ok) {
-          const error = new Error(payload.message || "Permintaan tidak berhasil.");
-          error.status = response.status;
-          throw error;
-        }
-        return payload;
       }
 
       async function postJson(route, body) {
@@ -464,15 +443,15 @@
     })();
   </script>
   <script src="./master-utils.js?v=master-csv-hardening-20261121" defer></script>
-  <script src="./master.js?v=20261127-p1-transport2" defer></script>
+  <script src="./master.js?v=20261127-p2-clean1" defer></script>
   <script src="./organoleptic-print.js?v=meal-options-plain-text-20261123-word-template-r2-kop-cleanup" defer></script>
   <script src="./documents-print.js?v=letterhead-blank-fields-20261123-word-template-r2-kop" defer></script>
   <script src="./archive.js?v=20261127-menu1" defer></script>
   <script src="./document-preview.js?v=20261127-p0-sync1" defer></script>
   <script src="./document-menu.js?v=20261127-p0-sync1" defer></script>
-  <script src="./daily-menu-planner.js?v=20261127-p0-sync1" defer></script>
+  <script src="./daily-menu-planner.js?v=20261127-p2-clean1" defer></script>
   <script src="./bast-realization.js?v=p2-p3-admin-visual-audit-20261124-stability2" defer></script>
-  <script src="./documents.js?v=20261127-p1-transport2" defer></script>
-  <script src="./dashboard.js?v=ruang-kerja-20261126" defer></script>
+  <script src="./documents.js?v=20261127-p2-clean1" defer></script>
+  <script src="./dashboard.js?v=20261127-p2-clean1" defer></script>
 </body>
 </html>

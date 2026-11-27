@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const { apiUrl: API, publishableKey: KEY } = window.AutoDocConfig;
+const api=(path,body)=>window.AutoDocCore.api(path,body,"Permintaan gagal.");
 const { parseCsv, parseCsvBoolean } = window.AutoDocMasterUtils;
 const defs={
  numbering:{title:"Nomor dokumen",fields:[]},
@@ -19,7 +19,7 @@ let loadSequence=0,saving=false;
 function isBusy(){return saving}
 function notifyBusy(){msg("Penyimpanan Data Master sedang berlangsung.",false,"loading")}
 let modal=null,entity="recipients",cache={},returnFocusEl=null;
-async function api(path,body){const h={"apikey":KEY,"Accept":"application/json"};const r=await fetch(API+"/"+path,{method:body?"POST":"GET",headers:body?{...h,"Content-Type":"application/json"}:h,body:body?JSON.stringify(body):undefined,credentials:"include",cache:"no-store"});let d={};try{d=await r.json()}catch(_){}if(!r.ok)throw Error(d.message||"Permintaan gagal.");return d;}
+
 function msg(text,bad=false,state){
  const output=modal?.querySelector(".dm-msg");
  if(!output)return;

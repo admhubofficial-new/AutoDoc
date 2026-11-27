@@ -13,9 +13,9 @@ function create({getModal,api,today,readMenu,setMenu,setEditorLocked,onDistribut
  const version=()=>saved?.updated_at??null;
  const requiresSave=()=>ready&&!locked&&!!saved&&!same(readMenu(),saved.menu_items);
  function buttons(){setEditorLocked?.(!ready||locked||saving||(date<today()&&!!saved));const retry=q("#docsMenuRetry"),recover=q("#docsRestoreMenuDraft");if(retry)retry.hidden=!failed;if(recover)recover.hidden=!conflict||locked||!ready||date<today();const main=mq("#docsDate"),menu=q("#docsMenuDate");if(main)main.disabled=saving;if(menu)menu.disabled=saving;const quick=q("#docsSaveDailyMenu"),save=q("#docsSavePlans"),add=q("#docsAddPlanDate");if(quick)quick.disabled=saving||!ready||locked||!valid(date)||date<today()||!readMenu().length;if(save){save.hidden=!editing;save.disabled=saving||!rows.some(r=>r.dirty&&!r.locked)}if(add)add.disabled=saving||rows.filter(r=>r.dirty).length>=20}
- function syncMenuLabel(){const title=q("#docsMenuForDate");if(title)title.textContent="Komponen menu";buttons()}
- function apply(items){applying=true;try{setMenu(items)}finally{applying=false}syncMenuLabel()}
- function menuChanged(){if(!root?.isConnected)return;if(!applying&&ready&&!locked){drafts.set(date,{items:readMenu().slice(),base:version()});conflict=null;msg("#docsDailyStatus",requiresSave()?"Simpan perubahan menu sebelum terbit.":"")}syncMenuLabel()}
+
+ function apply(items){applying=true;try{setMenu(items)}finally{applying=false}buttons()}
+ function menuChanged(){if(!root?.isConnected)return;if(!applying&&ready&&!locked){drafts.set(date,{items:readMenu().slice(),base:version()});conflict=null;msg("#docsDailyStatus",requiresSave()?"Simpan perubahan menu sebelum terbit.":"")}buttons()}
  function capture(){return {menuBase:version(),menuConflict:conflict?.items||null,planDraft:rows.filter(r=>r.dirty&&!r.locked).map(r=>({tanggal:r.tanggal,text:r.text,base:r.base??null,saved:!!r.saved}))}}
  function syncDate(force=false,restored=null){
   if(!root?.isConnected)return;const next=mq("#docsDate").value;if(next===date&&!force)return;

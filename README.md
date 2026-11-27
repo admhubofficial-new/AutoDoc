@@ -16,7 +16,7 @@ File frontend utama:
 - `documents.js`, `document-menu.js`, `document-preview.js`: alur pembuatan dokumen, editor menu, dan pratinjau.
 - `documents-print.js`, `organoleptic-print.js`: keluaran cetak SJ/BAST dan uji organoleptik.
 - `archive.js`, `bast-realization.js`: arsip distribusi dan realisasi BAST.
-- `master.js`, `master-utils.js`, `ai-assistant.js`: Data Master, impor CSV, dan asisten AI.
+- `master.js`, `master-utils.js`: Data Master dan impor CSV.
 - `styles.css`, `theme.css`: tampilan aplikasi.
 
 Backend:
@@ -28,14 +28,14 @@ Backend:
 
 ## Skema database dan akses
 
-Database saat ini mempunyai **14 tabel aplikasi** pada schema `public`:
+Database saat ini mempunyai **15 tabel aplikasi** pada schema `public`:
 
-- Operasional: `distributions`, `distribution_menu_items`.
+- Operasional: `distributions`, `distribution_menu_items`, `daily_menu_plans`.
 - Dokumen: `documents`, `bast_realisasi`, `bast_realisasi_items`, `counters`.
 - Data Master: `settings`, `recipients`, `master_pengemudi`, `master_kendaraan`, `master_petugas`, `master_menu`.
 - Keamanan/audit: `login_attempts`, `audit_log`.
 
-Seluruh 14 tabel mengaktifkan RLS. Tidak ada policy tabel aplikasi untuk `anon` atau `authenticated`, dan kedua role tersebut tidak memiliki grant tabel. Akses data aplikasi dilakukan oleh backend tepercaya menggunakan kredensial server-side. Jangan membuka akses tabel dari browser atau menambahkan policy publik hanya untuk menghilangkan peringatan advisor.
+Seluruh 15 tabel mengaktifkan RLS. Tidak ada policy tabel aplikasi untuk `anon` atau `authenticated`, dan kedua role tersebut tidak memiliki grant tabel. Akses data aplikasi dilakukan oleh backend tepercaya menggunakan kredensial server-side. Jangan membuka akses tabel dari browser atau menambahkan policy publik hanya untuk menghilangkan peringatan advisor.
 
 Nomor SJ dan BAST memakai counter terpisah. Penerbitan nomor menggunakan RPC PostgreSQL atomik; penyimpanan distribusi/menu dan realisasi BAST menggunakan RPC agar data terkait konsisten. Snapshot dokumen yang sudah diterbitkan dilindungi dari perubahan.
 
@@ -110,7 +110,7 @@ Semua endpoint terdaftar di `supabase/functions/autodoc-auth/index.ts`:
 
 - Setup/autentikasi: `setup/status`, `setup/complete`, `auth/login`, `auth/session`, `auth/logout`, `auth/verify-token`, `auth/change-token`.
 - Data Master: `master/list`, `master/recipients`, `master/save`, `master/import`.
-- AI: `ai/analyze`, `ai/recipient-apply`, `ai/master-apply`.
+- API AI lama (tidak dipanggil frontend saat ini): `ai/analyze`, `ai/recipient-apply`, `ai/master-apply`; dipertahankan sampai penggunaan eksternal dikonfirmasi.
 - Dashboard: `dashboard/summary`.
 - Dokumen: `docs/create`, `docs/days`, `docs/list`, `docs/mark-printed`, `docs/realization`, `docs/delete-history`.
 
