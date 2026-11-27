@@ -757,6 +757,11 @@ test("desktop paper accepts wheel input and reflows into scrollable rows on zoom
     await page.mouse.wheel(0, 520);
     await page.waitForFunction(() => document.querySelector("#docsPreviewPages").scrollTop > 100);
     const zoom = page.locator("#docsZoom");
+    const nav = page.locator(".docs-page-controls");
+    const [navBox, zoomBox] = await Promise.all([nav.boundingBox(), zoom.boundingBox()]);
+    assert.ok(navBox && zoomBox, "toolbar controls are visible");
+    assert.ok(Math.abs(navBox.y + navBox.height / 2 - zoomBox.y - zoomBox.height / 2) <= 2, "destination navigation and zoom share a row");
+    assert.ok(navBox.x + navBox.width <= zoomBox.x, "toolbar controls do not overlap");
     await zoom.press("Home");
     assert.equal(await zoom.inputValue(), "25");
     await page.waitForFunction(() => {
