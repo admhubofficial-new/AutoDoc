@@ -70,7 +70,7 @@ async function openApp({ authenticated = true, viewport = { width: 1365, height:
         id: recipientId, nama: "SDN UJI BROWSER", kelompok: "Sekolah/Lembaga", jenjang: "SD", alamat: "Alamat Uji",
         aktif: true, urutan: 10, total_porsi: 16, siswa_kecil: 16, siswa_besar: 0, tendik: 0,
         ibu_hamil: 0, ibu_menyusui: 0, balita: 0, putus_sekolah: 0, kader: 0
-      }], staff: [], drivers: [], vehicles: [], menus: [], numbering:[{jenis:"SJ",start_number:1000,next_number:1053,locked:true},{jenis:"BAST",start_number:1000,next_number:1055,locked:true}] } };
+      }], staff: [], drivers: [{id:"driver-1",nama:"Budi Supriadi",aktif:true,urutan:10,default_pengiriman:true},{id:"driver-2",nama:"Elzar Rifandanu",aktif:true,urutan:20,default_pengiriman:true}], vehicles: [{id:"vehicle-1",no_kendaraan:"Z 8734 HS",aktif:true,urutan:10,default_pengiriman:true},{id:"vehicle-2",no_kendaraan:"Z 8952 AI",aktif:true,urutan:20,default_pengiriman:true}], transport_defaults:{nama_pengemudi:"Budi Supriadi / Elzar Rifandanu",no_kendaraan:"Z 8734 HS / Z 8952 AI"}, menus: [], numbering:[{jenis:"SJ",start_number:1000,next_number:1053,locked:true},{jenis:"BAST",start_number:1000,next_number:1055,locked:true}] } };
     } else if (routeName === "master/numbering") {
       writes.push({route:routeName,body:request.postDataJSON()});payload={success:true};
     } else if (routeName === "master/recipients") {
@@ -832,7 +832,7 @@ test("legacy draft with empty transport fields migrates to defaults in live Sura
   assert.equal(await page.locator("#docsVehicle").inputValue(),"Z 8734 HS / Z 8952 AI");
   assert.equal(await page.locator("#docsMealTime").inputValue(),"pagi");
   assert.equal(await page.locator(".docs-menu-input").inputValue(),"Nasi Putih");
-  assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("autodoc:distribution-draft:v1")).version),3);
+  assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("autodoc:distribution-draft:v1")).version),4);
   await page.locator("#docsShippingDisclosure > summary").click();
   await page.locator("#docsDriver").fill("Pengemudi khusus");await preview.getByText("Pengemudi khusus",{exact:false}).waitFor();
   await page.locator("#docsVehicle").fill("");

@@ -10,12 +10,12 @@ function nowInJakarta(){
  return values.year+"-"+values.month+"-"+values.day;
 }
 const today=()=>nowInJakarta();
- const DEFAULT_DRIVER="Budi Supriadi / Elzar Rifandanu";
- const DEFAULT_VEHICLE="Z 8734 HS / Z 8952 AI";
+ function transportDefaults(){const values=master.transport_defaults;return {docsDriver:typeof values?.nama_pengemudi==="string"?values.nama_pengemudi:"",docsVehicle:typeof values?.no_kendaraan==="string"?values.no_kendaraan:""}}
+ function transportReady(){return typeof master.transport_defaults?.nama_pengemudi==="string"&&typeof master.transport_defaults?.no_kendaraan==="string"}
 let realizationMode=false, queueRequest=0, historyRequest=0, masterRequest=0, publishing=false, formDirty=false;
 let plannerController=null;
 const DRAFT_KEY="autodoc:distribution-draft:v1";
- const DRAFT_VERSION=3;
+ const DRAFT_VERSION=4;
 const DRAFT_TTL=12*60*60*1000;
 let renderingForm=false,restoringDraft=false,draftRestored=false;
 const draftFields=["docsDate","docsMealTime","docsTime","docsStaff","docsDriver","docsVehicle","docsKindSj","docsKindBast","docsIncludeOrganoleptic"];
@@ -26,7 +26,7 @@ function readStoredDraft(){
   const raw=sessionStorage.getItem(DRAFT_KEY);if(!raw)return null;
   if(raw.length>200000){clearStoredDraft();return null}
   const saved=JSON.parse(raw);
-  if(![1,2,DRAFT_VERSION].includes(saved.version)||!Number.isFinite(saved.savedAt)||saved.savedAt>Date.now()||Date.now()-saved.savedAt>DRAFT_TTL||!Array.isArray(saved.fields)||!Array.isArray(saved.menu)||!Array.isArray(saved.recipients)){clearStoredDraft();return null}
+  if(![1,2,3,DRAFT_VERSION].includes(saved.version)||!Number.isFinite(saved.savedAt)||saved.savedAt>Date.now()||Date.now()-saved.savedAt>DRAFT_TTL||!Array.isArray(saved.fields)||!Array.isArray(saved.menu)||!Array.isArray(saved.recipients)){clearStoredDraft();return null}
   const validId=id=>typeof id==="string"&&/^[0-9a-f-]{36}$/i.test(id);
   const fields=saved.fields.filter(item=>Array.isArray(item)&&draftFields.includes(item[0])&&(typeof item[1]==="boolean"||typeof item[1]==="string"&&item[1].length<=180));
   const menu=saved.menu.filter(item=>typeof item==="string"&&item.length<=180).slice(0,8);
@@ -34,7 +34,7 @@ function readStoredDraft(){
 
   const planDraft=Array.isArray(saved.planDraft)?saved.planDraft.filter(r=>r&&typeof r.tanggal==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(r.tanggal)&&typeof r.text==="string"&&r.text.length<=1450).slice(0,20).map(r=>({tanggal:r.tanggal,text:r.text,base:typeof r.base==="string"?r.base:null,saved:!!r.saved})):[];
    const menuConflict=Array.isArray(saved.menuConflict)?saved.menuConflict.filter(i=>typeof i==="string"&&i.length<=180).slice(0,8):null;
-   return {fields,menu,recipients,needsMenuReview:!!saved.plan,version:saved.version,menuBase:typeof saved.menuBase==="string"||saved.menuBase===null?saved.menuBase:undefined,planDraft,menuConflict};
+   return {fields,menu,recipients,needsMenuReview:!!saved.plan,version:saved.version,menuBase:typeof saved.menuBase==="string"||saved.menuBase===null?saved.menuBase:undefined,planDraft,menuConflict,transportOverrides:{docsDriver:saved.transportOverrides?.docsDriver===true,docsVehicle:saved.transportOverrides?.docsVehicle===true}};
  }catch(_){clearStoredDraft();return null}
 }
 function saveDraft(){
@@ -117,7 +117,8 @@ function masterSuggestions(items,key){
   .map(item=>"<option value='"+esc(item[key])+"'></option>").join("");
 }
 async function rememberMasterValue(entity,field,value){
- const normalized=String(value||"").trim();
+ let normalized=String(value||"").trim().replace(/\s+/g," ");
+  if(entity==="vehicles"){normalized=normalized.replace(/^Grand\s*Max\s+/i,"").toUpperCase();const plate=normalized.match(/^([A-Z]{1,2})\s*(\d{1,4})\s*([A-Z]{0,3})$/);if(plate)normalized=[plate[1],plate[2],plate[3]].filter(Boolean).join(" ")}
  if(!normalized)return false;
  const list=Array.isArray(master[entity])?master[entity]:[];
  if(list.some(item=>String(item[field]||"").trim().toLocaleLowerCase("id-ID")===normalized.toLocaleLowerCase("id-ID")))return false;
@@ -135,7 +136,7 @@ async function rememberCreationInputs(body){
   ["vehicles","no_kendaraan",body.no_kendaraan]
  ];
  for(const [entity,field,value] of tasks){
-  const values=(entity==="drivers"&&value===DEFAULT_DRIVER||entity==="vehicles"&&value===DEFAULT_VEHICLE)?value.split(" / "):[value];
+  const values=entity==="drivers"||entity==="vehicles"?String(value||"").split("/").map(v=>v.trim()).filter(Boolean):[value];
   for(const entry of values)await rememberMasterValue(entity,field,entry);
  }
  const allMenus=[...(body.menu_items||[]),...Object.values(body.recipient_menu_items||{}).flat()];
@@ -157,7 +158,7 @@ async function loadMaster(){
  if(!Array.isArray(recipients)) throw new Error("Server tidak mengirim daftar penerima dalam format yang benar.");
  master=masterResult.status==="fulfilled"&&masterResult.value&&masterResult.value.data?masterResult.value.data:{};
  master.recipients=recipients;
- masterLoaded=true;
+ masterLoaded=masterResult.status==="fulfilled"&&transportReady();
  const stored=!draftRestored&&!formDirty?readStoredDraft():null;
  const draft=formDirty?captureDraft():stored;
  draftRestored=true;
@@ -170,12 +171,12 @@ async function loadMaster(){
   else if(stored)draftMessage("Draf dipulihkan.");
  }
  const activeCount=recipients.length;
- const warning=masterResult.status==="rejected"?" Data pendukung (menu/petugas/kendaraan/pengemudi) gagal dimuat; daftar penerima tetap tersedia.":"";
+ const warning=!masterLoaded?" Data Master belum lengkap. Buka ulang Buat Dokumen untuk mencoba lagi.":"";
  if(warning)status(warning.trim(),true,"error");else if(!activeCount)status("Belum ada penerima aktif.",false,"empty");else status("");
 }
 function readMenuComponents(){return menuController?.read()||[]}
 function readDistributionForm(){return {tanggal:$("#docsDate",modal)?.value||"",jam_berangkat:$("#docsTime",modal)?.value||"",menu_items:readMenuComponents(),waktu_makan:$("#docsMealTime",modal)?.value||"siang",nama_petugas:$("#docsStaff",modal)?.value.trim()||"",nama_pengemudi:$("#docsDriver",modal)?.value.trim()||"",no_kendaraan:$("#docsVehicle",modal)?.value.trim()||""}}
-function applyLockedDistribution(dist){const fields={docsMealTime:["waktu_makan","siang"],docsTime:["jam_berangkat",""],docsStaff:["nama_petugas",""],docsDriver:["nama_pengemudi",DEFAULT_DRIVER],docsVehicle:["no_kendaraan",DEFAULT_VEHICLE]};for(const [id,[key,fallback]] of Object.entries(fields)){const input=$("#"+id,modal);if(!input)continue;if(dist){const raw=String(dist[key]??"");input.value=id==="docsTime"?raw.slice(0,5):raw||(id==="docsMealTime"?fallback:"");input.dataset.distributionLocked="true";input.disabled=true}else if(input.dataset.distributionLocked==="true"){delete input.dataset.distributionLocked;input.disabled=false;input.value=fallback}}}
+function applyLockedDistribution(dist){const defaults=transportDefaults();const fields={docsMealTime:["waktu_makan","siang"],docsTime:["jam_berangkat",""],docsStaff:["nama_petugas",""],docsDriver:["nama_pengemudi",defaults.docsDriver],docsVehicle:["no_kendaraan",defaults.docsVehicle]};for(const [id,[key,fallback]] of Object.entries(fields)){const input=$("#"+id,modal);if(!input)continue;if(dist){const raw=String(dist[key]??"");input.value=id==="docsTime"?raw.slice(0,5):raw||(id==="docsMealTime"?fallback:"");input.dataset.distributionLocked="true";delete input.dataset.transportOverride;input.disabled=true}else if(input.dataset.distributionLocked==="true"){delete input.dataset.distributionLocked;input.disabled=false;input.value=fallback;delete input.dataset.transportOverride}}}
 function selectedDocumentKinds(){
  const kinds=[];
  if($("#docsKindSj",modal)?.checked)kinds.push("SJ");
@@ -185,16 +186,19 @@ function selectedDocumentKinds(){
 function addMenuComponent(value=""){menuController?.add(value)}
 function captureDraft(){
  const ids=draftFields;
- return {version:DRAFT_VERSION,...(plannerController?.capture()||{}),fields:ids.map(id=>{const input=$("#"+id,modal);return [id,input?.type==="checkbox"?input.checked:input?.value]}),menu:readMenuComponents(),recipients:Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(input=>input.value)};
+ return {version:DRAFT_VERSION,...(plannerController?.capture()||{}),transportOverrides:Object.fromEntries(["docsDriver","docsVehicle"].map(id=>[id,$("#"+id,modal)?.dataset.transportOverride==="true"])),fields:ids.map(id=>{const input=$("#"+id,modal);return [id,input?.type==="checkbox"?input.checked:input?.value]}),menu:readMenuComponents(),recipients:Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(input=>input.value)};
 }
 function restoreDraft(draft){
  restoringDraft=true;
- const transportDefaults={docsDriver:DEFAULT_DRIVER,docsVehicle:DEFAULT_VEHICLE};
+ const defaults=transportDefaults();
  for(const [id,value] of draft.fields){
   const input=$("#"+id,modal);if(!input||value===undefined)continue;
   if(input.type==="checkbox")input.checked=value;
-  else if(draft.version===1&&Object.hasOwn(transportDefaults,id)&&!String(value??"").trim())input.value=transportDefaults[id];
-  else input.value=value;
+  else if(Object.hasOwn(defaults,id)){
+    const explicit=draft.version>=4?draft.transportOverrides?.[id]===true:!(draft.version===1&&!String(value??"").trim())&&value!==defaults[id];
+    if(explicit){input.value=value;input.dataset.transportOverride="true"}
+    else{input.value=defaults[id];delete input.dataset.transportOverride}
+   }else input.value=value;
  }
  if(plannerController)plannerController.restoreMenu(draft.menu,draft.menuBase,draft.planDraft,draft.menuConflict);
  else if(draft.menu.length)menuController?.set(draft.menu);
@@ -213,6 +217,7 @@ function renderCreateForm(){
  menuController?.reset(false);
  const recipients=Array.isArray(master.recipients)?master.recipients:[];
  const todayVal=today();
+ const defaults=transportDefaults();
  const menuSuggestions=masterSuggestions(master.menus,"teks_menu");
  const recipientGroups=[...new Set(recipients.map(item=>String(item.kelompok||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"id"));
  const groupOptions=recipientGroups.map(group=>"<option value='"+esc(group)+"'>"+esc(group)+"</option>").join("");
@@ -239,7 +244,7 @@ function renderCreateForm(){
     "</section>"+
     "<section class='docs-form-section'>"+
      "<details class='docs-shipping-details' id='docsShippingDisclosure'><summary><span>Pengiriman</span></summary><div class='docs-shipping-fields'>"+
-      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas</label><input id='docsStaff' type='text' list='docsStaffSuggestions' maxlength='180' placeholder='Pilih atau ketik nama petugas' autocomplete='off'><datalist id='docsStaffSuggestions'>"+masterSuggestions(master.staff,"nama")+"</datalist></div><div class='docs-field'><label for='docsDriver'>Pengemudi</label><input id='docsDriver' type='text' value='"+esc(DEFAULT_DRIVER)+"' list='docsDriverSuggestions' maxlength='180' placeholder='Pilih atau ketik nama pengemudi' autocomplete='off'><datalist id='docsDriverSuggestions'>"+masterSuggestions(master.drivers,"nama")+"</datalist></div><div class='docs-field'><label for='docsVehicle'>Kendaraan</label><input id='docsVehicle' type='text' value='"+esc(DEFAULT_VEHICLE)+"' list='docsVehicleSuggestions' maxlength='80' placeholder='Pilih atau ketik nomor kendaraan' autocomplete='off'><datalist id='docsVehicleSuggestions'>"+masterSuggestions(master.vehicles,"no_kendaraan")+"</datalist></div></div>"+
+      "<div class='docs-grid docs-grid-compact'><div class='docs-field'><label for='docsTime'>Jam berangkat</label><input id='docsTime' type='time'></div><div class='docs-field'><label for='docsStaff'>Petugas</label><input id='docsStaff' type='text' list='docsStaffSuggestions' maxlength='180' placeholder='Pilih atau ketik nama petugas' autocomplete='off'><datalist id='docsStaffSuggestions'>"+masterSuggestions(master.staff,"nama")+"</datalist></div><div class='docs-field'><label for='docsDriver'>Pengemudi</label><input id='docsDriver' type='text' value='"+esc(defaults.docsDriver)+"' list='docsDriverSuggestions' maxlength='180' placeholder='Pilih atau ketik nama pengemudi' autocomplete='off'><datalist id='docsDriverSuggestions'>"+masterSuggestions(master.drivers,"nama")+"</datalist></div><div class='docs-field'><label for='docsVehicle'>Kendaraan</label><input id='docsVehicle' type='text' value='"+esc(defaults.docsVehicle)+"' list='docsVehicleSuggestions' maxlength='80' placeholder='Pilih atau ketik nomor kendaraan' autocomplete='off'><datalist id='docsVehicleSuggestions'>"+masterSuggestions(master.vehicles,"no_kendaraan")+"</datalist></div></div>"+
      "</div></details>"+
     "</section>"+
     "<div class='docs-draft-line'><span id='docsDraftStatus' role='status' aria-live='polite'></span><button type='button' class='docs-btn' id='docsDiscardDraft'>Atur ulang draf</button></div>"+
@@ -292,6 +297,7 @@ function renderCreateForm(){
  }
  const onFormEdit=event=>{
    if(event.target.closest(".daily-menu-card")||event.target.matches("#docsRecipientSearch, #docsRecipientGroup"))return;
+   if(["docsDriver","docsVehicle"].includes(event.target.id))event.target.dataset.transportOverride="true";
    formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft();
   };
   form.addEventListener("input",onFormEdit);
@@ -361,7 +367,8 @@ function syncPreflightSummary(){
  const kinds=selectedDocumentKinds();
  const menuCount=typeof menuController?.count==="function"?menuController.count():modal.querySelectorAll("#docsMenuItems .docs-menu-input").length;
  const missing=[];
- if(!validDate)missing.push("tanggal distribusi");
+ if(!transportReady())missing.push("Data Master");
+  if(!validDate)missing.push("tanggal distribusi");
  if(!kinds.length)missing.push("jenis dokumen");
  if(!selectedIds.size)missing.push("minimal satu penerima");
  if(menuCount>8)missing.push("maksimal 8 komponen menu");
@@ -388,7 +395,7 @@ function updateSelectedCount(){
  saveDraft();
 }
 async function createDocs(event){
- event.preventDefault();if(publishing||plannerController&&(!plannerController.isReady()||plannerController.isSaving()||plannerController.requiresSave()))return;status("");syncPreflightSummary();
+ event.preventDefault();if(!transportReady()){status("Data Master belum dimuat. Buka ulang Buat Dokumen.",true);return}if(publishing||plannerController&&(!plannerController.isReady()||plannerController.isSaving()||plannerController.requiresSave()))return;status("");syncPreflightSummary();
  const selected=Array.from(modal.querySelectorAll("input[name='recipient']:checked")).map(x=>x.value);
  if(!selected.length){status("Pilih minimal satu penerima.",true);$("#docsRecipientSearch",modal)?.focus();return}
  const kinds=selectedDocumentKinds();
@@ -828,7 +835,7 @@ function init(){
  menuController=window.AutoDocMenuEditor.create({getModal:()=>modal,$,node,status,getPreviewController:()=>previewController,onChange:()=>{plannerController?.menuChanged();syncPreflightSummary();if(!renderingForm&&!restoringDraft&&draftRestored&&!plannerController?.isApplying()&&(!plannerController||plannerController.isReady())){formDirty=true;saveDraft()}}});
  archiveController=window.AutoDocArchive.create({getModal:()=>modal,$,node,status,api,loadHistory});
  realizationController=window.AutoDocBastRealization.create({getModal:()=>modal,$,node,esc,api,status,loadHistory});
- previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,readDistributionForm,contextReady:()=>!plannerController||plannerController.isReady(),contextLocked:()=>!!plannerController?.isLocked(),selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
+ previewController=window.AutoDocDocumentPreview.create({$,esc,getModal:()=>modal,getMaster:()=>master,api,readMenuComponents,readDistributionForm,contextReady:()=>transportReady()&&(!plannerController||plannerController.isReady()),contextLocked:()=>!!plannerController?.isLocked(),selectedDocumentKinds,today,logoUrl:()=>LETTERHEAD_LOGO_URL});
  plannerController=window.AutoDocDailyPlanner.create({getModal:()=>modal,api,today,readMenu:readMenuComponents,setMenu:items=>menuController.set(items),setEditorLocked:value=>menuController.setLocked(value),onDistribution:applyLockedDistribution,onState:()=>{syncPreflightSummary();previewController?.updateLivePreview()},onPersist:dirty=>{if(dirty)formDirty=true;saveDraft()},onDateChange:()=>{formDirty=true;syncPreflightSummary();previewController?.updateLivePreview();saveDraft()}});
  window.AutoDocDocuments=Object.freeze({
   open(){
