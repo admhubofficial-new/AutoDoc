@@ -28,10 +28,13 @@ import {
   RequestTimeoutError,
 } from "./validation.ts";
 
-// AutoDoc authentication backend for the GitHub Pages frontend.
+// AutoDoc authentication backend for the Vercel and legacy GitHub Pages frontends.
 // The PIN is read only from Supabase Edge Function secrets and is never
 // returned to the browser or written to logs.
-const APP_ORIGIN = "https://admhubofficial-new.github.io";
+const APP_ORIGINS = new Set([
+  "https://autodoc-xi.vercel.app",
+  "https://admhubofficial-new.github.io", // Legacy origin during migration.
+]);
 const COOKIE_NAME = "__Host-autodoc_session";
 const SESSION_SECONDS = 12 * 60 * 60;
 const MAX_BODY_BYTES = 8 * 1024;
@@ -295,7 +298,7 @@ function corsHeaders(origin: string | null): Headers {
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Max-Age": "600",
   });
-  if (origin === APP_ORIGIN) headers.set("Access-Control-Allow-Origin", APP_ORIGIN);
+  if (origin && APP_ORIGINS.has(origin)) headers.set("Access-Control-Allow-Origin", origin);
   return headers;
 }
 
@@ -2295,7 +2298,7 @@ async function handleAiAnalyze(request: Request): Promise<Response> {
 
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin");
-  if (origin && origin !== APP_ORIGIN) {
+  if (origin && !APP_ORIGINS.has(origin)) {
     return new Response(JSON.stringify({ message: "Asal permintaan tidak diizinkan." }), {
       status: 403,
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
